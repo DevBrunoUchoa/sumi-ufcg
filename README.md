@@ -2,27 +2,55 @@
 
 <p align="center">Sistema de gestão e acompanhamento de planos institucionais da Universidade Federal de Campina Grande.</p>
 
----
+## Estrutura
 
-## Sobre o projeto
+```text
+sumi-ufcg/
+├── .github/workflows/   Integração contínua
+├── docs/                Arquitetura e decisões arquiteturais
+├── frontend/            Aplicação web em React
+│   └── src/             Código-fonte da interface
+├── Dockerfile           Construção da imagem da aplicação
+├── compose.yaml         Execução local em contêiner
+├── package.json         Comandos e versões do projeto
+└── pnpm-workspace.yaml  Módulos do workspace
+```
 
-O SUMI-UFCG é desenvolvido no âmbito do Smart Campus da UFCG. O projeto propõe uma aplicação institucional para estruturar, acompanhar e registrar a execução de planos, preservando as particularidades dos processos conduzidos pela universidade.
+## Requisitos
 
----
+```text
+Node.js 24
+pnpm 11
+Docker
+```
 
-## Ambiente de desenvolvimento
-
-O repositório utiliza Node.js 24 e pnpm 11. As versões declaradas devem ser respeitadas para manter a instalação reproduzível entre os ambientes locais e a integração contínua.
+## Instalação
 
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
 ```
 
-As configurações locais são derivadas de `.env.example`. Credenciais e dados institucionais permanecem fora do histórico do Git.
+## Desenvolvimento
 
----
+```bash
+pnpm dev
+```
 
-## Infraestrutura
+## Verificações
 
-A configuração inicial de runtime, ambiente e integração contínua está descrita em [`docs/infrastructure.md`](docs/infrastructure.md). A containerização será incorporada após a definição dos comandos de build e inicialização da aplicação.
+```bash
+pnpm lint
+pnpm build
+```
+
+## Docker
+
+```bash
+docker compose build
+```
+
+## Documentação
+
+- [Arquitetura do sistema](docs/architecture.md)
+- [Decisões arquiteturais](docs/adr)

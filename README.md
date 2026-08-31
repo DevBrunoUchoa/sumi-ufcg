@@ -10,6 +10,19 @@ O SUMI-UFCG é desenvolvido no âmbito do Smart Campus da UFCG. O projeto propõ
 
 ---
 
+## Estrutura do repositório
+
+Monorepo gerenciado com pnpm workspaces (`pnpm-workspace.yaml`):
+
+```
+apps/
+  api/   # backend (Express + TypeScript), ver apps/api/README.md
+```
+
+Novas aplicações (ex.: frontend) entram como novos diretórios em `apps/`.
+
+---
+
 ## Ambiente de desenvolvimento
 
 O repositório utiliza Node.js 24 e pnpm 11. As versões declaradas devem ser respeitadas para manter a instalação reproduzível entre os ambientes locais e a integração contínua.
@@ -17,12 +30,21 @@ O repositório utiliza Node.js 24 e pnpm 11. As versões declaradas devem ser re
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
+
+# rodar o backend em modo desenvolvimento
+pnpm --filter @sumi-ufcg/api dev
 ```
 
-As configurações locais são derivadas de `.env.example`. Credenciais e dados institucionais permanecem fora do histórico do Git.
+As configurações de cada aplicação são derivadas do respectivo `.env.example`
+(ex.: `apps/api/.env.example`). Credenciais e dados institucionais permanecem
+fora do histórico do Git.
 
 ---
 
 ## Infraestrutura
 
 A configuração inicial de runtime, ambiente e integração contínua está descrita em [`docs/infrastructure.md`](docs/infrastructure.md). A containerização será incorporada após a definição dos comandos de build e inicialização da aplicação.
+
+## Decisões de arquitetura
+
+Decisões técnicas relevantes são registradas em [`docs/adr`](docs/adr) (Architecture Decision Records).

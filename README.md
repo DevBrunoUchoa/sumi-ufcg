@@ -2,47 +2,67 @@
 
 <p align="center">Sistema de gestão e acompanhamento de planos institucionais da Universidade Federal de Campina Grande.</p>
 
----
+## Estrutura
 
-## Sobre o projeto
-
-O SUMI-UFCG é desenvolvido no âmbito do Smart Campus da UFCG. O projeto propõe uma aplicação institucional para estruturar, acompanhar e registrar a execução de planos, preservando as particularidades dos processos conduzidos pela universidade.
-
----
-
-## Estrutura do repositório
-
-Workspace pnpm (`pnpm-workspace.yaml`), um pacote por diretório na raiz:
-
+```text
+sumi-ufcg/
+├── .github/workflows/   Integração contínua
+├── docs/                Arquitetura e decisões arquiteturais
+├── backend/             API (Express + TypeScript)
+│   └── src/             Código-fonte do servidor e dos módulos de domínio
+├── frontend/            Aplicação web em React
+│   └── src/             Código-fonte da interface
+├── supabase/migrations/ Migrações versionadas do banco (Postgres/Supabase)
+├── Dockerfile           Construção da imagem da aplicação
+├── compose.yaml         Execução local em contêiner
+├── package.json         Comandos e versões do projeto
+└── pnpm-workspace.yaml  Módulos do workspace
 ```
-backend/    # API (Express + TypeScript), ver backend/README.md
-frontend/   # interface web (React + Vite)
+
+## Requisitos
+
+```text
+Node.js 24
+pnpm 11
+Docker
 ```
 
----
-
-## Ambiente de desenvolvimento
-
-O repositório utiliza Node.js 24 e pnpm 11. As versões declaradas devem ser respeitadas para manter a instalação reproduzível entre os ambientes locais e a integração contínua.
+## Instalação
 
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
-
-# rodar o backend em modo desenvolvimento
-pnpm --filter backend dev
 ```
 
-As configurações de cada aplicação são derivadas do respectivo `.env.example`
-(ex.: `backend/.env.example`). Credenciais e dados institucionais permanecem
-fora do histórico do Git.
+As configurações de cada pacote são derivadas do respectivo `.env.example`
+(`backend/.env.example`). Credenciais e dados institucionais permanecem fora
+do histórico do Git.
 
----
+## Desenvolvimento
 
-## Infraestrutura
+```bash
+pnpm dev
+```
 
-A configuração inicial de runtime, ambiente e integração contínua está descrita em [`docs/infrastructure.md`](docs/infrastructure.md). A containerização será incorporada após a definição dos comandos de build e inicialização da aplicação.
+Sobe `frontend` e `backend` em paralelo. Para rodar só um dos dois:
+`pnpm --filter backend dev` ou `pnpm --filter frontend dev`.
 
-## Decisões de arquitetura
+## Verificações
 
-Decisões técnicas relevantes são registradas em [`docs/adr`](docs/adr) (Architecture Decision Records).
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+## Docker
+
+```bash
+docker compose build
+```
+
+## Documentação
+
+- [Arquitetura do sistema](docs/architecture.md)
+- [Decisões arquiteturais](docs/adr)

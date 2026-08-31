@@ -1,4 +1,4 @@
-# ADR 0001 — Stack do backend
+# ADR 0003 — Stack do backend
 
 - **Status:** aceito
 - **Data:** 2026-08-25
@@ -45,21 +45,26 @@ queries do módulo de riscos/indicadores crescer muito.
 A service role key nunca deve ser usada fora do backend (ignora Row Level
 Security).
 
-### Organização do repositório: monorepo com `apps/api`
+### Organização do repositório: workspace pnpm com `backend/` na raiz
 
-Criado `pnpm-workspace.yaml` apontando para `apps/*`, com o backend em
-`apps/api`. Ainda que hoje só exista uma aplicação, essa estrutura evita uma
-reorganização disruptiva quando o frontend (Dev B) for iniciado, e mantém o
-CI (`.github/workflows/repository.yml`) compatível — `pnpm install
---frozen-lockfile` na raiz já resolve todos os workspaces.
+A ideia original desta ADR era um monorepo com prefixo `apps/` (`apps/api`).
+Ao integrar este trabalho, a infraestrutura já tinha decidido (em paralelo,
+PR `setup-infra`, ver ADR 0001 — "Monólito modular com workspace pnpm" do
+time de infra) um layout plano, sem `apps/`: cada módulo direto na raiz
+(`frontend/`, e agora `backend/`), registrado em `pnpm-workspace.yaml`, com
+lockfile único e Dockerfile/CI já escritos assumindo esse layout. Adotamos a
+convenção da infra em vez de manter `apps/api`, para não haver dois padrões
+de estrutura coexistindo no mesmo repositório.
 
 ## Consequências
 
 - CI atual só valida a instalação das dependências; falta acrescentar
-  `pnpm --filter @sumi-ufcg/api typecheck|build|test` como próximos passos
-  (ver `docs/infrastructure.md`).
-- Dockerfile/Compose (ainda não criados) devem buildar a partir de
-  `apps/api`, gerando uma única unidade de implantação para o monólito,
-  conforme já registrado em `docs/infrastructure.md`.
+  `pnpm --filter backend typecheck|build|test` como próximos passos (ver
+  `docs/infrastructure.md` e o Dockerfile/CI da infra).
+- Dockerfile/Compose da infra devem passar a copiar `backend/package.json` e
+  buildar o pacote `backend`, do mesmo jeito que já fazem para `frontend/`
+  (coordenar com quem está na infra — não foi ajustado nesta sessão).
 - Módulos de domínio (planos, indicadores, riscos, auth) seguem a convenção
-  de pastas descrita em `apps/api/src/modules/README.md`.
+  de pastas descrita em `backend/src/modules/README.md`.
+- Numeração de ADR: esta e a ADR de modelo de dados foram renumeradas para
+  0003/0004 para não colidir com as ADRs 0001/0002 já usadas pela infra.

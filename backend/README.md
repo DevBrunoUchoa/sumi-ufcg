@@ -1,20 +1,20 @@
-# @sumi-ufcg/api
+# backend
 
 Backend do SUMI-UFCG (Express + TypeScript), acessando o Postgres do
 Supabase via `@supabase/supabase-js`. Decisões e alternativas consideradas em
-[`docs/adr/0001-stack-backend.md`](../../docs/adr/0001-stack-backend.md).
+[`docs/adr/0003-stack-backend.md`](../docs/adr/0003-stack-backend.md).
 
 ## Uso
 
 ```bash
 cp .env.example .env   # preencher SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY
-pnpm --filter @sumi-ufcg/api dev
+pnpm --filter backend dev
 ```
 
-- `pnpm --filter @sumi-ufcg/api dev` — desenvolvimento com reload automático
-- `pnpm --filter @sumi-ufcg/api typecheck` — checagem de tipos
-- `pnpm --filter @sumi-ufcg/api build` / `start` — build de produção e execução
-- `pnpm --filter @sumi-ufcg/api test` — testes (vitest)
+- `pnpm --filter backend dev` — desenvolvimento com reload automático
+- `pnpm --filter backend typecheck` — checagem de tipos
+- `pnpm --filter backend build` / `start` — build de produção e execução
+- `pnpm --filter backend test` — testes (vitest)
 
 ## Estrutura
 
@@ -30,5 +30,5 @@ src/
 ```
 
 As migrations SQL do banco (tabelas usadas por este backend) ficam em
-[`supabase/migrations`](../../supabase/migrations), na raiz do repositório —
-ver [`supabase/README.md`](../../supabase/README.md) para como aplicá-las.
+[`supabase/migrations`](../supabase/migrations), na raiz do repositório —
+ver [`supabase/README.md`](../supabase/README.md) para como aplicá-las.

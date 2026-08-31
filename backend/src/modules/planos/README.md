@@ -1,7 +1,7 @@
 # Módulo `planos` — motor de tipo_plano / nó_plano
 
 Implementado na Sprint 1–2. Decisões de modelo em
-[`docs/adr/0002-modelo-tipo-plano-no-plano.md`](../../../../../docs/adr/0002-modelo-tipo-plano-no-plano.md).
+[`docs/adr/0004-modelo-tipo-plano-no-plano.md`](../../../../docs/adr/0004-modelo-tipo-plano-no-plano.md).
 
 ```
 planos.types.ts        # TipoPlano, NoPlano, CampoDef, NivelDef

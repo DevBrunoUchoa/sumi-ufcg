@@ -2,6 +2,14 @@
   "name": "sumi-ufcg",
   "version": "0.0.0",
   "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter backend start",
+    "lint": "pnpm --filter frontend lint",
+    "typecheck": "pnpm --filter backend typecheck",
+    "test": "pnpm --filter backend test"
+  },
   "engines": {
     "node": ">=24 <25",
     "pnpm": ">=11 <12"

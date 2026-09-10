@@ -27,7 +27,7 @@ planos.service.test.ts  # testes unitários com repositórios fake (sem Supabase
 - `mover` só troca de pai dentro do **mesmo nível** (não recalcula `nivel`
   de subárvores movidas para outra profundidade).
 - Sem exclusão em cascata (nó com filhos precisa ser esvaziado antes).
-- Sem autenticação/autorização — rotas ainda abertas; entra quando o módulo
-  `auth` (Dev C, infra) estiver pronto.
-- Módulos `indicadores`, `riscos` e `auth` ainda não implementados (ver
-  README.md do diretório pai).
+- Sem autenticação/autorização — rotas ainda abertas; o contrato de sessão e
+  permissões está definido em `auth`, mas o middleware ainda não foi ligado.
+- Módulos `indicadores` e `riscos` ainda não implementados (ver README.md do
+  diretório pai).

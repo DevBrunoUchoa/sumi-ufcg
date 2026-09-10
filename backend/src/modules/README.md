@@ -24,9 +24,8 @@ O router de cada módulo é montado em `app.ts`.
   (linha de base, metas por ano, execução %), vinculados a um nó_plano.
 - **riscos** — previsto para a Sprint 4 — modelo ForRisco: `risco`,
   `avaliação_risco` (P×I), `controle`, `resposta_risco`, `revisão_risco`.
-- **auth** — responsabilidade da infra (Dev C), Sprint 2 — `usuário` /
-  `papel` / `setor`, autenticação e escopo de permissão (RBAC) sobre os
-  módulos acima.
+- **auth** — contrato v1 de sessão, permissões e escopos concluído; autenticação,
+  persistência e middleware ainda não implementados. Ver `auth/README.md`.
 
 Ver `docs/contexto-projeto.md` (Claude Project) para o detalhamento do
 modelo de dados e o vocabulário herdado do ForRisco/ForPDI.

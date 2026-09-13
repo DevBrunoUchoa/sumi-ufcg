@@ -9,21 +9,30 @@ import { logger } from "./lib/logger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler.js";
 import { healthRouter } from "./routes/health.route.js";
 import { planosRouter } from "./modules/planos/planos.routes.js";
+import { authRouter } from "./modules/auth/auth.routes.js";
+import { sessionMiddleware } from "./modules/auth/auth.middleware.js";
+import { planningRouter } from "./modules/planning/planning.routes.js";
 
 export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
   app.use(helmet());
-  app.use(cors());
+  app.use(cors({ origin: true, credentials: true }));
   app.use(express.json());
   app.use(pinoHttp({ logger }));
 
   app.use(healthRouter);
 
+  // sessionMiddleware resolve req.sumiSession (cookie -> usuário -> concessões,
+  // ou "consulta pública" quando não há cookie válido) para todas as rotas.
+  app.use(sessionMiddleware);
+
   // Rotas de domínio entram aqui conforme forem implementadas em src/modules/*.
+  app.use(authRouter);
+  app.use(planningRouter);
   app.use(planosRouter);
-  // app.use(indicadoresRouter); app.use(riscosRouter); app.use(authRouter);
+  // app.use(indicadoresRouter); app.use(riscosRouter);
 
   // Em produção (imagem Docker), o build do frontend fica em <raiz>/dist/frontend
   // (ver Dockerfile e docs/architecture.md — unidade única de implantação).

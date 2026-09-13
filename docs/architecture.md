@@ -18,6 +18,14 @@ A persistência utiliza PostgreSQL por meio do Supabase. O banco armazena dados 
 
 O acesso administrativo ao Supabase permanece no servidor. A chave de serviço não é exposta no frontend. Backups, retenção e rotação dos registros seguem políticas explícitas para cada ambiente.
 
+## Autenticação e sessão
+
+A sessão é um cookie httpOnly opaco (não JWT), validado a cada requisição contra a tabela `sessao`. Não existe papel global de "Gestor do Eixo" ou "Responsável pelo Eixo" no banco — essas concessões são derivadas da presença do usuário em `managerIds`/`reviewerIds` de cada eixo do plano. Ver `backend/src/modules/auth` e `docs/adr/0005-integracao-workspace-real.md`.
+
+## Workspace do frontend
+
+O frontend aprovado consome um único endpoint agregado (`GET/PUT /api/v1/planning/workspace`, módulo `backend/src/modules/planning`), que monta a árvore plano → eixo → objetivo → item a partir do motor genérico de `tipo_plano`/`no_plano` (módulo `planos`) somada a indicador, resultados, ações, etapas, riscos e histórico de cada item, guardados em tabelas próprias. A autorização de cada gravação é feita por item, comparando o estado antigo e o novo e exigindo a permissão correspondente à mudança (ver a ADR 0005 para os detalhes e as simplificações conhecidas).
+
 ## Build e implantação
 
 O workspace utiliza Node.js 24 e pnpm 11, com um único lockfile. Os comandos da raiz coordenam desenvolvimento, lint e build dos módulos. O build da interface é reunido em `dist/frontend` (empacotado como estático). O build do servidor fica em `backend/dist`, ao lado do seu `node_modules`, já que o processo Node.js precisa resolver os pacotes do backend em tempo de execução — diferente do bundle da interface, que é autocontido.

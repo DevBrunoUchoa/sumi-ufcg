@@ -1,0 +1,4 @@
+# Proxy same-origin para o backend real no Render — evita cookies cross-site
+# (SameSite=Lax não seria enviado se o navegador falasse direto com
+# sumi-ufcg-backend.onrender.com a partir de outro domínio).
+/api/*  https://sumi-ufcg-backend.onrender.com/api/:splat  200

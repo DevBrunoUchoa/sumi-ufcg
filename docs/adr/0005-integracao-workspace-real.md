@@ -150,11 +150,26 @@ esse mesmo acesso no eixo do item.
   foi atualizado para refletir isso.
 - Autenticação não usa nenhuma biblioteca nova (scrypt do `node:crypto`,
   cookie manual) — mantém a superfície de dependências do backend igual.
-- Conteúdo institucional real (iniciativas/ações/riscos do Eixo 8 do PDI,
-  histórico) **não foi portado para o seed** — `backend/scripts/seed.ts`
-  cria só os modelos (PDI/PLS), os dois planos e a estrutura real de eixos/
-  objetivos. Migrar o conteúdo de exemplo do protótipo (que usa ids curtos
-  como `"pdi-axis-8"`, incompatíveis com as colunas `uuid` do banco) é uma
-  decisão de carga de dados, não uma decisão de arquitetura — fica para o
-  time de produto decidir a fonte de verdade (a mesma planilha da SEPLAN
-  citada na ADR 0002).
+- Conteúdo institucional real do Eixo 8 do PDI (3 objetivos, 7 iniciativas,
+  13 ações, 65 etapas e 65 riscos) foi extraído da planilha oficial
+  "Monitoramento Eixo 8 — SEPLAN.xlsx" para
+  `backend/scripts/data/eixo8-monitoramento-pdi.json` e é importado por
+  `pnpm --filter backend importar-eixo8` (depois do `seed`) — ver
+  `backend/scripts/importar-eixo8.ts`. Isso substitui os dados de exemplo
+  do protótipo (que usa ids curtos como `"pdi-axis-8"`, incompatíveis com
+  as colunas `uuid` do banco) pelo conteúdo real, sem inventar nada: cada
+  campo do modelo (indicador, metas, ações, etapas, riscos) tem
+  correspondência direta com uma coluna da planilha. Duas simplificações
+  conhecidas na importação:
+  - a planilha não tem prazo (`deadline`) por ação/etapa — os campos ficam
+    vazios em vez de uma data fabricada;
+  - a planilha tem mais colunas de risco do que o modelo atual suporta
+    (custo previsto, datas reais de início/conclusão, lições aprendidas,
+    ações corretivas, próxima revisão) — não incorporadas por exigirem
+    estender `risco` e a tela de riscos do frontend aprovado, fora do
+    escopo desta integração.
+- O Plano de Negócio do SUMI (fornecido pela equipe) confirma o modelo de
+  papéis/permissões já implementado (Administrador Estratégico, Gestor do
+  Eixo, Responsável pelo Eixo) e a lógica de encadeamento
+  eixo→objetivo→iniciativa→indicador→meta→ação→etapa→risco — nenhuma
+  mudança de arquitetura foi necessária a partir dele.

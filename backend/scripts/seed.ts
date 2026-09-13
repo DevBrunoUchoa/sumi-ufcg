@@ -58,7 +58,6 @@ async function upsertUsuario(usuario: UsuarioSeed): Promise<string> {
 }
 
 async function upsertTipoPlano(input: {
-  id: string;
   nome: string;
   descricao: string;
   tipo: string;
@@ -66,14 +65,16 @@ async function upsertTipoPlano(input: {
   rotulos: { axis: string; objective: string; item: string };
   periodicidadePadrao: "annual" | "final";
 }): Promise<string> {
-  const { data: existente, error: erroBusca } = await supabase.from("tipo_plano").select("id").eq("id", input.id).maybeSingle();
+  // Idempotente por `tipo` (PDI/PLS), não por id: o script gera um id novo a
+  // cada chamada, então checar por id nunca encontraria nada já existente.
+  const { data: existente, error: erroBusca } = await supabase.from("tipo_plano").select("id").eq("tipo", input.tipo).maybeSingle();
   if (erroBusca) throw erroBusca;
   if (existente) return (existente as { id: string }).id;
 
   const { data, error } = await supabase
     .from("tipo_plano")
     .insert({
-      id: input.id,
+      id: randomUUID(),
       nome: input.nome,
       descricao: input.descricao,
       esquema_niveis: [
@@ -94,21 +95,37 @@ async function upsertTipoPlano(input: {
   return (data as { id: string }).id;
 }
 
+/**
+ * Idempotente por chave natural (não por id: o script gera um id novo a cada
+ * chamada, então checar por id nunca encontraria nada já existente). Para a
+ * raiz de um plano (nivel=-1, sem irmãos possíveis dentro do tipo_plano) a
+ * chave é `dados.shortName`; para eixo/objetivo/item, `dados.code` dentro do
+ * mesmo `noPaiId`.
+ */
 async function upsertNoPlano(input: {
-  id: string;
   tipoPlanoId: string;
   noPaiId: string | null;
   nivel: number;
   ordem: number;
   dados: Record<string, unknown>;
+  chaveNatural: "shortName" | "code";
 }): Promise<string> {
-  const { data: existente, error: erroBusca } = await supabase.from("no_plano").select("id").eq("id", input.id).maybeSingle();
+  let query = supabase.from("no_plano").select("id, dados").eq("tipo_plano_id", input.tipoPlanoId).eq("nivel", input.nivel);
+  query = input.noPaiId === null ? query.is("no_pai_id", null) : query.eq("no_pai_id", input.noPaiId);
+  const { data: candidatos, error: erroBusca } = await query;
   if (erroBusca) throw erroBusca;
-  if (existente) return (existente as { id: string }).id;
+  const existente = (candidatos as { id: string; dados: Record<string, unknown> }[]).find(
+    (row) => row.dados[input.chaveNatural] === input.dados[input.chaveNatural],
+  );
+  if (existente) {
+    const { error: erroUpdate } = await supabase.from("no_plano").update({ dados: input.dados, ordem: input.ordem }).eq("id", existente.id);
+    if (erroUpdate) throw erroUpdate;
+    return existente.id;
+  }
 
   const { data, error } = await supabase
     .from("no_plano")
-    .insert({ id: input.id, tipo_plano_id: input.tipoPlanoId, no_pai_id: input.noPaiId, nivel: input.nivel, ordem: input.ordem, dados: input.dados })
+    .insert({ id: randomUUID(), tipo_plano_id: input.tipoPlanoId, no_pai_id: input.noPaiId, nivel: input.nivel, ordem: input.ordem, dados: input.dados })
     .select("id")
     .single();
   if (error) throw error;
@@ -132,7 +149,6 @@ async function main() {
   if (responsavel) console.log(`Usuário responsável pronto: ${responsavel.email}`);
 
   const pdiTipoId = await upsertTipoPlano({
-    id: randomUUID(),
     nome: "Desenvolvimento institucional",
     descricao: "Objetivos, iniciativas, indicadores, metas anuais, ações e etapas.",
     tipo: "PDI",
@@ -141,7 +157,6 @@ async function main() {
     periodicidadePadrao: "annual",
   });
   const plsTipoId = await upsertTipoPlano({
-    id: randomUUID(),
     nome: "Logística sustentável",
     descricao: "Objetivos, metas, indicadores, ações e entregas de sustentabilidade.",
     tipo: "PLS",
@@ -152,15 +167,17 @@ async function main() {
   console.log("Modelos PDI/PLS prontos.");
 
   const pdiId = await upsertNoPlano({
-    id: randomUUID(),
     tipoPlanoId: pdiTipoId,
     noPaiId: null,
     nivel: -1,
     ordem: 0,
     dados: { shortName: "PDI", name: "Plano de Desenvolvimento Institucional", start: 2026, end: 2030, status: "published" },
+    chaveNatural: "shortName",
   });
-  const pdiEixo8Id = await upsertNoPlano({
-    id: randomUUID(),
+  // Eixo 8: nome/objetivos reais vêm de `pnpm --filter backend importar-eixo8`
+  // (planilha da SEPLAN) — aqui só garantimos que o eixo exista, para que o
+  // import tenha onde colocar os objetivos e itens.
+  await upsertNoPlano({
     tipoPlanoId: pdiTipoId,
     noPaiId: pdiId,
     nivel: 0,
@@ -173,32 +190,17 @@ async function main() {
       managerIds: gestorId ? [gestorId] : [],
       reviewerIds: responsavelId ? [responsavelId] : [],
     },
-  });
-  await upsertNoPlano({
-    id: randomUUID(),
-    tipoPlanoId: pdiTipoId,
-    noPaiId: pdiEixo8Id,
-    nivel: 1,
-    ordem: 0,
-    dados: { code: "8.1", title: "Aperfeiçoar Práticas de Governança Pública" },
-  });
-  await upsertNoPlano({
-    id: randomUUID(),
-    tipoPlanoId: pdiTipoId,
-    noPaiId: pdiEixo8Id,
-    nivel: 1,
-    ordem: 1,
-    dados: { code: "8.2", title: "Aperfeiçoar Práticas de Gestão Institucional" },
+    chaveNatural: "code",
   });
   console.log("PDI 2026-2030 (Eixo 8) pronto.");
 
   const plsId = await upsertNoPlano({
-    id: randomUUID(),
     tipoPlanoId: plsTipoId,
     noPaiId: null,
     nivel: -1,
     ordem: 0,
     dados: { shortName: "PLS", name: "Plano Diretor de Logística Sustentável", start: 2025, end: 2030, status: "published" },
+    chaveNatural: "shortName",
   });
   const plsEixos: [string, string, string, string][] = [
     ["1", "Promoção da racionalização e do consumo consciente de bens e serviços", "#4c8c68", "SEPLAN"],
@@ -207,12 +209,12 @@ async function main() {
   ];
   for (const [index, [code, name, color, ownerUnit]] of plsEixos.entries()) {
     await upsertNoPlano({
-      id: randomUUID(),
       tipoPlanoId: plsTipoId,
       noPaiId: plsId,
       nivel: 0,
       ordem: index,
       dados: { code, name, color, ownerUnit, managerIds: [], reviewerIds: responsavelId ? [responsavelId] : [] },
+      chaveNatural: "code",
     });
   }
   console.log("PLS 2025-2030 pronto.");

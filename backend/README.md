@@ -15,6 +15,12 @@ pnpm --filter backend dev
 - `pnpm --filter backend typecheck` — checagem de tipos
 - `pnpm --filter backend build` / `start` — build de produção e execução
 - `pnpm --filter backend test` — testes (vitest)
+- `pnpm --filter backend seed` — cria os modelos PDI/PLS, os dois planos e o
+  usuário administrador (variáveis `SEED_*`, ver `.env.example`)
+- `pnpm --filter backend importar-eixo8` — importa o conteúdo real do Eixo 8
+  do PDI (`scripts/data/eixo8-monitoramento-pdi.json`, extraído da planilha
+  "Monitoramento Eixo 8 — SEPLAN.xlsx") para dentro do plano PDI já criado
+  pelo `seed`; idempotente, pode rodar de novo para atualizar
 
 ## Estrutura
 

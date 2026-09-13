@@ -1,21 +1,8 @@
-export type TipoEscopo = "global" | "plan" | "axis" | "item";
+import type { PermissionGrant, PermissionScope, SessionRole } from "./auth.contract.js";
 
-export interface Escopo {
-  type: TipoEscopo;
-  planId?: string;
-  axisId?: string;
-  itemId?: string;
-}
-
-export interface Concessao {
-  permission: string;
-  scope: Escopo;
-}
-
-export interface Papel {
-  code: string;
-  name: string;
-}
+export type Escopo = PermissionScope;
+export type Concessao = PermissionGrant;
+export type Papel = SessionRole;
 
 export interface SessaoUsuario {
   authenticated: boolean;

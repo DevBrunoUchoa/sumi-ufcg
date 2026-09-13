@@ -1,8 +1,10 @@
+import { PERMISSION_CODES } from "./auth.contract.js";
+
 /**
- * Espelha exatamente src/auth/permissions.js e dev/session-fixtures.js do
- * frontend aprovado (sumi-prototipo) — não são um novo modelo de permissões,
- * são a mesma lista de strings e a mesma composição de concessões por
- * perfil que já estava demonstrada nas sessões de desenvolvimento.
+ * Composição de concessões por perfil — mesma que dev/session-fixtures.js do
+ * frontend aprovado (sumi-prototipo) demonstrava. O vocabulário de códigos
+ * em si (o que cada string significa e quais existem) é o contrato definido
+ * em auth.contract.ts (PR #6), não redefinido aqui.
  */
 
 export const PERMISSOES = Object.freeze({
@@ -25,7 +27,8 @@ export const PERMISSOES = Object.freeze({
   VIEW_REVIEW_QUEUE: "review_queue.read",
 } as const);
 
-export const TODAS_PERMISSOES_ADMIN = Object.freeze(Object.values(PERMISSOES));
+/** O administrador recebe, em escopo global, todo o vocabulário do contrato. */
+export const TODAS_PERMISSOES_ADMIN = PERMISSION_CODES;
 
 /** Concedidas por eixo a quem está em `managerIds` (Gestor do Eixo). */
 export const PERMISSOES_GESTOR_EIXO = Object.freeze([

@@ -1,5 +1,6 @@
 import { gerarHashSenha, verificarSenha } from "../../lib/password.js";
 import { HttpError } from "../../lib/http-error.js";
+import { authenticatedSessionSchema } from "./auth.contract.js";
 import { PERMISSOES, PERMISSOES_GESTOR_EIXO, PERMISSOES_RESPONSAVEL_EIXO, TODAS_PERMISSOES_ADMIN } from "./auth.permissions.js";
 import { eixoRepository, sessaoRepository, usuarioRepository } from "./auth.repository.js";
 import type { Concessao, EixoParaConcessoes, Papel, SessaoUsuario, Usuario } from "./auth.types.js";
@@ -15,6 +16,10 @@ function idsDaLista(valor: unknown): string[] {
  * Monta a sessão (papéis + concessões) exatamente como dev/session-fixtures.js
  * fazia no protótipo — só que a partir de dados reais: papel_admin do
  * usuário e a presença do seu id em managerIds/reviewerIds de cada eixo.
+ *
+ * O corpo de uma sessão autenticada é validado contra
+ * `authenticatedSessionSchema` (contrato da PR #6, `auth.contract.ts`) antes
+ * de ser devolvido — ver `autenticar`/`carregarSessaoPorToken` abaixo.
  */
 export function montarSessao(usuario: Usuario | null, eixos: EixoParaConcessoes[]): SessaoUsuario {
   const concessoes: Concessao[] = [{ permission: PERMISSOES.VIEW_PUBLISHED_PLAN, scope: { type: "global" } }];
@@ -72,7 +77,9 @@ export const authService = {
     }
     const token = await sessaoRepository.criar({ usuarioId: usuario.id, expiraEm: new Date(Date.now() + DURACAO_SESSAO_MS) });
     const eixos = await eixoRepository.listarTodos();
-    return { sessao: montarSessao(usuario, eixos), token };
+    const sessao = montarSessao(usuario, eixos);
+    authenticatedSessionSchema.parse(sessao);
+    return { sessao, token };
   },
 
   async encerrar(token: string | null): Promise<void> {
@@ -86,7 +93,9 @@ export const authService = {
     const usuario = await usuarioRepository.buscarPorId(usuarioId);
     if (!usuario) return null;
     const eixos = await eixoRepository.listarTodos();
-    return montarSessao(usuario, eixos);
+    const sessao = montarSessao(usuario, eixos);
+    authenticatedSessionSchema.parse(sessao);
+    return sessao;
   },
 
   /** Usado pelo seed e por uma futura administração de usuários. */

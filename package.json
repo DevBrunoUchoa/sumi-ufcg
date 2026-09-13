@@ -8,7 +8,7 @@
     "start": "pnpm --filter backend start",
     "lint": "pnpm --filter frontend lint",
     "typecheck": "pnpm --filter backend typecheck",
-    "test": "pnpm --filter backend test"
+    "test": "pnpm --filter backend test && pnpm --filter frontend test"
   },
   "engines": {
     "node": ">=24 <25",

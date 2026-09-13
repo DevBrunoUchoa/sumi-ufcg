@@ -1,0 +1,14 @@
+# SUMI — Sistema Unificado de Monitoramento Institucional da UFCG
+#
+# A aplicação é uma SPA com navegação por fragmento de URL (#/rota) — a
+# maior parte do conteúdo não é indexável como páginas separadas. Só a
+# consulta pública (planos publicados) faz sentido ser indexada; conteúdo
+# interno (pendências, validações, modelos) exige sessão autenticada e não
+# deve ser rastreado.
+User-agent: *
+Allow: /$
+Disallow: /__dev/
+Disallow: /api/
+
+# Substitua pelo domínio real de produção ao publicar (ver frontend/README.md).
+Sitemap: https://sumi.ufcg.edu.br/sitemap.xml

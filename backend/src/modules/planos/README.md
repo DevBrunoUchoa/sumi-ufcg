@@ -27,7 +27,12 @@ planos.service.test.ts  # testes unitários com repositórios fake (sem Supabase
 - `mover` só troca de pai dentro do **mesmo nível** (não recalcula `nivel`
   de subárvores movidas para outra profundidade).
 - Sem exclusão em cascata (nó com filhos precisa ser esvaziado antes).
-- Sem autenticação/autorização — rotas ainda abertas; entra quando o módulo
-  `auth` (Dev C, infra) estiver pronto.
-- Módulos `indicadores`, `riscos` e `auth` ainda não implementados (ver
-  README.md do diretório pai).
+- Sem autenticação/autorização própria — rotas `/tipos-plano` e
+  `/nos-plano` continuam abertas mesmo com o módulo `auth` já implementado
+  (ver README.md do diretório pai): o frontend aprovado fala com
+  `/api/v1/planning/workspace` (módulo `planning`, que aplica autorização),
+  não com este CRUD genérico. Se este CRUD vier a ser exposto diretamente
+  (ex.: uma futura tela de administração de modelos), aplicar
+  `sessionMiddleware`/`pode(...)` aqui também.
+- indicadores/riscos acabaram implementados como parte do módulo
+  `planning`, não como módulos próprios — ver README.md do diretório pai.

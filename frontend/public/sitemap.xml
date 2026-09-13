@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SUMI é uma SPA com navegação por fragmento (#/rota): fragmentos não são
+  URLs distintas para os buscadores, então este sitemap lista apenas a
+  origem (única página real servida). Substitua o domínio ao publicar
+  (ver frontend/README.md).
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://sumi.ufcg.edu.br/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

@@ -6,8 +6,32 @@ import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, 
 import { SessionProvider, useSession } from './auth/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
 import { LoginPage } from './auth/Login.jsx';
+import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, UnauthorizedPage } from './error-pages.jsx';
 import { createPlanningClient } from './planning-client.js';
 import './styles.css';
+
+const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/login'];
+const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
+
+const PAGE_DESCRIPTIONS = {
+  '/inicio': 'Visão geral dos planejamentos institucionais da UFCG: planos publicados, pendências e validações.',
+  '/planejamentos': 'Planos institucionais da UFCG (PDI, PLS e outros) com estrutura, execução e indicadores.',
+  '/pendencias': 'Itens sob sua responsabilidade de atualização nos planejamentos institucionais da UFCG.',
+  '/validacoes': 'Fila de informações enviadas para validação nos planejamentos institucionais da UFCG.',
+  '/modelos': 'Modelos de plano institucional configuráveis pela SEPLAN — estrutura e campos adicionais.',
+  '/login': 'Acesso à sessão institucional do SUMI, o Sistema Unificado de Monitoramento Institucional da UFCG.',
+};
+const DEFAULT_DESCRIPTION = 'SUMI — Sistema Unificado de Monitoramento Institucional da UFCG.';
+
+function setMetaDescription(text) {
+  let tag = document.querySelector('meta[name="description"]');
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute('name', 'description');
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', text);
+}
 
 const authApiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 async function logout() {
@@ -38,8 +62,8 @@ function AppGate() {
   };
   useEffect(load, []);
   if (auth.status === 'loading' || workspace.status === 'loading') return <main className="session-state" aria-busy="true"><p>Carregando…</p></main>;
-  if (auth.status === 'error') return <main className="session-state"><Empty title="Não foi possível iniciar o SUMI" action={<Button variant="primary" onClick={auth.reload}>Tentar novamente</Button>}>Sua sessão não pôde ser carregada.</Empty></main>;
-  if (workspace.status === 'error') return <main className="session-state"><Empty title="Não foi possível carregar os planejamentos" action={<Button variant="primary" onClick={load}>Tentar novamente</Button>}>{workspace.error?.message}</Empty></main>;
+  if (auth.status === 'error') return <main className="session-state">{isOfflineError(auth.error) ? <OfflinePage onRetry={auth.reload} /> : <ServerErrorPage onRetry={auth.reload} />}</main>;
+  if (workspace.status === 'error') return <main className="session-state">{isOfflineError(workspace.error) ? <OfflinePage onRetry={load} /> : <ServerErrorPage onRetry={load} />}</main>;
   return <App auth={auth} initialData={workspace.data} />;
 }
 
@@ -64,7 +88,11 @@ function App({ auth, initialData }) {
   const plan = visiblePlans.find((candidate) => candidate.id === planId);
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
   const roles = session.roles?.map((role) => role.name).join(' · ') || 'Consulta pública';
-  useEffect(() => { const label = plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos' })[route.path] || 'SUMI'; document.title = `SUMI · ${label}`; }, [plan?.shortName, route.path]);
+  useEffect(() => {
+    const label = plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/login': 'Entrar' })[route.path] || 'SUMI';
+    document.title = `SUMI · ${label}`;
+    setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
+  }, [plan?.shortName, plan?.name, route.path]);
 
   function saveItem(nextItem, id) {
     update((draft) => { const currentPlan = draft.plans.find((candidate) => candidate.id === id); const index = currentPlan.items.findIndex((item) => item.id === nextItem.id); if (index < 0) currentPlan.items.push(nextItem); else currentPlan.items[index] = { ...nextItem, reviewStatus: ['submitted', 'validated'].includes(currentPlan.items[index].reviewStatus) ? 'draft' : nextItem.reviewStatus }; }, 'Informações salvas.');
@@ -101,7 +129,13 @@ function App({ auth, initialData }) {
               : route.path === '/validacoes' && can(PERMISSIONS.VIEW_REVIEW_QUEUE) ? <ReviewQueue plans={visiblePlans} can={can} />
                 : route.path === '/modelos' && can(PERMISSIONS.MANAGE_MODEL) ? <Models templates={data.templates} onEdit={(template) => setModal({ type: 'template', template })} onUse={(template) => setModal({ type: 'plan', templateId: template.id })} />
                   : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} route={route} onModal={setModal} changeItem={changeItem} />
-                    : <Empty title="Página não encontrada" action={<Button onClick={() => navigate('/inicio')}>Voltar ao início</Button>}>O conteúdo solicitado não está disponível para sua sessão.</Empty>}
+                    // /plano/:id sem correspondência não distingue "não existe" de "existe mas sem acesso" —
+                    // o backend já nem devolve planos sem acesso, então tratar como 404 evita confirmar a
+                    // existência de um plano para quem não pode vê-lo. Itens de navegação conhecidos
+                    // (pendências/validações/modelos) têm a existência pública; só o acesso é negado, daí 401/403.
+                    : KNOWN_TOP_LEVEL_PATHS.includes(route.path)
+                      ? (session.authenticated ? <ForbiddenPage onGoHome={() => navigate('/inicio')} /> : <UnauthorizedPage onLogin={() => navigate('/login')} />)
+                      : <NotFoundPage onGoHome={() => navigate('/inicio')} />}
       </main>
     </div>
     {toast && <div role="status" className="toast"><Icon name="check" size={17} />{toast}</div>}

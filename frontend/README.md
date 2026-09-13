@@ -49,6 +49,18 @@ Variáveis disponíveis (ver `.env.example`):
 - `VITE_PLANNING_WORKSPACE_PATH`: caminho do endpoint agregado de planejamento;
 - `VITE_DATA_SOURCE`: `local` para dados de desenvolvimento ou `http` para a API.
 
+## Erros e SEO
+
+- Rotas inexistentes, sem permissão, sem sessão, falha do servidor e falha
+  de conexão têm páginas próprias (`src/error-pages.jsx`), reaproveitando o
+  sistema visual existente — não abrem um novo estilo.
+- `public/robots.txt` e `public/sitemap.xml` usam `https://sumi.ufcg.edu.br/`
+  como placeholder do domínio de produção — **substitua pelo domínio real
+  ao publicar**. Como a navegação é por fragmento (`#/rota`), o sitemap
+  lista só a origem: fragmentos não são URLs distintas para buscadores.
+- `<meta name="description">` é atualizada por rota (`src/main.jsx`,
+  `PAGE_DESCRIPTIONS`), junto com `document.title`.
+
 ## Verificação
 
 ```sh

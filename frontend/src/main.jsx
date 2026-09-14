@@ -7,10 +7,12 @@ import { SessionProvider, useSession } from './auth/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
 import { LoginPage } from './auth/Login.jsx';
 import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, UnauthorizedPage } from './error-pages.jsx';
+import { Attachments } from './attachments.jsx';
+import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
 import './styles.css';
 
-const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/login'];
+const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login'];
 const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
 
 const PAGE_DESCRIPTIONS = {
@@ -19,6 +21,7 @@ const PAGE_DESCRIPTIONS = {
   '/pendencias': 'Itens sob sua responsabilidade de atualização nos planejamentos institucionais da UFCG.',
   '/validacoes': 'Fila de informações enviadas para validação nos planejamentos institucionais da UFCG.',
   '/modelos': 'Modelos de plano institucional configuráveis pela SEPLAN — estrutura e campos adicionais.',
+  '/usuarios': 'Gerenciamento de usuários e permissões do SUMI, o Sistema Unificado de Monitoramento Institucional da UFCG.',
   '/login': 'Acesso à sessão institucional do SUMI, o Sistema Unificado de Monitoramento Institucional da UFCG.',
 };
 const DEFAULT_DESCRIPTION = 'SUMI — Sistema Unificado de Monitoramento Institucional da UFCG.';
@@ -89,7 +92,7 @@ function App({ auth, initialData }) {
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
   const roles = session.roles?.map((role) => role.name).join(' · ') || 'Consulta pública';
   useEffect(() => {
-    const label = plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/login': 'Entrar' })[route.path] || 'SUMI';
+    const label = plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar' })[route.path] || 'SUMI';
     document.title = `SUMI · ${label}`;
     setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
   }, [plan?.shortName, plan?.name, route.path]);
@@ -115,6 +118,7 @@ function App({ auth, initialData }) {
         {can(PERMISSIONS.VIEW_WORK_QUEUE) && navigationLink('/pendencias', 'list', 'Minhas pendências')}
         {can(PERMISSIONS.VIEW_REVIEW_QUEUE) && navigationLink('/validacoes', 'check', 'Validações')}
         {can(PERMISSIONS.MANAGE_MODEL) && navigationLink('/modelos', 'layers', 'Modelos de plano')}
+        {can(PERMISSIONS.MANAGE_MODEL) && navigationLink('/usuarios', 'user', 'Usuários')}
       </nav>
       <div className="sidebar-bottom"><div className="institution">Universidade Federal<br />de Campina Grande</div></div>
     </aside>
@@ -128,7 +132,8 @@ function App({ auth, initialData }) {
             : route.path === '/pendencias' && can(PERMISSIONS.VIEW_WORK_QUEUE) ? <WorkQueue plans={visiblePlans} can={can} />
               : route.path === '/validacoes' && can(PERMISSIONS.VIEW_REVIEW_QUEUE) ? <ReviewQueue plans={visiblePlans} can={can} />
                 : route.path === '/modelos' && can(PERMISSIONS.MANAGE_MODEL) ? <Models templates={data.templates} onEdit={(template) => setModal({ type: 'template', template })} onUse={(template) => setModal({ type: 'plan', templateId: template.id })} />
-                  : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} route={route} onModal={setModal} changeItem={changeItem} />
+                  : route.path === '/usuarios' && can(PERMISSIONS.MANAGE_MODEL) ? <UsersAdmin currentUserId={session.user?.id} />
+                    : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} route={route} onModal={setModal} changeItem={changeItem} />
                     // /plano/:id sem correspondência não distingue "não existe" de "existe mas sem acesso" —
                     // o backend já nem devolve planos sem acesso, então tratar como 404 evita confirmar a
                     // existência de um plano para quem não pode vê-lo. Itens de navegação conhecidos
@@ -240,7 +245,7 @@ function ItemDetail({ plan, item, actor, can, tab, tabs, period, setPeriod, onMo
     </div><footer className="source-note"><Icon name="info" size={13} />{item.source}</footer></>;
 }
 
-function StageRow({ task, action, actor, canUpdate, onChange }) {
+function StageRow({ task, action, actor, canUpdate, onChange, itemId }) {
   const [justifying, setJustifying] = useState(false);
   const [justification, setJustification] = useState(task.justification || '');
   const [error, setError] = useState('');
@@ -256,6 +261,7 @@ function StageRow({ task, action, actor, canUpdate, onChange }) {
     </div>
     {justifying && canUpdate && <form className="justification-form" onSubmit={saveJustification}><label htmlFor={`justification-${task.id}`}>Justificativa da etapa</label><textarea id={`justification-${task.id}`} rows="2" maxLength={400} value={justification} onChange={(event) => setJustification(event.target.value)} placeholder="Informe a causa e, se possível, a nova previsão." />{error && <p role="alert" className="form-error">{error}</p>}<div><button type="submit" className="button primary">Salvar justificativa</button><button type="button" className="button" onClick={() => setJustifying(false)}>Cancelar</button></div></form>}
     {!justifying && task.justification && <p className="justification-text"><b>Justificativa:</b> {task.justification}</p>}
+    <Attachments itemId={itemId} etapaId={task.id} canManage={canUpdate} />
   </div>;
 }
 
@@ -298,7 +304,7 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
           </button>
           {!closed && <div className="action-body">
             {action.tasks.length > 0 && <div className="stage-columns" aria-hidden="true"><span>Etapa</span><span>Prazo</span><span>Situação</span></div>}
-            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} onChange={onChange} />)}
+            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} onChange={onChange} itemId={item.id} />)}
             {!action.tasks.length && <p className="hint px-5 pt-3">Esta ação ainda não possui etapas.</p>}
             {adding === action.id ? <form className="inline-task-form" onSubmit={(event) => submitTask(event, action.id)}>
               <input aria-label="Nome da etapa" autoFocus required maxLength={180} placeholder="Descreva a etapa…" value={taskName} onChange={(event) => setTaskName(event.target.value)} />
@@ -307,8 +313,8 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
               <Button type="submit" variant="primary">Adicionar</Button>
               <Button onClick={cancelStage}>Cancelar</Button>
               {error && <p role="alert" className="form-error">{error}</p>}
-            </form> : (canManageAction || canManageRisk) && <div className="action-tools">
-              {canManageAction && <button className="add-task" onClick={() => setAdding(action.id)}><Icon name="plus" size={14} />Adicionar etapa<span className="sr-only"> em {action.title}</span></button>}
+            </form> : (canManageAction || canUpdateStage || canManageRisk) && <div className="action-tools">
+              {(canManageAction || canUpdateStage) && <button className="add-task" onClick={() => setAdding(action.id)}><Icon name="plus" size={14} />Adicionar etapa<span className="sr-only"> em {action.title}</span></button>}
               {canManageRisk && <button className="add-risk" onClick={() => onAddRisk(action)}><Icon name="info" size={14} />Adicionar risco<span className="sr-only"> em {action.title}</span></button>}
             </div>}
           </div>}
@@ -365,7 +371,7 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
       })}</tbody>
     </table></div> : <IndicatorEvolution item={item} plan={plan} period={period} setPeriod={setPeriod} />}
     <div className="record-footer"><p>{latestMeasurement(item, period) ? `Último registro: ${formatDate(latestMeasurement(item, period).at)}` : item.metric.measurementMode === 'stages' ? 'Resultado atualizado automaticamente pelas etapas.' : 'Nenhum resultado registrado para o período.'}</p>{canRecord && <Button variant="primary" icon="plus" onClick={onRecord}>Registrar resultado</Button>}</div>
-    <div className="measurements"><h3>Registros do período</h3>{measurements.length ? measurements.map((entry) => <article className="measurement" key={entry.id}><div><strong>{metricValue(entry.value)}</strong><time>{formatDate(entry.at)}</time></div><p>{entry.note}</p>{entry.evidence && <a href={entry.evidence} target="_blank" rel="noreferrer">Abrir evidência <Icon name="arrow" size={13} /></a>}</article>) : <p className="hint">Nenhum registro manual para este período.</p>}</div>
+    <div className="measurements"><h3>Registros do período</h3>{measurements.length ? measurements.map((entry) => <article className="measurement" key={entry.id}><div><strong>{metricValue(entry.value)}</strong><time>{formatDate(entry.at)}</time></div><p>{entry.note}</p>{entry.evidence && <a href={entry.evidence} target="_blank" rel="noreferrer">Abrir evidência <Icon name="arrow" size={13} /></a>}<Attachments itemId={item.id} resultadoId={entry.id} canManage={canRecord} /></article>) : <p className="hint">Nenhum registro manual para este período.</p>}</div>
   </section>;
 }
 

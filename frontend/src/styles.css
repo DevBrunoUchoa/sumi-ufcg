@@ -569,9 +569,11 @@ main:focus { outline: none; }
 .attachment-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .attachment-remove { display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; color: #9e3636; flex-shrink: 0; }
 .attachment-remove:hover { background: #fff1ef; }
+.attachment-upload-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
 .attachment-upload { display: inline-flex; align-items: center; gap: 7px; color: #1b668d; font-size: 13px; cursor: pointer; padding: 4px 0; width: fit-content; }
 .attachment-upload:hover { text-decoration: underline; text-underline-offset: 3px; }
 .attachment-upload input[type="file"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.attachment-hint { color: #7a8894; font-size: 11px; }
 
 /* Tela de Usuários. */
 .checkbox-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #364550; padding: 4px 0 2px; }

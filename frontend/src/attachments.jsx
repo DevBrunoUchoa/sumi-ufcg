@@ -4,6 +4,7 @@ import { enviarAnexo, listarAnexos, obterUrlAnexo, removerAnexo } from './anexos
 
 const formatBytes = (bytes) => bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const ACCEPT = '.png,.jpg,.jpeg,.gif,.webp,.pdf,.xlsx,.xls,.txt,.csv';
+const TAMANHO_MAXIMO_MB = 15;
 
 // Documentos de execução/comprovação (imagem, PDF, xlsx, txt) anexados a
 // uma etapa ou a um resultado — Plano de Negócio, Módulo 3: "ações, etapas,
@@ -77,11 +78,14 @@ export function Attachments({ itemId, etapaId, resultadoId, canManage }) {
         </ul>
       )}
       {canManage && (
-        <label className="attachment-upload">
-          <Icon name="link" size={13} />
-          <span>{sending ? 'Enviando…' : 'Anexar arquivo'}</span>
-          <input type="file" accept={ACCEPT} onChange={handleUpload} disabled={sending} />
-        </label>
+        <div className="attachment-upload-row">
+          <label className="attachment-upload">
+            <Icon name="link" size={13} />
+            <span>{sending ? 'Enviando…' : 'Anexar arquivo'}</span>
+            <input type="file" accept={ACCEPT} onChange={handleUpload} disabled={sending} />
+          </label>
+          <small className="attachment-hint">Imagem, PDF, xlsx, xls, txt ou csv — máx. {TAMANHO_MAXIMO_MB}MB</small>
+        </div>
       )}
       {error && <p role="alert" className="form-error">{error}</p>}
     </div>

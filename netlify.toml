@@ -5,6 +5,11 @@
 
 [build.environment]
   VITE_DATA_SOURCE = "http"
+  # netlify.toml define base = "frontend", e o .nvmrc (node 24) fica na raiz
+  # do repo — fora do alcance da detecção automática de versão do Netlify a
+  # partir do base dir. Fixamos aqui para não depender de qual versão padrão
+  # o build remoto escolher (package.json tem engine-strict node>=24 <25).
+  NODE_VERSION = "24"
 
 # Mesma regra do frontend/public/_redirects — repetida aqui porque o
 # arquivo publicado (dist/frontend/_redirects) já cobre o deploy normal,

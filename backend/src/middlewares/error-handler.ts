@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { MulterError } from "multer";
 import { ZodError } from "zod";
 import { HttpError } from "../lib/http-error.js";
 import { logger } from "../lib/logger.js";
@@ -18,6 +19,11 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
 
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message, details: err.details });
+    return;
+  }
+
+  if (err instanceof MulterError) {
+    res.status(400).json({ error: `Falha no envio do arquivo: ${err.message}` });
     return;
   }
 

@@ -48,6 +48,37 @@ export const usuarioRepository = {
     tratarErro(error, "Falha ao buscar usuário");
     return data ? paraUsuario(data as UsuarioRow) : null;
   },
+
+  async listar(): Promise<Usuario[]> {
+    const { data, error } = await supabase.from("usuario").select("*").order("nome");
+    tratarErro(error, "Falha ao listar usuários");
+    return (data as UsuarioRow[]).map(paraUsuario);
+  },
+
+  async criar(input: { nome: string; email: string; senhaHash: string; papelAdmin: boolean }): Promise<Usuario> {
+    const { data, error } = await supabase
+      .from("usuario")
+      .insert({ nome: input.nome, email: input.email.trim().toLowerCase(), senha_hash: input.senhaHash, papel_admin: input.papelAdmin })
+      .select("*")
+      .single();
+    tratarErro(error, "Falha ao criar usuário");
+    return paraUsuario(data as UsuarioRow);
+  },
+
+  async atualizar(id: string, input: { nome?: string; papelAdmin?: boolean; senhaHash?: string }): Promise<Usuario | null> {
+    const dados: Record<string, unknown> = {};
+    if (input.nome !== undefined) dados.nome = input.nome;
+    if (input.papelAdmin !== undefined) dados.papel_admin = input.papelAdmin;
+    if (input.senhaHash !== undefined) dados.senha_hash = input.senhaHash;
+    const { data, error } = await supabase.from("usuario").update(dados).eq("id", id).select("*").maybeSingle();
+    tratarErro(error, "Falha ao atualizar usuário");
+    return data ? paraUsuario(data as UsuarioRow) : null;
+  },
+
+  async remover(id: string): Promise<void> {
+    const { error } = await supabase.from("usuario").delete().eq("id", id);
+    tratarErro(error, "Falha ao remover usuário");
+  },
 };
 
 export const sessaoRepository = {

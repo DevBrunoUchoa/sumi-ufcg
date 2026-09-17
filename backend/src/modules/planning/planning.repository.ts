@@ -60,6 +60,12 @@ export interface NoPlanoRow {
 }
 
 export const noPlanoRepo = {
+  async buscarPorId(id: string): Promise<NoPlanoRow | null> {
+    const { data, error } = await supabase.from("no_plano").select("*").eq("id", id).maybeSingle();
+    tratarErro(error, "Falha ao buscar nó do plano");
+    return data as NoPlanoRow | null;
+  },
+
   /** Todos os nós (raiz + eixos + objetivos + itens) de um tipo_plano — volume pequeno, uma consulta só. */
   async listarPorTipo(tipoPlanoId: string): Promise<NoPlanoRow[]> {
     const { data, error } = await supabase
@@ -218,5 +224,85 @@ export const historicoRepo = {
     if (!idsItem.length) return;
     const { error } = await supabase.from("historico").delete().in("no_plano_id", idsItem);
     tratarErro(error, "Falha ao remover histórico");
+  },
+};
+
+// ---- anexo ------------------------------------------------------------------
+
+export interface AnexoRow {
+  id: string;
+  no_plano_id: string;
+  etapa_id: string | null;
+  resultado_id: string | null;
+  nome_arquivo: string;
+  tipo_mime: string;
+  tamanho_bytes: number;
+  caminho_storage: string;
+  enviado_por: string;
+  enviado_em: string;
+}
+
+export const anexoRepo = {
+  async listarPorItem(noPlanoId: string): Promise<AnexoRow[]> {
+    const { data, error } = await supabase.from("anexo").select("*").eq("no_plano_id", noPlanoId).order("enviado_em");
+    tratarErro(error, "Falha ao listar anexos");
+    return data as AnexoRow[];
+  },
+  async buscarPorId(id: string): Promise<AnexoRow | null> {
+    const { data, error } = await supabase.from("anexo").select("*").eq("id", id).maybeSingle();
+    tratarErro(error, "Falha ao buscar anexo");
+    return data as AnexoRow | null;
+  },
+  async criar(input: {
+    noPlanoId: string;
+    etapaId: string | null;
+    resultadoId: string | null;
+    nomeArquivo: string;
+    tipoMime: string;
+    tamanhoBytes: number;
+    caminhoStorage: string;
+    enviadoPor: string;
+  }): Promise<AnexoRow> {
+    const { data, error } = await supabase
+      .from("anexo")
+      .insert({
+        no_plano_id: input.noPlanoId,
+        etapa_id: input.etapaId,
+        resultado_id: input.resultadoId,
+        nome_arquivo: input.nomeArquivo,
+        tipo_mime: input.tipoMime,
+        tamanho_bytes: input.tamanhoBytes,
+        caminho_storage: input.caminhoStorage,
+        enviado_por: input.enviadoPor,
+      })
+      .select("*")
+      .single();
+    tratarErro(error, "Falha ao registrar anexo");
+    return data as AnexoRow;
+  },
+  async remover(id: string): Promise<void> {
+    const { error } = await supabase.from("anexo").delete().eq("id", id);
+    tratarErro(error, "Falha ao remover anexo");
+  },
+  // Reinsere anexos preservando id/metadados — usado para restaurar anexos de
+  // etapa/resultado depois que salvarItem apaga e recria essas linhas (o
+  // "on delete cascade" da FK já removeu o anexo antes do reinsert acontecer).
+  async recriarLote(linhas: AnexoRow[]): Promise<void> {
+    if (linhas.length === 0) return;
+    const { error } = await supabase.from("anexo").insert(
+      linhas.map((linha) => ({
+        id: linha.id,
+        no_plano_id: linha.no_plano_id,
+        etapa_id: linha.etapa_id,
+        resultado_id: linha.resultado_id,
+        nome_arquivo: linha.nome_arquivo,
+        tipo_mime: linha.tipo_mime,
+        tamanho_bytes: linha.tamanho_bytes,
+        caminho_storage: linha.caminho_storage,
+        enviado_por: linha.enviado_por,
+        enviado_em: linha.enviado_em,
+      })),
+    );
+    tratarErro(error, "Falha ao restaurar anexos");
   },
 };

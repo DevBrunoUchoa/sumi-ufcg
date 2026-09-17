@@ -3,6 +3,7 @@ import { pode } from "../auth/auth.can.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import {
   acaoRepo,
+  anexoRepo,
   etapaRepo,
   historicoRepo,
   indicadorRepo,
@@ -471,12 +472,17 @@ async function salvarItem(
     exigir(pode(sessao, "item.edit", recurso), `Sem permissão para editar o indicador do item "${item.code}"`);
   }
 
-  // Ações/etapas: mudanças estruturais (nova ação, nova/removida etapa,
-  // campos da ação) exigem action.manage; mudar só status/justificativa de
-  // uma etapa já existente exige apenas stage.update (Gestor do Eixo).
+  // Ações: criar/remover ação, ou editar os campos da própria ação, exige
+  // action.manage (administrador). Etapas são mais permissivas — o Plano de
+  // Negócio dá ao Gestor do Eixo "cadastrar e alterar etapas": adicionar
+  // uma etapa nova a uma ação já existente, ou mudar status/justificativa/
+  // parceiros de uma etapa existente, exige só stage.update. Remover etapa
+  // ou mudar o título de uma etapa já existente continua exigindo
+  // action.manage (não é "cadastrar", é reestruturar).
   const acoesAntigasPorId = new Map(contexto.acoesAntigas.map((row) => [row.id as string, row]));
   const idsAcoesNovas = new Set(item.actions.map((action) => action.id));
   let estruturaAcoesMudou = contexto.acoesAntigas.length !== item.actions.length;
+  let novaEtapaMudou = false;
   let statusEtapaMudou = false;
   for (const action of item.actions) {
     const acaoAntiga = acoesAntigasPorId.get(action.id);
@@ -489,13 +495,11 @@ async function salvarItem(
     }
     const etapasAntigas = contexto.etapasAntigasPorAcao.get(action.id) ?? [];
     const etapasAntigasPorId = new Map(etapasAntigas.map((row) => [row.id as string, row]));
-    if (etapasAntigas.length !== action.tasks.length) estruturaAcoesMudou = true;
+    if (etapasAntigas.length > action.tasks.length) estruturaAcoesMudou = true; // etapa removida
+    else if (etapasAntigas.length < action.tasks.length) novaEtapaMudou = true; // etapa(s) nova(s)
     for (const task of action.tasks) {
       const etapaAntiga = etapasAntigasPorId.get(task.id);
-      if (!etapaAntiga) {
-        estruturaAcoesMudou = true;
-        continue;
-      }
+      if (!etapaAntiga) continue; // já contabilizado acima (novaEtapaMudou)
       if (etapaAntiga.titulo !== task.title) estruturaAcoesMudou = true;
       if (etapaAntiga.situacao !== task.status || etapaAntiga.justificativa !== task.justification || etapaAntiga.parceiros !== task.partners) {
         statusEtapaMudou = true;
@@ -507,8 +511,8 @@ async function salvarItem(
   }
   if (estruturaAcoesMudou) {
     exigir(pode(sessao, "action.manage", recurso), `Sem permissão para alterar ações/etapas do item "${item.code}"`);
-  } else if (statusEtapaMudou) {
-    exigir(pode(sessao, "stage.update", recurso), `Sem permissão para atualizar etapas do item "${item.code}"`);
+  } else if (novaEtapaMudou || statusEtapaMudou) {
+    exigir(pode(sessao, "stage.update", recurso), `Sem permissão para cadastrar ou atualizar etapas do item "${item.code}"`);
   }
 
   // Resultados: só é possível adicionar (frontend nunca remove) — exige result.create.
@@ -585,6 +589,12 @@ async function salvarItem(
     },
   ]);
 
+  // Etapas e resultados são apagados e recriados a cada save (mesmo quando só
+  // outro campo do item mudou) e o "on delete cascade" da FK leva junto
+  // qualquer anexo vinculado — por isso capturamos os anexos existentes antes
+  // de apagar e restauramos os que sobreviverem (mesmo id) depois de recriar.
+  const anexosAntesDoSave = await anexoRepo.listarPorItem(item.id);
+
   await resultadoRepo.removerPorItens([item.id]);
   await resultadoRepo.inserirLote(
     item.measurements.map((measurement) => ({
@@ -624,6 +634,13 @@ async function salvarItem(
       })),
     ),
   );
+
+  const etapaIdsNovas = new Set(item.actions.flatMap((action) => action.tasks.map((task) => task.id)));
+  const resultadoIdsNovas = new Set(item.measurements.map((measurement) => measurement.id));
+  const anexosParaRestaurar = anexosAntesDoSave.filter(
+    (anexo) => (anexo.etapa_id && etapaIdsNovas.has(anexo.etapa_id)) || (anexo.resultado_id && resultadoIdsNovas.has(anexo.resultado_id)),
+  );
+  await anexoRepo.recriarLote(anexosParaRestaurar);
 
   await riscoRepo.removerPorItens([item.id]);
   await riscoRepo.inserirLote(

@@ -12,6 +12,9 @@ import { planosRouter } from "./modules/planos/planos.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { sessionMiddleware } from "./modules/auth/auth.middleware.js";
 import { planningRouter } from "./modules/planning/planning.routes.js";
+import { anexosRouter } from "./modules/planning/anexos.routes.js";
+import { importacaoRouter } from "./modules/planning/importacao.routes.js";
+import { usuariosAdminRouter } from "./modules/auth/usuarios-admin.routes.js";
 
 export function createApp() {
   const app = express();
@@ -30,7 +33,10 @@ export function createApp() {
 
   // Rotas de domínio entram aqui conforme forem implementadas em src/modules/*.
   app.use(authRouter);
+  app.use(usuariosAdminRouter);
   app.use(planningRouter);
+  app.use(anexosRouter);
+  app.use(importacaoRouter);
   app.use(planosRouter);
   // app.use(indicadoresRouter); app.use(riscosRouter);
 

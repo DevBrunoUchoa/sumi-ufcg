@@ -10,6 +10,7 @@ import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, Unauthorized
 import { Attachments } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
+import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
 import './styles.css';
 
 const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login'];
@@ -83,6 +84,13 @@ function App({ auth, initialData }) {
   useEffect(() => { if (!readyToSave) return setReadyToSave(true); const timer = setTimeout(() => planningClient.save(data).then(() => setSaveError('')).catch(() => setSaveError('Não foi possível salvar as alterações.')), 150); return () => clearTimeout(timer); }, [data]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   const update = (mutate, message) => { setData((current) => { const next = structuredClone(current); mutate(next); return next; }); if (message) setToast(message); };
+  const importPlanilha = async (planId, arquivo) => {
+    const resumo = await importarPlanilha(planId, arquivo);
+    const fresh = await planningClient.load();
+    setData(fresh);
+    setToast(`Planilha importada: ${resumo.itensCriados} iniciativa${resumo.itensCriados === 1 ? '' : 's'} nova${resumo.itensCriados === 1 ? '' : 's'}, ${resumo.itensAtualizados} atualizada${resumo.itensAtualizados === 1 ? '' : 's'}, ${resumo.riscosImportados} risco${resumo.riscosImportados === 1 ? '' : 's'}.`);
+    return resumo;
+  };
   const changeItem = (planId, itemId, change, message) => update((draft) => { const plan = draft.plans.find((candidate) => candidate.id === planId); const index = plan.items.findIndex((item) => item.id === itemId); plan.items[index] = change(plan.items[index]); }, message);
   const close = () => setModal(null);
   const toggleSidebar = () => setSidebarCollapsed((current) => { const next = !current; try { localStorage.setItem(SIDEBAR_PREFERENCE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
@@ -133,7 +141,7 @@ function App({ auth, initialData }) {
               : route.path === '/validacoes' && can(PERMISSIONS.VIEW_REVIEW_QUEUE) ? <ReviewQueue plans={visiblePlans} can={can} />
                 : route.path === '/modelos' && can(PERMISSIONS.MANAGE_MODEL) ? <Models templates={data.templates} onEdit={(template) => setModal({ type: 'template', template })} onUse={(template) => setModal({ type: 'plan', templateId: template.id })} />
                   : route.path === '/usuarios' && can(PERMISSIONS.MANAGE_MODEL) ? <UsersAdmin currentUserId={session.user?.id} />
-                    : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} route={route} onModal={setModal} changeItem={changeItem} />
+                    : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} route={route} onModal={setModal} changeItem={changeItem} onImportPlanilha={importPlanilha} />
                     // /plano/:id sem correspondência não distingue "não existe" de "existe mas sem acesso" —
                     // o backend já nem devolve planos sem acesso, então tratar como 404 evita confirmar a
                     // existência de um plano para quem não pode vê-lo. Itens de navegação conhecidos
@@ -195,7 +203,34 @@ function Models({ templates, onEdit, onUse }) {
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">CONFIGURAÇÃO</p><h1>Modelos de plano</h1><p>Defina a terminologia e os campos adicionais dos novos planejamentos.</p></div></div><div className="models-grid">{templates.map((template) => <article className="model-card" key={template.id}><div className="section-heading"><Badge tone={template.type === 'PDI' ? 'blue' : 'green'}>{template.type}</Badge><span className="muted text-sm">Versão {template.version}</span></div><h2>{template.name}</h2><p>{template.description}</p><div className="model-tree">{[template.labels.axis, template.labels.objective, template.labels.item, 'Ação', 'Etapa'].map((label, index) => <div key={label} style={{ marginLeft: index * 20 }}><Icon name={index === 4 ? 'check' : 'layers'} size={14} />{label}{index === 2 && <span>Indicador + metas</span>}</div>)}</div><div className="model-buttons"><Button icon="edit" onClick={() => onEdit(template)}>Editar modelo</Button><Button variant="primary" onClick={() => onUse(template)}>Criar plano<Icon name="arrow" size={15} /></Button></div></article>)}</div></div>;
 }
 
-function PlanPage({ plan, actor, can, route, onModal, changeItem }) {
+function ImportacaoPlanilha({ planId, onImport }) {
+  const [importando, setImportando] = useState(false);
+  const [erro, setErro] = useState('');
+  const inputRef = React.useRef(null);
+  const escolherArquivo = () => { setErro(''); inputRef.current?.click(); };
+  const arquivoSelecionado = async (event) => {
+    const arquivo = event.target.files?.[0];
+    event.target.value = '';
+    if (!arquivo) return;
+    setImportando(true);
+    setErro('');
+    try {
+      await onImport(planId, arquivo);
+    } catch (err) {
+      setErro(err.message || 'Não foi possível importar a planilha.');
+    } finally {
+      setImportando(false);
+    }
+  };
+  return <div className="import-tools">
+    <Button icon="download" onClick={baixarModeloPlanilha}>Baixar modelo</Button>
+    <Button icon="upload" onClick={escolherArquivo} disabled={importando}>{importando ? 'Importando…' : 'Importar planilha'}</Button>
+    <input ref={inputRef} type="file" accept=".xlsx" hidden onChange={arquivoSelecionado} aria-label="Selecionar planilha para importar" />
+    {erro && <p role="alert" className="form-error">{erro}</p>}
+  </div>;
+}
+
+function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanilha }) {
   const [search, setSearch] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState('');
@@ -211,7 +246,7 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem }) {
   const groups = plan.axes.filter((axis) => filtered.some((candidate) => candidate.axisId === axis.id));
   const toggle = (key) => setCollapsed((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const resetFilters = () => { setSearch(''); setOwner(''); setStatus(''); };
-  return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button>{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
+  return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
     <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><label className="search"><Icon name="search" size={15} /><input aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /></label><div className="tree-filters"><select aria-label="Filtrar responsável" value={owner} onChange={(event) => setOwner(event.target.value)}><option value="">Todos os responsáveis</option>{[...new Set(plan.items.map((candidate) => candidate.owner))].map((value) => <option key={value}>{value}</option>)}</select><select aria-label="Filtrar situação" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todas as situações</option>{['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'].map((value) => <option key={value}>{value}</option>)}</select></div>
       <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={!collapsed.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={!collapsed.includes(axis.id) ? 'rotated' : ''} /><span>{axisLabel(axis)}</span></button>{!collapsed.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={!collapsed.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={!collapsed.includes(objective.id) ? 'rotated' : ''} /><span>{objective.code} · {objective.title}</span></button>{!collapsed.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <a key={candidate.id} href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
       <section className="detail" aria-label="Detalhe do item">{item ? <ItemDetail plan={plan} item={item} actor={actor} can={can} tab={tab} tabs={tabs} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} /> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;

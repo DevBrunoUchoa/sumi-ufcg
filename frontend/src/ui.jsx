@@ -19,6 +19,8 @@ const paths = {
   user: 'M20 21v-2a6 6 0 0 0-6-6h-4a6 6 0 0 0-6 6v2 M16 5a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   calendar: 'M4 5h16v16H4z M4 10h16 M8 2v6 M16 2v6',
   link: 'm10 13 4-4 M8 16l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0 M16 8l2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0',
+  download: 'M12 3v12 M7 10l5 5 5-5 M4 20h16',
+  upload: 'M12 21V9 M7 14l5-5 5 5 M4 20h16',
 };
 export function Icon({ name, size = 18, ...props }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name] || paths.book} /></svg>;

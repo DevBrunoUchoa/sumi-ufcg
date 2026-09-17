@@ -149,6 +149,8 @@ main:focus { outline: none; }
 .plan-page { padding: 24px 32px 48px; max-width: 1680px; margin: auto; }
 .plan-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 24px; }
 .heading-actions { display: flex; align-items: center; gap: 12px; }
+.import-tools { display: flex; align-items: center; gap: 8px; position: relative; }
+.import-tools .form-error { position: absolute; top: 100%; right: 0; white-space: nowrap; margin-top: 4px; }
 .back-link { font-size: 13px; color: #5c6871; display: inline-block; margin-bottom: 8px; }
 .back-link:hover { color: #1b668d; text-decoration: underline; }
 .title-line { display: flex; align-items: center; gap: 16px; }

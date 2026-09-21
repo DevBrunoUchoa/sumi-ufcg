@@ -3,10 +3,11 @@ import { Button, Field, FormEnd, Icon, Modal } from './ui.jsx';
 import { controlFactor, createPlan, deliveryStatusLabels, historyEntry, normalize, periods, residualRisk, riskLevel, riskLevelFromScore, riskLevelLabel, riskScore, uid } from './domain.js';
 import { listarUsuarios } from './admin-client.js';
 
-export function PlanForm({ templates, initialTemplate = 'pdi', onClose, onSave }) {
-  const [templateId, setTemplateId] = useState(initialTemplate);
+export function PlanForm({ templates, initialTemplate, onClose, onSave }) {
+  const [templateId, setTemplateId] = useState(initialTemplate ?? templates[0]?.id ?? '');
   const [error, setError] = useState('');
   const template = templates.find((t) => t.id === templateId);
+  if (!template) return null;
   function submit(event) {
     event.preventDefault();
     const fields = Object.fromEntries(new FormData(event.currentTarget));

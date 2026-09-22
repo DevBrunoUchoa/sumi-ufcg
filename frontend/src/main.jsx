@@ -85,11 +85,22 @@ function App({ auth, initialData }) {
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   const update = (mutate, message) => { setData((current) => { const next = structuredClone(current); mutate(next); return next; }); if (message) setToast(message); };
   const importPlanilha = async (planId, arquivo) => {
-    const resumo = await importarPlanilha(planId, arquivo);
-    const fresh = await planningClient.load();
-    setData(fresh);
-    setToast(`Planilha importada: ${resumo.itensCriados} iniciativa${resumo.itensCriados === 1 ? '' : 's'} nova${resumo.itensCriados === 1 ? '' : 's'}, ${resumo.itensAtualizados} atualizada${resumo.itensAtualizados === 1 ? '' : 's'}, ${resumo.riscosImportados} risco${resumo.riscosImportados === 1 ? '' : 's'}.`);
-    return resumo;
+    try {
+      const resumo = await importarPlanilha(planId, arquivo);
+      const fresh = await planningClient.load();
+      setData(fresh);
+      setToast(`Planilha importada: ${resumo.itensCriados} iniciativa${resumo.itensCriados === 1 ? '' : 's'} nova${resumo.itensCriados === 1 ? '' : 's'}, ${resumo.itensAtualizados} atualizada${resumo.itensAtualizados === 1 ? '' : 's'}, ${resumo.riscosImportados} risco${resumo.riscosImportados === 1 ? '' : 's'}.`);
+      return resumo;
+    } catch (err) {
+      // Um timeout de proxy (502/503/504) não significa que o servidor não terminou —
+      // em planilhas grandes o processamento pode passar do limite do proxy mesmo tendo
+      // sucesso no backend. Recarrega o workspace para refletir o estado real antes de
+      // repassar o erro, para não deixar a árvore desatualizada nem convidar um reenvio
+      // duplicado enquanto a importação anterior ainda pode estar concluindo.
+      const fresh = await planningClient.load().catch(() => null);
+      if (fresh) setData(fresh);
+      throw err;
+    }
   };
   const changeItem = (planId, itemId, change, message) => update((draft) => { const plan = draft.plans.find((candidate) => candidate.id === planId); const index = plan.items.findIndex((item) => item.id === itemId); plan.items[index] = change(plan.items[index]); }, message);
   const close = () => setModal(null);

@@ -22,7 +22,10 @@ export function createApp() {
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(cors({ origin: true, credentials: true }));
-  app.use(express.json());
+  // O PUT do workspace envia todos os planos de uma vez (sem persistência
+  // incremental por item) — o padrão de 100kb do express.json() já é
+  // insuficiente com poucos planos preenchidos.
+  app.use(express.json({ limit: "20mb" }));
   app.use(pinoHttp({ logger }));
 
   app.use(healthRouter);

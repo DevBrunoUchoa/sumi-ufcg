@@ -25,6 +25,14 @@ export async function importarPlanilha(planId, arquivo) {
     body: formData,
   });
   const body = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error || `Falha ao importar a planilha (${response.status}).`);
+  if (!response.ok) {
+    // 502/503/504 são timeout do proxy, não do backend — planilhas grandes podem
+    // ultrapassar esse limite mesmo com o processamento concluindo com sucesso do
+    // outro lado. Avisa para conferir antes de reenviar, em vez de sugerir uma falha.
+    if ([502, 503, 504].includes(response.status)) {
+      throw new Error('O servidor demorou para responder, mas a importação pode ter sido concluída mesmo assim. A estrutura foi atualizada — confira antes de importar de novo.');
+    }
+    throw new Error(body?.error || `Falha ao importar a planilha (${response.status}).`);
+  }
   return body;
 }

@@ -134,7 +134,8 @@ function App({ auth, initialData }) {
       <header className="topbar"><div className="breadcrumb"><a href="#/inicio">SUMI</a>{plan && <><Icon name="chevron" size={13} /><a href="#/planejamentos">Planejamentos</a><Icon name="chevron" size={13} /><strong>{plan.shortName}</strong></>}</div><div className="account-summary"><span className="account-avatar"><Icon name="user" size={16} /></span><span><strong>{session.user?.name || 'Comunidade UFCG'}</strong><small>{roles}</small></span>{session.authenticated ? <button type="button" className="text-button" onClick={() => logout().then(auth.reload)}>Sair</button> : <a className="text-button" href="#/login">Entrar</a>}</div></header>
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
       <main id="main-content" tabIndex={-1}>
-        {route.path === '/login' ? <LoginPage onSuccess={() => { auth.reload(); navigate('/inicio'); }} />
+        {/* workspace foi buscado uma vez no mount, antes do login — sem recarregar aqui, planos internos/rascunho ficam invisíveis até um refresh manual da página */}
+        {route.path === '/login' ? <LoginPage onSuccess={async () => { auth.reload(); setData(await planningClient.load()); navigate('/inicio'); }} />
           : route.path === '/inicio' ? <Home data={{ ...data, plans: visiblePlans }} session={session} can={can} />
           : route.path === '/planejamentos' ? <PlanList data={{ ...data, plans: visiblePlans }} can={can} onCreate={() => setModal({ type: 'plan' })} />
             : route.path === '/pendencias' && can(PERMISSIONS.VIEW_WORK_QUEUE) ? <WorkQueue plans={visiblePlans} can={can} />

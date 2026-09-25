@@ -1,5 +1,6 @@
 ﻿@import url('https://fonts.cdnfonts.com/css/rawline');
 @import "tailwindcss";
+@import '@govbr-ds/core/dist/core.css';
 
 @theme {
   --font-sans: "Rawline", "Raleway", sans-serif;
@@ -8,71 +9,48 @@
 
 /* Theme tokens: change the visual language here instead of in component rules. */
 :root {
-  /* Brand and actions */
-  --primary: #1351B4;
-  --primary-strong: #0C326F;
-  --primary-hover: #071D41;
-  --primary-soft: #EDF5FF;
-  --primary-pale: #f0f5f8;
-  --focus: #2580b5;
+  /* Primary / interactive — família Blue Warm (Vivid) */
+  --primary: var(--blue-warm-vivid-50);
+  --primary-strong: var(--blue-warm-vivid-80);
+  --primary-hover: var(--blue-warm-vivid-90);
+  --primary-soft: var(--blue-warm-vivid-5);   
+  --primary-pale: var(--blue-5);                             
 
-  /* Typography */
+  /* Typography — família Gray / Gray Cool (Cor Leitura) */
   --text-strong: var(--gray-80);
   --text-body: var(--gray-80);
-  --text-subtle: #46555f;
-  --text-muted: #5c6871;
+  --text-subtle: var(--gray-cool-60);
+  --text-muted: var(--gray-cool-50);
   --text-on-primary: var(--pure-0);
 
-  /* Surfaces and borders */
-  --surface: #fff;
-  --surface-soft: #f6f8f9;
-  --surface-raised: #f8fafb;
-  --surface-hover: #f3f6f8;
-  --border: #dfe4e7;
-  --border-soft: #e8ecef;
-  --border-strong: #cdd7df;
-  --backdrop: #102e4266;
+  /* Surfaces and borders — Pure / Gray Cool (Cor Superfície) */
+  --surface: var(--pure-0);
+  --surface-soft: var(--gray-cool-2);
+  --surface-raised: var(--gray-cool-1);
+  --surface-hover: var(--gray-cool-3);
+  --border: var(--gray-cool-10);
+  --border-soft: var(--gray-cool-5);
+  --border-strong: var(--blue-warm-20);
+  --backdrop: color-mix(in srgb, var(--blue-warm-vivid-90) 40%, transparent);
 
-  /* Feedback */
-  --warning: #815320;
-  --warning-surface: #fff7ea;
-  --danger: #a33131;
-  --danger-hover: #862626;
-  --success: #317355;
-  --success-surface: #f0f7f2;
+  /* Feedback — famílias oficiais do DS */
+  --warning: var(--yellow-vivid-60);
+  --warning-surface: var(--yellow-vivid-5);
+  --danger: var(--red-60);
+  --danger-hover: var(--red-70);
+  --success: var(--mint-60);
+  --success-surface: var(--mint-5);
 
-  /* Risk scale */
-  --risk-low-surface: #dff3c8;
-  --risk-low-text: #3d7425;
-  --risk-moderate-surface: #fff2a8;
-  --risk-moderate-text: #7b6500;
-  --risk-high-surface: #ffd7a8;
-  --risk-high-text: #935b13;
-  --risk-critical-surface: #f8c4bf;
-  --risk-critical-text: #9d3028;
+  /* Risk scale — Green / Yellow / Orange Warm / Red Cool */
+  --risk-low-surface: var(--green-vivid-5);
+  --risk-low-text: var(--green-60);
+  --risk-moderate-surface: var(--yellow-vivid-5);
+  --risk-moderate-text: var(--yellow-vivid-60);
+  --risk-high-surface: var(--orange-warm-vivid-20);
+  --risk-high-text: var(--orange-vivid-60);
+  --risk-critical-surface: var(--red-cool-vivid-20);
+  --risk-critical-text: var(--red-60);
 
-  /* Spacing — Padrão Digital de Governo (Fundamentos Visuais > Espaçamento)
-     Escala Layout (incremento de 8px): padding, margin, gap e dimensões de qualquer elemento.
-     Escala Ajuste (incremento de 4px): apenas pequenos ajustes em textos e ícones.
-     Margens entre elementos vizinhos não se somam: com valores iguais prevalece uma só,
-     com valores diferentes prevalece a maior. */
-  --spacing-scale-default: 0px;
-  --spacing-scale-half: 4px;
-  --spacing-scale-base: 8px;
-  --spacing-scale-baseh: 12px;
-  --spacing-scale-2x: 16px;
-  --spacing-scale-2xh: 20px;
-  --spacing-scale-3x: 24px;
-  --spacing-scale-3xh: 28px;
-  --spacing-scale-4x: 32px;
-  --spacing-scale-4xh: 36px;
-  --spacing-scale-5x: 40px;
-  --spacing-scale-5xh: 44px;
-  --spacing-scale-6x: 48px;
-  --spacing-scale-7x: 56px;
-  --spacing-scale-8x: 64px;
-  --spacing-scale-9x: 72px;
-  --spacing-scale-10x: 80px;
 
   /* Elevation — Padrão Digital de Governo (Fundamentos Visuais > Elevação)
      Camada 0: sem sombra (formulário, ação, texto, tabelas, listas, abas, navegação, rodapé)
@@ -95,7 +73,6 @@
   --surface-blur-md: 3px;
   --surface-blur-lg: 6px;
   --surface-blur-xl: 9px;
-  --pure-100: #000;
   --surface-opacity-xs: .16;
   --surface-shadow-color: color-mix(in srgb, var(--pure-100) calc(var(--surface-opacity-xs) * 100%), transparent);
   --elevation-layer-0: none;
@@ -108,42 +85,7 @@
   --z-index-layer-2: 2000;
   --z-index-layer-3: 3000;
   --z-index-layer-4: 4000;
-
-  /* Typography — Padrão Digital de Governo (Fundamentos Visuais > Tipografia)
-     Família única Rawline, com Raleway e sans-serif como fallback.
-     Fonte base de 14px (definida no :root) e escala Minor Third (1,2). Os tamanhos estão em rem
-     (mesmos multiplicadores em em da documentação) para não acumular quando há elementos aninhados. */
-  --font-family-base: "Rawline", "Raleway", sans-serif;
-
-  --font-weight-thin: 100;
-  --font-weight-extra-light: 200;
-  --font-weight-light: 300;
-  --font-weight-regular: 400;
-  --font-weight-medium: 500;
-  --font-weight-semi-bold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extra-bold: 800;
-  --font-weight-black: 900;
-
-  --font-size-scale-up-07: 3.583rem;
-  --font-size-scale-up-06: 2.986rem;
-  --font-size-scale-up-05: 2.488rem;
-  --font-size-scale-up-04: 2.074rem;
-  --font-size-scale-up-03: 1.728rem;
-  --font-size-scale-up-02: 1.44rem;
-  --font-size-scale-up-01: 1.2rem;
-  --font-size-scale-base: 1rem;
-  --font-size-scale-down-01: .833rem;
-  --font-size-scale-down-02: .694rem;
-  --font-size-scale-down-03: .579rem;
-
-  --font-line-height-low: 1.15;
-  --font-line-height-medium: 1.45;
-  --font-line-height-high: 1.85;
-
-  /* Cores de texto: gray-80 sobre fundo claro e pure-0 sobre fundo escuro */
-  --gray-80: #333333;
-  --pure-0: #ffffff;
+  
 }
 
 /* Base and accessible controls */
@@ -310,12 +252,81 @@ main:focus { outline: none; }
 .plan-page-heading p { font-size: var(--font-size-scale-base); color: var(--text-muted); margin-top: var(--spacing-scale-half); }
 .explorer { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 624px; }
 .plan-tree { border-right: 1px solid var(--border); padding: var(--spacing-scale-base) var(--spacing-scale-3x) var(--spacing-scale-3x) 0; min-width: 0; align-self: stretch; }
-.tree-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-base); padding-bottom: var(--spacing-scale-2x); }
-.tree-heading h2 { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-semi-bold); line-height: var(--font-line-height-medium); }
-.tree-heading > span { font-size: var(--font-size-scale-base); color: var(--text-muted); }
+.tree-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-scale-base);
+  padding-bottom: var(--spacing-scale-2x);
+}
+
+.tree-heading h2 {
+  margin: 0;
+  font-size: var(--font-size-scale-base);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: 1;
+}
+
+.tree-heading > span {
+  font-size: var(--font-size-scale-base);
+  color: var(--text-muted);
+  line-height: 1;
+}
 .plan-tree > .search { margin-bottom: var(--spacing-scale-base); }
-.tree-filters { display: grid; gap: var(--spacing-scale-base); padding-bottom: var(--spacing-scale-2x); }
-.tree-filters select { font-size: var(--font-size-scale-base); padding: var(--spacing-scale-base) var(--spacing-scale-3x) var(--spacing-scale-base) var(--spacing-scale-base); }
+.tree-filters { display: grid; gap: var(--spacing-scale-base); padding-bottom: var(--spacing-scale-base); }
+/* Select customizado (substitui o BrSelect do gov.br-ds) — DOM próprio, sem shadow root,
+   então :hover, foco e sombra são CSS de verdade, sem ::part() nem truques de variável. */
+.custom-select { position: relative; width: 100%; min-width: 0; }
+.custom-select-label { display: block; font-size: var(--font-size-scale-base); font-weight: var(--font-weight-semi-bold); color: var(--gray-80); margin-bottom: var(--spacing-scale-half); }
+.custom-select-input { padding-right: var(--spacing-scale-5x); cursor: pointer; }
+.custom-select-input::placeholder { font-style: italic; }
+/* Estado aberto/focado: borda e halo laranja, igual ao print de referência. */
+.custom-select-input:focus,
+.custom-select.open .custom-select-input {
+  outline: none;
+  border-color: var(--warning);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 35%, transparent);
+}
+.custom-select-chevron {
+  position: absolute;
+  right: var(--spacing-scale-2x);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 8px;
+  color: var(--primary);
+  pointer-events: none;
+  transition: transform .14s ease;
+}
+.custom-select.open .custom-select-chevron { transform: translateY(-50%) rotate(180deg); }
+.custom-select-panel {
+  position: absolute;
+  z-index: var(--z-index-layer-2);
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--spacing-scale-half) 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--elevation-layer-2);
+  max-height: 240px;
+  overflow-y: auto;
+}
+.custom-select-option {
+  padding: var(--spacing-scale-base) var(--spacing-scale-2x);
+  font-size: var(--font-size-scale-up-01);
+  color: var(--text-body);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-soft);
+}
+.custom-select-option:last-child { border-bottom: 0; }
+.custom-select-option:hover,
+.custom-select-option.active { background: var(--surface-hover); }
+.custom-select-option[aria-selected="true"] { font-weight: var(--font-weight-semi-bold); color: var(--primary-strong); }
+.custom-select-empty { padding: var(--spacing-scale-2x); color: var(--text-muted); font-size: var(--font-size-scale-base); }
 .tree-content { padding: 0; }
 .tree-group { display: flex; gap: var(--spacing-scale-base); text-align: left; align-items: flex-start; width: 100%; font-size: var(--font-size-scale-base); line-height: var(--font-line-height-medium); padding: var(--spacing-scale-base) var(--spacing-scale-half); }
 .tree-group > svg { margin-top: var(--spacing-scale-half); color: var(--text-muted); }
@@ -327,14 +338,15 @@ main:focus { outline: none; }
 .objective-group { padding-left: var(--spacing-scale-base); }
 .tree-item { display: block; margin: var(--spacing-scale-half) 0 var(--spacing-scale-half) var(--spacing-scale-2x); padding: var(--spacing-scale-base) var(--spacing-scale-2x); font-size: var(--font-size-scale-base); line-height: var(--font-line-height-medium); border-left: 3px solid transparent; color: var(--text-body); }
 .tree-item:hover { background: var(--surface-hover); }
-.tree-item.selected { background: color-mix(in srgb, var(--axis-color) 8%, var(--surface)); border-left-color: var(--axis-color); color: var(--text-strong); }
+.tree-item.selected { background: color-mix(in srgb, var(--axis-color) 20%, var(--surface)); border-left-color: var(--axis-color); color: var(--text-strong); }
 .tree-item small { display: block; font-size: var(--font-size-scale-base); color: var(--text-muted); margin-bottom: var(--spacing-scale-half); }
 .node-dot { display: none; }
 .tree-no-results { color: var(--text-muted); padding: var(--spacing-scale-2x); }
-.detail { min-width: 0; padding-left: var(--spacing-scale-4x); }
-.item-heading { padding: var(--spacing-scale-base) 0 var(--spacing-scale-2x); }
+.detail { min-width: 0; padding-left: var(--spacing-scale-4x); padding-top: var(--spacing-scale-base); }
+.item-heading { padding: 0 0 var(--spacing-scale-2x); }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-2x); }
-.item-code { font-size: var(--font-size-scale-base); color: var(--text-muted); display: inline-flex; align-items: center; gap: var(--spacing-scale-base); }
+.item-heading .section-heading { align-items: flex-start; }
+.item-code { font-size: var(--font-size-scale-base); color: var(--text-muted); display: inline-flex; align-items: center; gap: var(--spacing-scale-base); line-height: 1; }
 .item-code::before { content: ''; width: 8px; height: 16px; border-radius: 2px; background: var(--axis-color); }
 .item-heading h2 { font-size: var(--font-size-scale-up-03); font-weight: var(--font-weight-semi-bold); margin-top: var(--spacing-scale-base); max-width: 952px; }
 .item-heading > p { font-size: var(--font-size-scale-up-01); line-height: var(--font-line-height-medium); color: var(--text-muted); margin-top: var(--spacing-scale-base); max-width: 848px; }
@@ -377,8 +389,8 @@ main:focus { outline: none; }
 .actions-heading h3 { font-size: var(--font-size-scale-up-01); font-weight: var(--font-weight-semi-bold); }
 .actions-heading h3 > span { color: var(--text-muted); font-size: var(--font-size-scale-base); font-weight: var(--font-weight-regular); margin-left: var(--spacing-scale-base); }
 .actions-list { display: grid; gap: var(--spacing-scale-3x); margin-top: var(--spacing-scale-2x); }
-.action-card { min-width: 0; border: 1px solid var(--border); border-radius: 5px; }
-.action-heading { width: 100%; display: flex; align-items: flex-start; text-align: left; gap: var(--spacing-scale-2x); padding: var(--spacing-scale-2x); background: var(--surface-soft); border-radius: 4px; }
+.action-card { min-width: 0; border: 1px solid var(--border); border-radius: 5px;  }
+.action-heading { width: 100%; display: flex; align-items: flex-start; text-align: left; gap: var(--spacing-scale-2x); padding: var(--spacing-scale-2x); background: color-mix(in srgb, var(--axis-color) 20%, var(--surface)); border-radius: 4px;}
 .action-heading:hover .action-title { color: var(--primary); }
 .action-body { padding: var(--spacing-scale-2x) var(--spacing-scale-2x) var(--spacing-scale-half); }
 .action-name { flex: 1; min-width: 0; color: var(--text-strong); }
@@ -390,7 +402,7 @@ main:focus { outline: none; }
 .task-count strong { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-semi-bold); color: var(--text-body); }
 .action-heading > svg { margin-top: var(--spacing-scale-3xh); color: var(--text-muted); }
 .rotated { transform: rotate(90deg); }
-.stage-columns, .task-row { display: grid; grid-template-columns: minmax(0, 1fr) 104px 160px; gap: var(--spacing-scale-base) var(--spacing-scale-3x); }
+.stage-columns, .task-row { display: grid; grid-template-columns: minmax(0, 1fr) 104px 210px; gap: var(--spacing-scale-base) var(--spacing-scale-3x); }
 .stage-columns { color: var(--text-muted); font-size: var(--font-size-scale-base); padding: 0 0 var(--spacing-scale-base); }
 .task-row { align-items: start; padding: var(--spacing-scale-2x) 0; border-top: 1px solid var(--border-soft); font-size: var(--font-size-scale-base); }
 .task-main { display: flex; flex-direction: column; gap: var(--spacing-scale-half); min-width: 0; overflow-wrap: anywhere; padding-top: var(--spacing-scale-half); }
@@ -401,7 +413,7 @@ main:focus { outline: none; }
 .overdue-label { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-semi-bold); }
 .mobile-field-label { display: none; }
 .stage-control { display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-scale-base); min-width: 0; }
-.stage-status-select { width: 100%; padding: var(--spacing-scale-base) var(--spacing-scale-3x) var(--spacing-scale-base) var(--spacing-scale-base); font-size: var(--font-size-scale-base); min-height: 40px; }
+.stage-status-select { width: 100%; padding: var(--spacing-scale-base) var(--spacing-scale-3x) var(--spacing-scale-base) var(--spacing-scale-base); font-size: var(--font-size-scale-base); min-height: 40px; white-space: nowrap; }
 .stage-control > .badge { margin-top: var(--spacing-scale-base); }
 .justification-button { color: var(--warning); font-size: var(--font-size-scale-base); text-decoration: underline; text-underline-offset: 3px; padding: var(--spacing-scale-half) 0; }
 .justification-form { grid-column: 1 / -1; display: grid; gap: var(--spacing-scale-base); padding: var(--spacing-scale-base) 0; }
@@ -412,12 +424,48 @@ main:focus { outline: none; }
 .justification-text b { color: var(--text-subtle); font-weight: var(--font-weight-semi-bold); }
 .action-tools { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-3x); padding: var(--spacing-scale-base) 0; border-top: 1px solid var(--border-soft); }
 .add-task, .add-risk { display: inline-flex; align-items: center; gap: var(--spacing-scale-base); padding: var(--spacing-scale-base) 0; color: var(--primary); font-size: var(--font-size-scale-base); }
-.add-task:hover, .add-risk:hover { text-decoration: underline; text-underline-offset: 3px; }
 .add-risk svg { display: none; }
-.inline-task-form { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-base); padding: var(--spacing-scale-2x) 0; }
-.inline-task-form input { flex: 1 1 224px; }
-.inline-task-form input[type="date"] { flex: 0 1 168px; }
-.inline-task-form .form-error { flex-basis: 100%; margin: 0; }
+.inline-task-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--spacing-scale-base);
+  padding: var(--spacing-scale-2x) 0;
+}
+
+.inline-task-form > .task-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.inline-task-form > br-datetime-picker {
+  flex: 0 0 280px;
+}
+
+.inline-task-form > button {
+  flex: 0 0 auto;
+}
+
+/* br-datetime-picker: o calendário ("panel") é exposto como CSS Shadow Part direto na
+   shadow root do próprio host (não precisa de exportparts encadeado, como no select) —
+   por padrão ele nasce em fluxo normal e empurra o resto do formulário pra baixo.
+   Tiramos ele do fluxo e o fazemos flutuar sobre o conteúdo. */
+br-datetime-picker { position: relative; }
+br-datetime-picker::part(panel) {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--z-index-layer-2);
+  box-shadow: var(--elevation-layer-2);
+}
+
+br-select::part(list) {
+  box-shadow: var(--elevation-layer-2);
+}
+
+br-select::part(option):hover {
+  --br-select-option-bg-color: var(--gray-20) !important;
+}
 
 /* One indicator summary, with alternative annual views. */
 .indicator-heading { align-items: flex-start; gap: var(--spacing-scale-3x); margin-bottom: var(--spacing-scale-3x); }
@@ -612,7 +660,7 @@ main:focus { outline: none; }
   .action-heading { flex-wrap: wrap; gap: var(--spacing-scale-base) var(--spacing-scale-baseh); }
   .action-name { flex-basis: calc(100% - 32px); }
   .task-count { order: 2; padding: 0; flex-direction: row; align-items: baseline; gap: var(--spacing-scale-base); width: 100%; }
-  .stage-columns, .task-row { grid-template-columns: minmax(0, 1fr) 96px 144px; column-gap: var(--spacing-scale-baseh); }
+  .stage-columns, .task-row { grid-template-columns: minmax(0, 1fr) 96px 190px; column-gap: var(--spacing-scale-baseh); }
   .annual-tools { gap: var(--spacing-scale-baseh); }
   .model-buttons { flex-wrap: wrap; }
 }
@@ -729,11 +777,23 @@ main:focus { outline: none; }
 .attachment-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .attachment-remove { display: flex; align-items: center; justify-content: center; padding: var(--spacing-scale-half); border-radius: 4px; color: var(--danger); flex-shrink: 0; }
 .attachment-remove:hover { background: var(--warning-surface); }
-.attachment-upload-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--spacing-scale-half) var(--spacing-scale-base); }
-.attachment-upload { display: inline-flex; align-items: center; gap: var(--spacing-scale-base); color: var(--primary); font-size: var(--font-size-scale-base); cursor: pointer; padding: var(--spacing-scale-half) 0; width: fit-content; }
-.attachment-upload:hover { text-decoration: underline; text-underline-offset: 3px; }
 .attachment-upload input[type="file"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.attachment-hint { color: var(--text-muted); font-size: var(--font-size-scale-down-01); }
+.attachment-upload {
+  display: block;
+  width: 50%;
+}
+
+.attachment-upload-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-scale-half);
+  width: 100%;
+}
+
+.attachment-hint {
+  color: var(--gray-60);
+  font-size: var(--font-size-scale-down-01);
+}
 
 /* User administration */
 .checkbox-field { display: flex; align-items: center; gap: var(--spacing-scale-base); font-size: var(--font-size-scale-base); color: var(--text-body); padding: var(--spacing-scale-half) 0; }
@@ -748,3 +808,10 @@ main:focus { outline: none; }
 .axis-user-picker ul { list-style: none; margin: var(--spacing-scale-base) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-scale-base); max-height: 160px; overflow-y: auto; }
 .axis-user-picker label { display: flex; align-items: center; gap: var(--spacing-scale-base); font-weight: var(--font-weight-regular); }
 .axis-user-picker small { color: var(--text-muted); }
+.searchbar { max-width: '320px'; width: '100%' }
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-scale-2x)
+}

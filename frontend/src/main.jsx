@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { actionProgress, axisFor, axisLabel, controlFactor, currentPeriod, executionProgress, executionStatus, formatDate, formatMetricValue, formatNumber, historyEntry, latestMeasurement, metricAchievement, metricResult, metricStatus, metricTone, normalize, objectiveFor, periodLabel, periods, residualRisk, reviewStatusLabel, riskLevel, riskLevelLabel, riskScore, stageStatusLabel, stageStatusLabels, taskOverdue, uid } from './domain.js';
-import { Badge, Button, Empty, Field, Icon } from './ui.jsx';
+import { Badge, Button, Empty, Field, Icon, Input, Select } from './ui.jsx';
 import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, StructureForm, TargetsForm, TemplateForm } from './forms.jsx';
 import { SessionProvider, useSession } from './auth/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
@@ -11,7 +11,10 @@ import { Attachments } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
 import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
+import { defineCustomElement as defineBrDatetimePicker } from '@govbr-ds/webcomponents/dist/components/br-datetime-picker.js';
+import '@govbr-ds/core/dist/core.css';
 import './styles.css';
+defineBrDatetimePicker();
 
 const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login'];
 const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
@@ -194,8 +197,8 @@ function PlanList({ data, can, onCreate }) {
   const [search, setSearch] = useState('');
   const filtered = data.plans.filter((plan) => (filter === 'Todos' || plan.type === filter) && normalize(`${plan.shortName} ${plan.name}`).includes(normalize(search)));
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">PLANEJAMENTOS</p><h1>Planos institucionais</h1><p>Acompanhe estrutura, execução e resultados em um único lugar.</p></div>{can(PERMISSIONS.MANAGE_PLAN) && <Button icon="plus" variant="primary" onClick={onCreate}>Novo planejamento</Button>}</div>
-    <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><label className="search"><Icon name="search" size={17} /><input aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
-    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress"><Progress {...progress} /></div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><a className="open-plan" href={`#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></a></div></article>; })}</div> : <Empty title="Nenhum planejamento encontrado" action={<Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button>}>Tente outro nome ou tipo.</Empty>}
+    <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className='searchbar'><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} button={<Button variant="terciary" icon="search" aria-label="Buscar"/>}/></div></div>
+    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress"><Progress {...progress} /></div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title="Nenhum planejamento encontrado" action={<Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button>}>Tente outro nome ou tipo.</Empty>}
   </div>;
 }
 
@@ -247,9 +250,32 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
   const toggle = (key) => setCollapsed((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const resetFilters = () => { setSearch(''); setOwner(''); setStatus(''); };
   return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
-    <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><label className="search"><Icon name="search" size={15} /><input aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /></label><div className="tree-filters"><select aria-label="Filtrar responsável" value={owner} onChange={(event) => setOwner(event.target.value)}><option value="">Todos os responsáveis</option>{[...new Set(plan.items.map((candidate) => candidate.owner))].map((value) => <option key={value}>{value}</option>)}</select><select aria-label="Filtrar situação" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todas as situações</option>{['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'].map((value) => <option key={value}>{value}</option>)}</select></div>
-      <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={!collapsed.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={!collapsed.includes(axis.id) ? 'rotated' : ''} /><span>{axisLabel(axis)}</span></button>{!collapsed.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={!collapsed.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={!collapsed.includes(objective.id) ? 'rotated' : ''} /><span>{objective.code} · {objective.title}</span></button>{!collapsed.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <a key={candidate.id} href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
-      <section className="detail" aria-label="Detalhe do item">{item ? <ItemDetail plan={plan} item={item} actor={actor} can={can} tab={tab} tabs={tabs} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} /> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
+    <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} button={<Button variant="terciary" icon="search" aria-label="Buscar"/>}/><div className="tree-filters">
+      <Select
+        placeholder="Todos os responsáveis"
+        value={owner}
+        onChange={(event) => setOwner(event.currentTarget.value)}
+        options={Array.from(
+          new Set(plan.items.map((item) => item.owner))
+        )
+          .filter(Boolean)
+          .map((owner) => ({
+            value: owner,
+            label: owner,
+          }))}
+      /><Select
+      placeholder="Todas as situações"
+      value={status}
+      onChange={(event) => setStatus(event.target.value)}
+      options={[
+        'Não iniciada',
+        'Em andamento',
+        'Concluída',
+        'Cancelada'
+      ]}
+    /></div>
+    <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={!collapsed.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={!collapsed.includes(axis.id) ? 'rotated' : ''} /><span>{axisLabel(axis)}</span></button>{!collapsed.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={!collapsed.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={!collapsed.includes(objective.id) ? 'rotated' : ''} /><span>{objective.code} · {objective.title}</span></button>{!collapsed.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <a key={candidate.id} href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
+    <section className="detail" aria-label="Detalhe do item">{item ? <ItemDetail plan={plan} item={item} actor={actor} can={can} tab={tab} tabs={tabs} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} /> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
 }
 
 function ItemDetail({ plan, item, actor, can, tab, tabs, period, setPeriod, onModal, changeItem }) {
@@ -269,7 +295,7 @@ function ItemDetail({ plan, item, actor, can, tab, tabs, period, setPeriod, onMo
     selectTab(tabs[nextIndex][0]);
     requestAnimationFrame(() => document.querySelectorAll('.detail-tabs [role="tab"]')[nextIndex]?.focus());
   };
-  return <><div className="item-heading" style={{ '--axis-color': axis?.color || '#2f78a5' }}><div className="section-heading"><div className="flex items-center gap-3"><span className="item-code">{plan.template.labels.item} {item.code}</span><Badge tone={statusTone(executionStatus(item))}>{executionStatus(item)}</Badge></div>{can(PERMISSIONS.EDIT_ITEM, resource) && <Button icon="edit" variant="ghost" onClick={() => onModal({ type: 'item', item })}>Editar informações</Button>}</div><h2>{item.title}</h2><p>{item.description}</p><div className="item-meta"><span><Icon name="layers" size={15} /><strong>{objective?.code} · {objective?.title}</strong></span><span><Icon name="user" size={15} /><strong>{item.owner}</strong></span>{item.partners && <span>Parceiros: {item.partners}</span>}</div>{extraFields.length > 0 && <div className="extra-values">{extraFields.map((field) => <span key={field.id}><b>{field.label}:</b> {presentExtra(field, item.extras[field.id])}</span>)}</div>}</div>
+  return <><div className="item-heading" style={{ '--axis-color': axis?.color || '#2f78a5' }}><div className="section-heading"><div className="flex items-center gap-3"><span className="item-code">{plan.template.labels.item} {item.code}</span><Badge tone={statusTone(executionStatus(item))}>{executionStatus(item)}</Badge></div>{can(PERMISSIONS.EDIT_ITEM, resource) && <Button icon="edit" variant="tertiary" onClick={() => onModal({ type: 'item', item })}>Editar informações</Button>}</div><h2>{item.title}</h2><p>{item.description}</p><div className="item-meta"><span><Icon name="layers" size={15} /><strong>{objective?.code} · {objective?.title}</strong></span><span><Icon name="user" size={15} /><strong>{item.owner}</strong></span>{item.partners && <span>Parceiros: {item.partners}</span>}</div>{extraFields.length > 0 && <div className="extra-values">{extraFields.map((field) => <span key={field.id}><b>{field.label}:</b> {presentExtra(field, item.extras[field.id])}</span>)}</div>}</div>
     {canSeeWorkflow && <div className={`workflow-banner ${item.reviewStatus}`}><div><span>Validação</span><strong>{reviewStatusLabel(item.reviewStatus)}</strong>{item.reviewNote && <p>{item.reviewNote}</p>}</div><div>{can(PERMISSIONS.SUBMIT_ITEM, resource) && ['draft', 'changes_requested'].includes(item.reviewStatus) && <Button variant="primary" onClick={submit}>Enviar para validação</Button>}{can(PERMISSIONS.REVIEW_ITEM, resource) && item.reviewStatus === 'submitted' && <><Button onClick={() => onModal({ type: 'review', item, decision: 'changes_requested' })}>Solicitar correção</Button><Button variant="primary" onClick={() => onModal({ type: 'review', item, decision: 'validated' })}>Validar</Button></>}</div></div>}
     {item.linkedPlan && <a className="linked-plan" href={`#${planUrl(item.linkedPlan)}`}><Icon name="link" size={16} /><span>Relacionado ao Plano Diretor de Logística Sustentável</span><Icon name="arrow" size={14} /></a>}
     <div className="detail-tabs" role="tablist">{tabs.map(([value, , label], index) => <button key={value} className={tab === value ? 'active' : ''} role="tab" aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} onClick={() => selectTab(value)} onKeyDown={(event) => moveTab(event, index)}>{label}</button>)}</div><div className="tab-content" role="tabpanel">
@@ -291,10 +317,19 @@ function StageRow({ task, action, actor, canUpdate, onChange, itemId }) {
     <div className="task-main"><span>{task.title}</span>{task.partners && <small>Parceiros: {task.partners}</small>}</div>
     <div className="task-deadline"><span className="mobile-field-label">Prazo</span><time dateTime={task.deadline}>{formatDate(task.deadline)}</time>{overdue && <span className="overdue-label">Atrasada</span>}</div>
     <div className="stage-control">
-      {canUpdate ? <select className="stage-status-select" aria-label={`Situação de ${task.title}`} value={task.status} onChange={(event) => changeStatus(event.target.value)}>{Object.entries(stageStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select> : <Badge tone={statusTone(stageStatusLabel(task.status))}>{stageStatusLabel(task.status)}</Badge>}
+      {canUpdate ? <Select
+        className="stage-status-select"
+        aria-label={`Situação de ${task.title}`}
+        value={task.status}
+        onChange={(event) => changeStatus(event.target.value)}
+        options={Object.entries(stageStatusLabels).map(([value, label]) => ({
+          value,
+          label,
+        }))}
+      /> : <Badge tone={statusTone(stageStatusLabel(task.status))}>{stageStatusLabel(task.status)}</Badge>}
       {canUpdate && (overdue || task.status === 'cancelled' || task.justification) && <button type="button" className="justification-button" aria-expanded={justifying} onClick={() => setJustifying((current) => !current)}>{task.justification ? 'Justificativa' : 'Justificar'}</button>}
     </div>
-    {justifying && canUpdate && <form className="justification-form" onSubmit={saveJustification}><label htmlFor={`justification-${task.id}`}>Justificativa da etapa</label><textarea id={`justification-${task.id}`} rows="2" maxLength={400} value={justification} onChange={(event) => setJustification(event.target.value)} placeholder="Informe a causa e, se possível, a nova previsão." />{error && <p role="alert" className="form-error">{error}</p>}<div><button type="submit" className="button primary">Salvar justificativa</button><button type="button" className="button" onClick={() => setJustifying(false)}>Cancelar</button></div></form>}
+    {justifying && canUpdate && <form className="justification-form" onSubmit={saveJustification}><label htmlFor={`justification-${task.id}`}>Justificativa da etapa</label><textarea id={`justification-${task.id}`} rows="2" maxLength={400} value={justification} onChange={(event) => setJustification(event.target.value)} placeholder="Informe a causa e, se possível, a nova previsão." />{error && <p role="alert" className="form-error">{error}</p>}<div><Button type="submit" variant="primary">Salvar justificativa</Button><Button type="button"  onClick={() => setJustifying(false)}>Cancelar</Button></div></form>}
     {!justifying && task.justification && <p className="justification-text"><b>Justificativa:</b> {task.justification}</p>}
     <Attachments itemId={itemId} etapaId={task.id} canManage={canUpdate} />
   </div>;
@@ -315,6 +350,25 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
   const submitTask = (event, actionId) => { event.preventDefault(); if (!taskName.trim()) return setError('Informe o nome da etapa.'); if (!taskDeadline) return setError('Informe o prazo da etapa.'); onChange((current) => ({ ...current, actions: current.actions.map((action) => action.id === actionId ? { ...action, tasks: [...action.tasks, { id: uid(), title: taskName.trim(), status: 'not_started', deadline: taskDeadline, justification: '', partners: taskPartners.trim() }] } : action), history: [...current.history, historyEntry(`Etapa adicionada: ${taskName.trim()}.`, actor)] }), 'Etapa adicionada.'); setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError(''); };
   const toggleAction = (actionId) => setCollapsed((current) => current.includes(actionId) ? current.filter((id) => id !== actionId) : [...current, actionId]);
   const cancelStage = () => { setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError(''); };
+  
+  const deadlinePickerRef = useRef(null);
+
+  useEffect(() => {
+    const picker = deadlinePickerRef.current;
+
+    if (!picker) return;
+
+    const handleValueChange = () => {
+      setTaskDeadline(picker.serializedValue || '');
+    };
+
+    picker.addEventListener('valueChange', handleValueChange);
+
+    return () => {
+      picker.removeEventListener('valueChange', handleValueChange);
+    };
+  }, []);
+  
   return <>
     <div className="execution-summary" style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
       <span>Execução das etapas</span>
@@ -342,15 +396,39 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
             {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} onChange={onChange} itemId={item.id} />)}
             {!action.tasks.length && <p className="hint px-5 pt-3">Esta ação ainda não possui etapas.</p>}
             {adding === action.id ? <form className="inline-task-form" onSubmit={(event) => submitTask(event, action.id)}>
-              <input aria-label="Nome da etapa" autoFocus required maxLength={180} placeholder="Descreva a etapa…" value={taskName} onChange={(event) => setTaskName(event.target.value)} />
-              <input aria-label="Prazo da etapa" type="date" min={`${plan.start}-01-01`} max={`${plan.end}-12-31`} required value={taskDeadline} onChange={(event) => setTaskDeadline(event.target.value)} />
-              <input aria-label="Parceiros da etapa" maxLength={150} placeholder="Parceiros (opcional)" value={taskPartners} onChange={(event) => setTaskPartners(event.target.value)} />
+              <Input id="input-medium" className="task-input" aria-label="Nome da etapa" autoFocus required maxLength={180} placeholder="Descreva a etapa…" value={taskName} onChange={(event) => setTaskName(event.target.value)} />
+              <Input id="input-medium" className="task-input" aria-label="Parceiros da etapa" maxLength={150} placeholder="Parceiros (opcional)" value={taskPartners} onChange={(event) => setTaskPartners(event.target.value)} />
+              <br-datetime-picker
+                ref={deadlinePickerRef}
+                mode="date"
+                locale="pt-BR"
+                min={`${plan.start}-01-01`}
+                max={`${plan.end}-12-31`}
+                required
+                placeholder="Selecione o prazo"
+                aria-label="Prazo da etapa"
+                serializedValue={taskDeadline}
+              />
               <Button type="submit" variant="primary">Adicionar</Button>
               <Button onClick={cancelStage}>Cancelar</Button>
               {error && <p role="alert" className="form-error">{error}</p>}
             </form> : (canManageAction || canUpdateStage || canManageRisk) && <div className="action-tools">
-              {(canManageAction || canUpdateStage) && <button className="add-task" onClick={() => setAdding(action.id)}><Icon name="plus" size={14} />Adicionar etapa<span className="sr-only"> em {action.title}</span></button>}
-              {canManageRisk && <button className="add-risk" onClick={() => onAddRisk(action)}><Icon name="info" size={14} />Adicionar risco<span className="sr-only"> em {action.title}</span></button>}
+              {(canManageAction || canUpdateStage) && <Button
+                variant="terciary"
+                icon="plus"
+                className="add-task"
+                onClick={() => setAdding(action.id)}
+              >
+                Adicionar etapa<span className="sr-only"> em {action.title}</span>
+              </Button>}
+              {canManageRisk && <Button
+                variant="terciary"
+                icon="info"
+                className="add-risk"
+                onClick={() => onAddRisk(action)}
+              >
+                Adicionar risco<span className="sr-only"> em {action.title}</span>
+              </Button>}
             </div>}
           </div>}
         </article>;
@@ -377,7 +455,14 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
   return <section className="indicator" aria-label="Indicador e metas" style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
     <div className="section-heading indicator-heading">
       <div><h3>{item.metric.name}</h3><p>{description}</p></div>
-      <Field label={item.metric.periodicity === 'final' ? 'Período' : 'Ano de referência'} className="year-field"><select value={period} onChange={(event) => setPeriod(Number(event.target.value))}>{list.map((value) => <option key={value} value={value}>{periodLabel(plan, item, value)}</option>)}</select></Field>
+      <Field label={item.metric.periodicity === 'final' ? 'Período' : 'Ano de referência'} className="year-field"><Select
+        value={period}
+        onChange={(event) => setPeriod(Number(event.target.value))}
+        options={list.map((value) => ({
+          value,
+          label: periodLabel(plan, item, value),
+        }))}
+      /></Field>
     </div>
     <div className={`indicator-summary ${status === 'Meta atingida' ? 'green' : status === 'Meta não atingida' ? 'critical' : status === 'Em acompanhamento' ? 'blue' : 'neutral'} ${descriptive ? 'descriptive' : ''}`}>
       <div className="current-result"><span>Resultado</span><strong>{metricValue(result)}</strong><Badge tone={metricTone(item, period)}>{status}</Badge></div>
@@ -389,7 +474,7 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
       <h3>{item.metric.periodicity === 'final' ? 'Meta e resultado do ciclo' : 'Metas e resultados por ano'}</h3>
       <div className="annual-tools">
         {hasEvolution && <div className="view-switch" role="group" aria-label="Visualização dos resultados"><button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>Tabela</button><button type="button" aria-pressed={view === 'evolution'} onClick={() => setView('evolution')}>Evolução</button></div>}
-        {can(PERMISSIONS.EDIT_TARGET, resource) && <Button variant="ghost" onClick={onTargets}>Editar metas</Button>}
+        {can(PERMISSIONS.EDIT_TARGET, resource) && <Button variant="tertiary" onClick={onTargets}>Editar metas</Button>}
       </div>
     </div>
     {view === 'table' || !hasEvolution ? <div className="table-scroll"><table className={`annual-table ${descriptive ? 'descriptive' : ''}`}>

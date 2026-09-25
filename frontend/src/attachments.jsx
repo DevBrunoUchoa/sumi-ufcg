@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from './ui.jsx';
 import { enviarAnexo, listarAnexos, obterUrlAnexo, removerAnexo } from './anexos-client.js';
+import { BrUpload } from '@govbr-ds/webcomponents-react';
 
 const formatBytes = (bytes) => bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const ACCEPT = '.png,.jpg,.jpeg,.gif,.webp,.pdf,.xlsx,.xls,.txt,.csv';
@@ -77,14 +78,19 @@ export function Attachments({ itemId, etapaId, resultadoId, canManage }) {
           ))}
         </ul>
       )}
-      {canManage && (
+     {canManage && (
         <div className="attachment-upload-row">
-          <label className="attachment-upload">
-            <Icon name="link" size={13} />
-            <span>{sending ? 'Enviando…' : 'Anexar arquivo'}</span>
-            <input type="file" accept={ACCEPT} onChange={handleUpload} disabled={sending} />
-          </label>
-          <small className="attachment-hint">Imagem, PDF, xlsx, xls, txt ou csv — máx. {TAMANHO_MAXIMO_MB}MB</small>
+          <BrUpload
+            className="attachment-upload"
+            label={sending ? 'ENVIANDO…' : 'Anexar documento'}
+            accept={ACCEPT}
+            disabled={sending}
+            onChange={handleUpload}
+          />
+
+          <small className="attachment-hint">
+            Imagem, PDF, xlsx, xls, txt ou csv — máx. {TAMANHO_MAXIMO_MB}MB
+          </small>
         </div>
       )}
       {error && <p role="alert" className="form-error">{error}</p>}

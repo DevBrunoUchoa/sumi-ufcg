@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import '@govbr-ds/core/dist/core.min.css';
 import { BrSelect, BrSelectOption, BrInput, BrButton, BrTextarea } from '@govbr-ds/webcomponents-react';
+import { defineCustomElement as defineBrDatetimePicker } from '@govbr-ds/webcomponents/dist/components/br-datetime-picker.js';
+defineBrDatetimePicker();
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTableCellsLarge, faLayerGroup, faPlus, faArrowRight, faChevronRight, faMagnifyingGlass, faCheck, faXmark, faPen, faRotateLeft, 
@@ -46,12 +47,14 @@ export function Button({
   icon,
   variant = 'secondary',
   className = '',
+  type = 'button',
   ...props
 }) {
   
   return (
     <BrButton
       emphasis={variant}
+      type={type}
       className={className}
       {...props}
     >
@@ -64,22 +67,29 @@ export function Button({
 const DENSITIES = ['small', 'medium', 'large'];
 const toDensity = (density, size) => density || (DENSITIES.includes(size) ? size : undefined);
 
-function textProps({ defaultValue, value, maxLength, minLength, ...rest }) {
+function textProps({ maxLength, minLength, ...rest }) {
   return {
     ...rest,
-    value: value ?? defaultValue,
     maxlength: maxLength ?? rest.maxlength,
     minlength: minLength ?? rest.minlength,
   };
 }
 
-export function Input({ label, id, size, className = '', density, button, ...props }) {
+export function Input({ label, id, size, className = '', density, button, onChange, value, defaultValue, ...props }) {
+  const [inner, setInner] = useState(defaultValue ?? '');
+  const current = value !== undefined ? value : inner;
+  const handleInput = (event) => {
+    if (value === undefined) setInner(event.target.value);
+    onChange?.(event);
+  };
   return (
     <BrInput
       customId={id}
       label={label}
       density={toDensity(density, size)}
       className={className}
+      value={current}
+      onInput={handleInput}
       {...textProps(props)}
     >
       {button && React.cloneElement(button, { slot: 'action' })}
@@ -87,7 +97,13 @@ export function Input({ label, id, size, className = '', density, button, ...pro
   );
 }
 
-export function Textarea({ label, id, size, className = '', density, rows, ...props }) {
+export function Textarea({ label, id, size, className = '', density, rows, onChange, value, defaultValue, ...props }) {
+  const [inner, setInner] = useState(defaultValue ?? '');
+  const current = value !== undefined ? value : inner;
+  const handleInput = (event) => {
+    if (value === undefined) setInner(event.target.value);
+    onChange?.(event);
+  };
   return (
     <BrTextarea
       customId={id}
@@ -95,6 +111,8 @@ export function Textarea({ label, id, size, className = '', density, rows, ...pr
       density={toDensity(density, size)}
       rows={rows != null ? Number(rows) : undefined}
       className={className}
+      value={current}
+      onInput={handleInput}
       {...textProps(props)}
     />
   );
@@ -130,12 +148,17 @@ export function Select({
   const placeholderText = placeholder || empty?.label || 'Selecione';
 
   function handleChange(event) {
-    const next = event?.target?.value;
-    setInner(next == null ? '' : String(next));
-    onChange?.(event);
+    const next = String(event.detail ?? '');
+    if (!next && current && !list.some((option) => option.value === '')) return;
+    setInner(next);
+    onChange?.({ target: { value: next }, currentTarget: { value: next } });
   }
 
   const selectRef = useRef(null);
+
+  useEffect(() => {
+    if (selectRef.current && selectRef.current.value !== current) selectRef.current.value = current;
+  }, [current, normalized.length]);
 
   useEffect(() => {
     const el = selectRef.current;
@@ -169,17 +192,35 @@ export function Select({
         label={label}
         placeholder={placeholderText}
         value={current}
-        onChange={handleChange}
+        onValueChange={handleChange}
         className={className}
         {...props}
       >
         {list.map((opt) => (
-          <BrSelectOption key={opt.value} label={opt.label} value={opt.value} />
+          <BrSelectOption key={opt.value} label={opt.label} value={opt.value} selected={opt.value === current} />
         ))}
       </BrSelect>
       {name && <input type="hidden" name={name} value={current} />}
     </>
   );
+}
+
+export function DatePicker({ value = '', onChange, name, ...props }) {
+  const pickerRef = useRef(null);
+  useEffect(() => {
+    const picker = pickerRef.current;
+    if (!picker) return;
+    const handleValueChange = () => onChange?.(picker.serializedValue || '');
+    picker.addEventListener('valueChange', handleValueChange);
+    return () => picker.removeEventListener('valueChange', handleValueChange);
+  }, [onChange]);
+  useEffect(() => {
+    if (pickerRef.current && pickerRef.current.serializedValue !== value) pickerRef.current.serializedValue = value;
+  }, [value]);
+  return <>
+    <br-datetime-picker ref={pickerRef} mode="date" locale="pt-BR" serializedValue={value} {...props} />
+    {name && <input type="hidden" name={name} value={value} />}
+  </>;
 }
 
 export function Badge({ children, tone = 'neutral' }) { return <span className={`badge ${tone}`}>{children}</span>; }

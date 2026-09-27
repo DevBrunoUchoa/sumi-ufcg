@@ -1,4 +1,4 @@
-import { test, expect, openPdi, openPls, detail, recordNumber, selectItem } from './fixtures.js';
+import { test, expect, chooseOption, openPdi, openPls, detail, recordNumber, selectItem } from './fixtures.js';
 
 test('visão geral e lista permitem localizar e abrir os planos', async ({ page }) => {
   await page.goto('/');
@@ -7,14 +7,14 @@ test('visão geral e lista permitem localizar e abrir os planos', async ({ page 
   await expect(page.locator('.plan-card')).toHaveCount(2);
   await page.getByRole('button', { name: 'PLS', exact: true }).click();
   await expect(page.locator('.plan-card')).toHaveCount(1);
-  await page.getByLabel('Buscar planejamento').fill('logistica');
-  await page.getByRole('link', { name: /Abrir PLS/ }).click();
+  await page.getByRole('searchbox', { name: 'Buscar planejamento' }).fill('logistica');
+  await page.getByRole('button', { name: /Abrir PLS/ }).click();
   await expect(page.getByRole('heading', { name: /^PLS/ })).toBeVisible();
 });
 
 test('menu lateral pode ser recolhido e preserva a preferência', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.sidebar')).toHaveCSS('width', '220px');
+  await expect(page.locator('.sidebar')).toHaveCSS('width', '224px');
   await page.getByRole('button', { name: 'Recolher menu lateral' }).click();
   await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
   await expect(page.locator('.sidebar')).toHaveCSS('width', '72px');
@@ -22,14 +22,13 @@ test('menu lateral pode ser recolhido e preserva a preferência', async ({ page 
   await page.reload();
   await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
   await page.getByRole('button', { name: 'Expandir menu lateral' }).click();
-  await expect(page.locator('.sidebar')).toHaveCSS('width', '220px');
+  await expect(page.locator('.sidebar')).toHaveCSS('width', '224px');
 });
 
 test('PDI calcula o indicador por etapas e mantém o histórico', async ({ page }) => {
   await openPdi(page);
   await expect(page.locator('.execution-summary strong')).toHaveText('20%');
-  const status = page.getByLabel('Situação de Elaborar a minuta da portaria');
-  await status.selectOption('completed');
+  await chooseOption(page, 'Situação de Elaborar a minuta da portaria', 'Concluída');
   await expect(page.locator('.execution-summary strong')).toHaveText('30%');
   await page.getByRole('tab', { name: 'Indicador e metas' }).click();
   await expect(page.locator('.current-result strong')).toContainText('30');
@@ -57,8 +56,8 @@ test('PLS acompanha entregas por situação descritiva', async ({ page }) => {
   await expect(page.locator('.current-result')).not.toContainText('0%');
   await page.getByRole('button', { name: 'Registrar resultado', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Situação da entrega').selectOption('completed');
-  await dialog.getByLabel('Justificativa / observação').fill('Guia publicado e validado pela unidade responsável.');
+  await chooseOption(dialog, 'Situação da entrega', 'Concluída');
+  await dialog.getByLabel('Justificativa / observação').last().fill('Guia publicado e validado pela unidade responsável.');
   await dialog.getByRole('button', { name: 'Salvar resultado' }).click();
   await expect(page.locator('.current-result strong')).toContainText('Concluída');
   await expect(page.locator('.current-result')).toContainText('Meta atingida');
@@ -67,10 +66,10 @@ test('PLS acompanha entregas por situação descritiva', async ({ page }) => {
 test('busca e filtros atuam sobre eixo, objetivo, item e responsável', async ({ page }) => {
   await openPdi(page);
   const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
-  await page.getByLabel('Buscar no plano').fill('rankings');
+  await page.getByRole('searchbox', { name: 'Buscar no plano' }).fill('rankings');
   await expect(tree.getByRole('link')).toHaveCount(1);
   await expect(detail(page).getByRole('heading', { level: 2 })).toContainText('rankings');
-  await page.getByLabel('Filtrar situação').selectOption('Concluída');
+  await chooseOption(page, 'Filtrar situação', 'Concluída');
   await expect(page.getByRole('heading', { name: 'Nenhum item encontrado' })).toBeVisible();
   await page.getByRole('button', { name: 'Limpar filtros' }).click();
   await expect(tree.getByRole('link')).toHaveCount(3);
@@ -80,9 +79,9 @@ test('ações aceitam novas etapas com prazo e parceiros', async ({ page }) => {
   await openPdi(page);
   const action = page.locator('.action-card').first();
   await action.getByRole('button', { name: /Adicionar etapa/ }).click();
-  await page.getByLabel('Nome da etapa').fill('Revisar contribuições dos setores');
-  await page.getByLabel('Prazo da etapa').fill('2026-11-30');
-  await page.getByLabel('Parceiros da etapa').fill('STI e Reitoria');
+  await page.getByLabel('Nome da etapa').last().fill('Revisar contribuições dos setores');
+  await page.getByLabel('Prazo da etapa').locator('input').first().fill('30/11/2026');
+  await page.getByLabel('Parceiros da etapa').last().fill('STI e Reitoria');
   await action.getByRole('button', { name: 'Adicionar', exact: true }).click();
   await expect(action).toContainText('Revisar contribuições dos setores');
   await expect(action).toContainText('Parceiros: STI e Reitoria');
@@ -115,7 +114,7 @@ test('tabela e evolução mantêm o período selecionado e distinguem ausência 
   await page.getByRole('tab', { name: 'Indicador e metas' }).click();
   await expect(page.getByRole('table')).toBeVisible();
   await page.getByRole('button', { name: 'Selecionar 2027', exact: true }).click();
-  await expect(page.getByLabel('Ano de referência', { exact: true })).toHaveValue('2027');
+  await expect(page.getByRole('combobox', { name: 'Ano de referência' })).toHaveAttribute('value', '2027');
   await expect(page.locator('.current-result')).toContainText('Sem resultado');
   await page.getByRole('button', { name: 'Evolução', exact: true }).click();
   const evolution = page.getByRole('region', { name: 'Evolução anual do atingimento' });
@@ -127,7 +126,7 @@ test('tabela e evolução mantêm o período selecionado e distinguem ausência 
   await page.getByRole('button', { name: 'Tabela', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Selecionar 2026', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.reload();
-  await expect(page.getByLabel('Ano de referência', { exact: true })).toHaveValue('2026');
+  await expect(page.getByRole('combobox', { name: 'Ano de referência' })).toHaveAttribute('value', '2026');
 });
 
 test('novo resumo mantém o sentido de redução e a unidade das metas do PLS', async ({ page }) => {

@@ -1,6 +1,4 @@
-﻿@import url('https://fonts.cdnfonts.com/css/rawline');
 @import "tailwindcss";
-@import '@govbr-ds/core/dist/core.css';
 
 @theme {
   --font-sans: "Rawline", "Raleway", sans-serif;
@@ -589,7 +587,7 @@ br-select::part(option):hover {
 .muted { color: var(--text-muted); }
 .hint { font-size: var(--font-size-scale-base); color: var(--text-muted); line-height: var(--font-line-height-high); }
 .danger { color: var(--danger); }
-.modal { border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--elevation-layer-4); width: min(544px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0; color: var(--text-body); position: fixed; z-index: var(--z-index-layer-4); margin: auto; overflow-y: auto; overscroll-behavior: contain; }
+.modal { border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--elevation-layer-4); width: min(544px, calc(100vw - 32px)); max-width: calc(100vw - 32px); min-width: 0; max-height: calc(100dvh - 48px); padding: 0; color: var(--text-body); position: fixed; z-index: var(--z-index-layer-4); margin: auto; overflow-y: auto; overscroll-behavior: contain; }
 .code-input { display: flex; align-items: center; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface-soft); overflow: hidden; }
 .code-input > span { padding: var(--spacing-scale-base) 0 var(--spacing-scale-base) var(--spacing-scale-base); color: var(--primary-strong); font-size: var(--font-size-scale-base); white-space: nowrap; }
 .code-input input { border: 0; border-radius: 0; background: transparent; padding-left: var(--spacing-scale-half); }
@@ -707,7 +705,7 @@ br-select::part(option):hover {
   .list-toolbar { align-items: stretch; flex-direction: column; }
   .list-toolbar .search { width: 100%; }
   .segmented { width: fit-content; }
-  .heading-actions { flex-wrap: wrap; gap: var(--spacing-scale-base); }
+  .heading-actions, .import-tools { flex-wrap: wrap; max-width: 100%; gap: var(--spacing-scale-base); }
   .title-line { flex-wrap: wrap; gap: var(--spacing-scale-base); }
   .plan-tree { margin-bottom: var(--spacing-scale-3x); }
   .tree-heading { padding-bottom: var(--spacing-scale-2x); }

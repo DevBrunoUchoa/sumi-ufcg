@@ -1,4 +1,4 @@
-import { test, expect, openPdi, useSession, selectItem } from './fixtures.js';
+import { test, expect, chooseOption, openPdi, useSession, selectItem } from './fixtures.js';
 
 test('consulta pública recebe somente conteúdo publicado', async ({ page }) => {
   await useSession(page, 'public');
@@ -27,7 +27,7 @@ test('gestor do eixo executa e envia, sem administrar a estrutura', async ({ pag
   await expect(page.getByRole('button', { name: 'Enviar para validação' })).toBeVisible();
   await page.getByRole('button', { name: 'Enviar para validação' }).click();
   await expect(page.locator('.workflow-banner')).toContainText('Aguardando validação');
-  await page.getByLabel('Situação de Elaborar a minuta da portaria').selectOption('completed');
+  await chooseOption(page, 'Situação de Elaborar a minuta da portaria', 'Concluída');
   await expect(page.locator('.workflow-banner')).toContainText('Em elaboração');
 });
 
@@ -47,7 +47,7 @@ test('responsável do eixo valida sem receber ações de execução', async ({ p
   await expect(page.locator('.stage-status-select')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Validar', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Validar', exact: true }).click();
-  await page.getByLabel('Observação da validação').fill('Informações conferidas.');
+  await page.getByLabel('Observação da validação').last().fill('Informações conferidas.');
   await page.getByRole('button', { name: 'Confirmar validação' }).click();
   await expect(page.locator('.workflow-banner')).toContainText('Validado');
 });

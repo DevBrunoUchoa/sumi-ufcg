@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Field, FormEnd, Icon, Input, Modal, Select, Textarea } from './ui.jsx';
+import { Button, DatePicker, Field, FormEnd, Icon, Input, Modal, Select, Textarea } from './ui.jsx';
 import { controlFactor, createPlan, deliveryStatusLabels, historyEntry, normalize, periods, residualRisk, riskLevel, riskLevelFromScore, riskLevelLabel, riskScore, uid } from './domain.js';
 import { listarUsuarios } from './admin-client.js';
-import { defineCustomElement as defineBrDatetimePicker } from '@govbr-ds/webcomponents/dist/components/br-datetime-picker.js';
-defineBrDatetimePicker();
 
 
 export function PlanForm({ templates, initialTemplate, onClose, onSave }) {
@@ -52,12 +50,12 @@ export function TemplateForm({ template, onClose, onSave }) {
         <Field label="Segundo nível"><Input name="objective" required defaultValue={template.labels.objective} maxLength={32} /></Field>
         <Field label="Item acompanhado"><Input name="item" required defaultValue={template.labels.item} maxLength={32} /></Field>
       </div>
-      <div className="section-heading"><h3>Campos adicionais</h3><Button class="br-button secondary" icon="plus" onClick={() => setFields([...fields, { id: uid(), label: '', type: 'text', options: '' }])}>Adicionar campo</Button></div>
+      <div className="section-heading"><h3>Campos adicionais</h3><Button icon="plus" onClick={() => setFields([...fields, { id: uid(), label: '', type: 'text', options: '' }])}>Adicionar campo</Button></div>
       {!fields.length && <p className="hint">Os campos de identificação, responsáveis e indicadores já fazem parte do modelo.</p>}
       {fields.map((f, i) => <div className="custom-field" key={f.id}>
         <div className="form-grid"><Field label={`Nome do campo ${i + 1}`}><Input value={f.label} onChange={(e) => updateField(f.id, 'label', e.target.value)} maxLength={50} required /></Field><Field label={`Tipo do campo ${i + 1}`}><Select value={f.type} onChange={(e) => updateField(f.id, 'type', e.target.value)} options={[{ value: '', label: 'Selecione' }, { value: 'text', label: 'Texto' }, { value: 'number', label: 'Número' }, { value: 'date', label: 'Data' }, { value: 'select', label: 'Seleção' }]} /></Field></div>
         {f.type === 'select' && <Field label={`Opções do campo ${i + 1}`} help="Separe as opções por vírgulas."><Input value={f.options} onChange={(e) => updateField(f.id, 'options', e.target.value)} placeholder="Campina Grande, Cajazeiras, Patos" required /></Field>}
-        <button type="button" class="br-button secondary" onClick={() => setFields(fields.filter((field) => field.id !== f.id))}>Remover campo {i + 1}</button>
+        <Button onClick={() => setFields(fields.filter((field) => field.id !== f.id))}>Remover campo {i + 1}</Button>
       </div>)}
     </div><FormEnd onClose={onClose} submit="Salvar modelo" error={error} /></form>
   </Modal>;
@@ -194,6 +192,7 @@ export function RiskForm({ item, action, risk, onClose, onSave }) {
   const [impact, setImpact] = useState(risk?.impact || 3);
   const [maturity, setMaturity] = useState(risk?.maturity || 'Fraco');
   const [error, setError] = useState('');
+  const [deadline, setDeadline] = useState(risk?.deadline || '');
   const level = riskLevel(probability, impact);
   const score = riskScore(probability, impact);
   const residual = residualRisk(probability, impact, maturity);
@@ -203,7 +202,9 @@ export function RiskForm({ item, action, risk, onClose, onSave }) {
     const values = Object.fromEntries(new FormData(event.currentTarget));
     const required = ['title', 'cause', 'consequence', 'controls', 'treatment', 'treatmentOwner'];
     if (required.some((name) => !values[name].trim())) return setError('Preencha os campos principais do risco.');
-    onSave({ ...(risk || {}), id: risk?.id || uid(), actionId: action.id, stage: values.stage.trim(), title: values.title.trim(), strategicRisk: values.strategicRisk.trim(), cause: values.cause.trim(), consequence: values.consequence.trim(), category: values.category, probability, impact, controls: values.controls.trim(), controlType: values.controlType, maturity, response: values.response, treatment: values.treatment.trim(), treatmentOwner: values.treatmentOwner.trim(), deadline: values.deadline, execution: Number(values.execution || 0), situation: values.situation, review: values.review, status: values.status });
+    const selectedDeadline = event.currentTarget.querySelector('br-datetime-picker')?.serializedValue || deadline;
+    if (!selectedDeadline) return setError('Informe o prazo de conclusão do risco.');
+    onSave({ ...(risk || {}), id: risk?.id || uid(), actionId: action.id, stage: values.stage.trim(), title: values.title.trim(), strategicRisk: values.strategicRisk.trim(), cause: values.cause.trim(), consequence: values.consequence.trim(), category: values.category, probability, impact, controls: values.controls.trim(), controlType: values.controlType, maturity, response: values.response, treatment: values.treatment.trim(), treatmentOwner: values.treatmentOwner.trim(), deadline: selectedDeadline, execution: Number(values.execution || 0), situation: values.situation, review: values.review, status: values.status });
   }
   return <Modal title={risk ? 'Editar risco' : 'Adicionar risco'} subtitle={`${item.code} · ${action.title}`} onClose={onClose} wide><form onSubmit={submit}><div className="form-body">
     <div className="risk-form-context"><span><b>Ação:</b> {action.title}</span><span><b>Etapa:</b> {risk?.stage || 'Será definida no formulário'}</span></div>
@@ -223,13 +224,12 @@ export function RiskForm({ item, action, risk, onClose, onSave }) {
       <Field label="Plano de tratamento"><Textarea name="treatment" rows="2" required maxLength={400} defaultValue={field('treatment')} placeholder="Controles propostos para reduzir o risco" /></Field>
     <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '16px', marginBottom: '1rem' }}>
       <Field label="Prazo de conclusão">
-        <br-datetime-picker
-          mode="date"
-          locale="pt-BR"
+        <DatePicker
           required
           placeholder="Selecione o prazo"
           aria-label="Prazo de conclusão"
-          serializedValue={field('deadline')}
+          value={deadline}
+          onChange={setDeadline}
           style={{ display: 'block', marginTop: '-12px' }} 
         />
       </Field>

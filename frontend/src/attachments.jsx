@@ -28,8 +28,7 @@ export function Attachments({ itemId, etapaId, resultadoId, canManage }) {
   useEffect(reload, [itemId, etapaId, resultadoId]);
 
   async function handleUpload(event) {
-    const arquivo = event.target.files?.[0];
-    event.target.value = '';
+    const arquivo = event.detail?.[0];
     if (!arquivo) return;
     setSending(true);
     setError('');
@@ -85,7 +84,7 @@ export function Attachments({ itemId, etapaId, resultadoId, canManage }) {
             label={sending ? 'ENVIANDO…' : 'Anexar documento'}
             accept={ACCEPT}
             disabled={sending}
-            onChange={handleUpload}
+            onSelectedFilesChange={handleUpload}
           />
 
           <small className="attachment-hint">

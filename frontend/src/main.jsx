@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { actionProgress, axisFor, axisLabel, controlFactor, currentPeriod, executionProgress, executionStatus, formatDate, formatMetricValue, formatNumber, historyEntry, latestMeasurement, metricAchievement, metricResult, metricStatus, metricTone, normalize, objectiveFor, periodLabel, periods, residualRisk, reviewStatusLabel, riskLevel, riskLevelLabel, riskScore, stageStatusLabel, stageStatusLabels, taskOverdue, uid } from './domain.js';
-import { Badge, Button, Empty, Field, Icon, Input, Select } from './ui.jsx';
+import { Badge, Button, DatePicker, Empty, Field, Icon, Input, Select } from './ui.jsx';
 import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, StructureForm, TargetsForm, TemplateForm } from './forms.jsx';
 import { SessionProvider, useSession } from './auth/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
@@ -11,10 +11,8 @@ import { Attachments } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
 import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
-import { defineCustomElement as defineBrDatetimePicker } from '@govbr-ds/webcomponents/dist/components/br-datetime-picker.js';
 import '@govbr-ds/core/dist/core.css';
 import './styles.css';
-defineBrDatetimePicker();
 
 const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login'];
 const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
@@ -209,7 +207,7 @@ function PlanList({ data, can, onCreate }) {
   const [search, setSearch] = useState('');
   const filtered = data.plans.filter((plan) => (filter === 'Todos' || plan.type === filter) && normalize(`${plan.shortName} ${plan.name}`).includes(normalize(search)));
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">PLANEJAMENTOS</p><h1>Planos institucionais</h1><p>Acompanhe estrutura, execução e resultados em um único lugar.</p></div>{can(PERMISSIONS.MANAGE_PLAN) && <Button icon="plus" variant="primary" onClick={onCreate}>Novo planejamento</Button>}</div>
-    <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className='searchbar'><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} button={<Button variant="terciary" icon="search" aria-label="Buscar"/>}/></div></div>
+    <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className='searchbar'><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>
     {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress"><Progress {...progress} /></div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title="Nenhum planejamento encontrado" action={<Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button>}>Tente outro nome ou tipo.</Empty>}
   </div>;
 }
@@ -262,8 +260,9 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
   const toggle = (key) => setCollapsed((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const resetFilters = () => { setSearch(''); setOwner(''); setStatus(''); };
   return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
-    <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} button={<Button variant="terciary" icon="search" aria-label="Buscar"/>}/><div className="tree-filters">
+    <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /><div className="tree-filters">
       <Select
+        aria-label="Filtrar responsável"
         placeholder="Todos os responsáveis"
         value={owner}
         onChange={(event) => setOwner(event.currentTarget.value)}
@@ -276,6 +275,7 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
             label: owner,
           }))}
       /><Select
+      aria-label="Filtrar situação"
       placeholder="Todas as situações"
       value={status}
       onChange={(event) => setStatus(event.target.value)}
@@ -359,27 +359,23 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
   const canManageAction = can(PERMISSIONS.MANAGE_ACTION, resource);
   const canUpdateStage = can(PERMISSIONS.UPDATE_STAGE, resource);
   const canManageRisk = can(PERMISSIONS.MANAGE_RISK, resource);
-  const submitTask = (event, actionId) => { event.preventDefault(); if (!taskName.trim()) return setError('Informe o nome da etapa.'); if (!taskDeadline) return setError('Informe o prazo da etapa.'); onChange((current) => ({ ...current, actions: current.actions.map((action) => action.id === actionId ? { ...action, tasks: [...action.tasks, { id: uid(), title: taskName.trim(), status: 'not_started', deadline: taskDeadline, justification: '', partners: taskPartners.trim() }] } : action), history: [...current.history, historyEntry(`Etapa adicionada: ${taskName.trim()}.`, actor)] }), 'Etapa adicionada.'); setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError(''); };
+  const submitTask = (event, actionId) => {
+    event.preventDefault();
+    const selectedDeadline = event.currentTarget.querySelector('br-datetime-picker')?.serializedValue || taskDeadline;
+    if (!taskName.trim()) return setError('Informe o nome da etapa.');
+    if (!selectedDeadline) return setError('Informe o prazo da etapa.');
+    onChange((current) => ({
+      ...current,
+      actions: current.actions.map((action) => action.id === actionId ? {
+        ...action,
+        tasks: [...action.tasks, { id: uid(), title: taskName.trim(), status: 'not_started', deadline: selectedDeadline, justification: '', partners: taskPartners.trim() }],
+      } : action),
+      history: [...current.history, historyEntry(`Etapa adicionada: ${taskName.trim()}.`, actor)],
+    }), 'Etapa adicionada.');
+    setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError('');
+  };
   const toggleAction = (actionId) => setCollapsed((current) => current.includes(actionId) ? current.filter((id) => id !== actionId) : [...current, actionId]);
   const cancelStage = () => { setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError(''); };
-  
-  const deadlinePickerRef = useRef(null);
-
-  useEffect(() => {
-    const picker = deadlinePickerRef.current;
-
-    if (!picker) return;
-
-    const handleValueChange = () => {
-      setTaskDeadline(picker.serializedValue || '');
-    };
-
-    picker.addEventListener('valueChange', handleValueChange);
-
-    return () => {
-      picker.removeEventListener('valueChange', handleValueChange);
-    };
-  }, []);
   
   return <>
     <div className="execution-summary" style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
@@ -410,23 +406,21 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
             {adding === action.id ? <form className="inline-task-form" onSubmit={(event) => submitTask(event, action.id)}>
               <Input id="input-medium" className="task-input" aria-label="Nome da etapa" autoFocus required maxLength={180} placeholder="Descreva a etapa…" value={taskName} onChange={(event) => setTaskName(event.target.value)} />
               <Input id="input-medium" className="task-input" aria-label="Parceiros da etapa" maxLength={150} placeholder="Parceiros (opcional)" value={taskPartners} onChange={(event) => setTaskPartners(event.target.value)} />
-              <br-datetime-picker
-                ref={deadlinePickerRef}
-                mode="date"
-                locale="pt-BR"
+              <DatePicker
                 min={`${plan.start}-01-01`}
                 max={`${plan.end}-12-31`}
                 required
                 placeholder="Selecione o prazo"
                 aria-label="Prazo da etapa"
-                serializedValue={taskDeadline}
+                value={taskDeadline}
+                onChange={setTaskDeadline}
               />
               <Button type="submit" variant="primary">Adicionar</Button>
               <Button onClick={cancelStage}>Cancelar</Button>
               {error && <p role="alert" className="form-error">{error}</p>}
-            </form> : (canManageAction || canUpdateStage || canManageRisk) && <div className="action-tools">
-              {(canManageAction || canUpdateStage) && <Button
-                variant="terciary"
+            </form> : (canManageAction || canManageRisk) && <div className="action-tools">
+              {canManageAction && <Button
+                variant="tertiary"
                 icon="plus"
                 className="add-task"
                 onClick={() => setAdding(action.id)}
@@ -434,7 +428,7 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
                 Adicionar etapa<span className="sr-only"> em {action.title}</span>
               </Button>}
               {canManageRisk && <Button
-                variant="terciary"
+                variant="tertiary"
                 icon="info"
                 className="add-risk"
                 onClick={() => onAddRisk(action)}

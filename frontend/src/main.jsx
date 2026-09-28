@@ -7,7 +7,7 @@ import { SessionProvider, useSession } from './auth/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
 import { LoginPage } from './auth/Login.jsx';
 import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, UnauthorizedPage } from './error-pages.jsx';
-import { Attachments } from './attachments.jsx';
+import { Attachments, AttachmentsProvider } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
 import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
@@ -44,12 +44,10 @@ async function logout() {
 }
 
 const planningClient = createPlanningClient();
-const SIDEBAR_PREFERENCE_KEY = 'sumi.ui.sidebar-collapsed';
 const planUrl = (id, item, tab = 'acoes', period) => `/plano/${id}${item ? `?item=${item}&tab=${tab}${period ? `&period=${period}` : ''}` : ''}`;
 const navigate = (path) => { window.location.hash = path; };
 const readRoute = () => { const [path, query] = (window.location.hash.slice(1) || '/inicio').split('?'); return { path, query: new URLSearchParams(query) }; };
 const statusTone = (status) => status === 'Concluída' || status === 'Meta atingida' || status === 'Validado' ? 'green' : status === 'Em andamento' || status === 'Aguardando validação' ? 'blue' : status === 'Correção solicitada' ? 'attention' : 'neutral';
-const readSidebarPreference = () => { try { return localStorage.getItem(SIDEBAR_PREFERENCE_KEY) === 'true'; } catch { return false; } };
 
 function Progress({ done, total, percent, label = 'etapas', compact = false }) {
   const value = percent ?? (total ? done / total * 100 : 0);
@@ -80,7 +78,7 @@ function App({ auth, initialData }) {
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
   const [readyToSave, setReadyToSave] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   useEffect(() => { const changed = () => { setRoute(readRoute()); setModal(null); }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange', changed); }, []);
   useEffect(() => { if (!readyToSave) return setReadyToSave(true); const timer = setTimeout(() => planningClient.save(data).then(() => setSaveError('')).catch(() => setSaveError('Não foi possível salvar as alterações.')), 150); return () => clearTimeout(timer); }, [data]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
@@ -105,7 +103,7 @@ function App({ auth, initialData }) {
   };
   const changeItem = (planId, itemId, change, message) => update((draft) => { const plan = draft.plans.find((candidate) => candidate.id === planId); const index = plan.items.findIndex((item) => item.id === itemId); plan.items[index] = change(plan.items[index]); }, message);
   const close = () => setModal(null);
-  const toggleSidebar = () => setSidebarCollapsed((current) => { const next = !current; try { localStorage.setItem(SIDEBAR_PREFERENCE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
+  const toggleSidebar = () => setSidebarCollapsed((current) => !current);
   const planId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
   const visiblePlans = data.plans.filter((plan) => can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan)) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, resourceFor(plan))));
   const plan = visiblePlans.find((candidate) => candidate.id === planId);
@@ -247,7 +245,7 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
   const [search, setSearch] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState('');
-  const [collapsed, setCollapsed] = useState([]);
+  const [expanded, setExpanded] = useState([]);
   const filtered = plan.items.filter((item) => { const axis = axisFor(plan, item); const objective = objectiveFor(plan, item); return normalize(`${item.code} ${item.title} ${axisLabel(axis)} ${objective?.title}`).includes(normalize(search)) && (!owner || item.owner === owner) && (!status || executionStatus(item) === status); });
   const item = filtered.find((candidate) => candidate.id === route.query.get('item')) || filtered[0];
   const selectedPeriod = Number(route.query.get('period'));
@@ -257,7 +255,7 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
   const tab = tabs.some(([value]) => value === route.query.get('tab')) ? route.query.get('tab') : 'acoes';
   const setPeriod = (next) => navigate(planUrl(plan.id, item.id, tab, next));
   const groups = plan.axes.filter((axis) => filtered.some((candidate) => candidate.axisId === axis.id));
-  const toggle = (key) => setCollapsed((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+  const toggle = (key) => setExpanded((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const resetFilters = () => { setSearch(''); setOwner(''); setStatus(''); };
   return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
     <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /><div className="tree-filters">
@@ -286,8 +284,8 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
         'Cancelada'
       ]}
     /></div>
-    <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={!collapsed.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={!collapsed.includes(axis.id) ? 'rotated' : ''} /><span>{axisLabel(axis)}</span></button>{!collapsed.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={!collapsed.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={!collapsed.includes(objective.id) ? 'rotated' : ''} /><span>{objective.code} · {objective.title}</span></button>{!collapsed.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <a key={candidate.id} href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
-    <section className="detail" aria-label="Detalhe do item">{item ? <ItemDetail plan={plan} item={item} actor={actor} can={can} tab={tab} tabs={tabs} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} /> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
+    <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={expanded.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={expanded.includes(axis.id) ? 'rotated' : ''} /><span>{axisLabel(axis)}</span></button>{expanded.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={expanded.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={expanded.includes(objective.id) ? 'rotated' : ''} /><span>{objective.code} · {objective.title}</span></button>{expanded.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <a key={candidate.id} href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
+    <section className="detail" aria-label="Detalhe do item">{item ? <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resource)}><ItemDetail plan={plan} item={item} actor={actor} can={can} tab={tab} tabs={tabs} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} /></AttachmentsProvider> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
 }
 
 function ItemDetail({ plan, item, actor, can, tab, tabs, period, setPeriod, onModal, changeItem }) {
@@ -321,34 +319,64 @@ function ItemDetail({ plan, item, actor, can, tab, tabs, period, setPeriod, onMo
 function StageRow({ task, action, actor, canUpdate, onChange, itemId }) {
   const [justifying, setJustifying] = useState(false);
   const [justification, setJustification] = useState(task.justification || '');
+  const [pendingStatus, setPendingStatus] = useState(null);
   const [error, setError] = useState('');
   const overdue = taskOverdue(task);
-  const changeStatus = (status) => { onChange((current) => ({ ...current, actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, status } : stage) } : candidate), history: [...current.history, historyEntry(`Etapa “${task.title}” alterada para ${stageStatusLabel(status)}.`, actor)] }), 'Situação da etapa atualizada.'); if (status === 'cancelled' && !task.justification) setJustifying(true); };
-  const saveJustification = (event) => { event.preventDefault(); if (!justification.trim()) return setError('Informe uma justificativa.'); onChange((current) => ({ ...current, actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, justification: justification.trim() } : stage) } : candidate), history: [...current.history, historyEntry(`Justificativa registrada para a etapa “${task.title}”.`, actor)] }), 'Justificativa salva.'); setJustifying(false); setError(''); };
+  const cancelJustification = () => { setPendingStatus(null); setJustifying(false); setJustification(task.justification || ''); setError(''); };
+  const changeStatus = (status) => {
+    if (status === 'cancelled' && task.status !== 'cancelled') {
+      setPendingStatus(status);
+      setJustification('');
+      setJustifying(true);
+      setError('');
+      return;
+    }
+    cancelJustification();
+    if (status === task.status) return;
+    onChange((current) => ({ ...current, actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, status } : stage) } : candidate), history: [...current.history, historyEntry(`Etapa “${task.title}” alterada para ${stageStatusLabel(status)}.`, actor)] }), 'Situação da etapa atualizada.');
+  };
+  const saveJustification = (event) => {
+    event.preventDefault();
+    const note = justification.trim();
+    if (!note) return setError('Informe uma justificativa.');
+    onChange((current) => ({
+      ...current,
+      actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, status: pendingStatus || stage.status, justification: note } : stage) } : candidate),
+      history: [...current.history, historyEntry(pendingStatus ? `Etapa “${task.title}” cancelada. Justificativa: ${note}` : `Justificativa registrada para a etapa “${task.title}”.`, actor)],
+    }), pendingStatus ? 'Etapa cancelada com justificativa.' : 'Justificativa salva.');
+    setPendingStatus(null);
+    setJustifying(false);
+    setError('');
+  };
   return <div className={`task-row ${task.status === 'completed' ? 'done' : ''} ${!canUpdate ? 'read-only' : ''} ${overdue ? 'overdue' : ''}`}>
-    <div className="task-main"><span>{task.title}</span>{task.partners && <small>Parceiros: {task.partners}</small>}</div>
-    <div className="task-deadline"><span className="mobile-field-label">Prazo</span><time dateTime={task.deadline}>{formatDate(task.deadline)}</time>{overdue && <span className="overdue-label">Atrasada</span>}</div>
+    <div className="task-main"><span className="stage-field-label">Etapa</span><strong>{task.title}</strong>{task.partners && <small>Parceiros: {task.partners}</small>}</div>
+    <div className="task-deadline"><span className="stage-field-label">Prazo</span><time dateTime={task.deadline}>{formatDate(task.deadline)}</time>{overdue && <span className="overdue-label">Atrasada</span>}</div>
     <div className="stage-control">
+      <span className="stage-field-label">Situação</span>
       {canUpdate ? <Select
         className="stage-status-select"
         aria-label={`Situação de ${task.title}`}
-        value={task.status}
+        value={pendingStatus || task.status}
         onChange={(event) => changeStatus(event.target.value)}
         options={Object.entries(stageStatusLabels).map(([value, label]) => ({
           value,
           label,
         }))}
       /> : <Badge tone={statusTone(stageStatusLabel(task.status))}>{stageStatusLabel(task.status)}</Badge>}
-      {canUpdate && (overdue || task.status === 'cancelled' || task.justification) && <button type="button" className="justification-button" aria-expanded={justifying} onClick={() => setJustifying((current) => !current)}>{task.justification ? 'Justificativa' : 'Justificar'}</button>}
     </div>
-    {justifying && canUpdate && <form className="justification-form" onSubmit={saveJustification}><label htmlFor={`justification-${task.id}`}>Justificativa da etapa</label><textarea id={`justification-${task.id}`} rows="2" maxLength={400} value={justification} onChange={(event) => setJustification(event.target.value)} placeholder="Informe a causa e, se possível, a nova previsão." />{error && <p role="alert" className="form-error">{error}</p>}<div><Button type="submit" variant="primary">Salvar justificativa</Button><Button type="button"  onClick={() => setJustifying(false)}>Cancelar</Button></div></form>}
-    {!justifying && task.justification && <p className="justification-text"><b>Justificativa:</b> {task.justification}</p>}
-    <Attachments itemId={itemId} etapaId={task.id} canManage={canUpdate} />
+    <div className="stage-footer">
+      {!justifying && task.justification && <p className="justification-text"><b>Justificativa:</b> {task.justification}</p>}
+      {justifying && canUpdate && <form className="justification-form" onSubmit={saveJustification}><label htmlFor={`justification-${task.id}`}>{pendingStatus ? 'Justificativa do cancelamento' : 'Justificativa da etapa'}</label>{pendingStatus && <p className="justification-help">A situação só será alterada após a confirmação.</p>}<textarea id={`justification-${task.id}`} rows="2" maxLength={400} value={justification} onChange={(event) => setJustification(event.target.value)} placeholder={pendingStatus ? 'Explique por que esta etapa será cancelada.' : 'Informe a causa e, se possível, a nova previsão.'} />{error && <p role="alert" className="form-error">{error}</p>}<div><Button type="button" onClick={cancelJustification}>Cancelar</Button><Button type="submit" variant="primary">{pendingStatus ? 'Confirmar cancelamento' : 'Salvar justificativa'}</Button></div></form>}
+      <div className="stage-tools">
+        {!justifying && canUpdate && (overdue || task.status === 'cancelled' || task.justification) && <Button variant="tertiary" icon="edit" aria-expanded={false} onClick={() => { setJustification(task.justification || ''); setJustifying(true); setError(''); }}>{task.justification ? 'Editar justificativa' : task.status === 'cancelled' ? 'Justificar cancelamento' : 'Justificar atraso'}</Button>}
+        <Attachments itemId={itemId} etapaId={task.id} canManage={canUpdate} buttonVariant="tertiary" />
+      </div>
+    </div>
   </div>;
 }
 
 function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
-  const [collapsed, setCollapsed] = useState([]);
+  const [expanded, setExpanded] = useState([]);
   const [adding, setAdding] = useState(null);
   const [taskName, setTaskName] = useState('');
   const [taskDeadline, setTaskDeadline] = useState('');
@@ -374,7 +402,7 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
     }), 'Etapa adicionada.');
     setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError('');
   };
-  const toggleAction = (actionId) => setCollapsed((current) => current.includes(actionId) ? current.filter((id) => id !== actionId) : [...current, actionId]);
+  const toggleAction = (actionId) => setExpanded((current) => current.includes(actionId) ? current.filter((id) => id !== actionId) : [...current, actionId]);
   const cancelStage = () => { setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError(''); };
   
   return <>
@@ -392,7 +420,7 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
     <div className="actions-list">
       {item.actions.map((action) => {
         const state = actionProgress(action);
-        const closed = collapsed.includes(action.id);
+        const closed = !expanded.includes(action.id);
         return <article className="action-card" key={action.id} style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
           <button className="action-heading" aria-expanded={!closed} onClick={() => toggleAction(action.id)}>
             <span className="action-name"><span className="action-number">{action.code}</span><span className="action-title">{action.title}</span><small>{action.owner} <span>·</span> Prazo: {formatDate(action.deadline)}</small></span>
@@ -400,7 +428,6 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
             <Icon name="chevron" size={14} className={!closed ? 'rotated' : ''} />
           </button>
           {!closed && <div className="action-body">
-            {action.tasks.length > 0 && <div className="stage-columns" aria-hidden="true"><span>Etapa</span><span>Prazo</span><span>Situação</span></div>}
             {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} onChange={onChange} itemId={item.id} />)}
             {!action.tasks.length && <p className="hint px-5 pt-3">Esta ação ainda não possui etapas.</p>}
             {adding === action.id ? <form className="inline-task-form" onSubmit={(event) => submitTask(event, action.id)}>

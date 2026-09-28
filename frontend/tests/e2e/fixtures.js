@@ -27,12 +27,28 @@ export const openPdi = (page) => openPlan(page, 'PDI');
 export const openPls = (page) => openPlan(page, 'PLS');
 export const detail = (page) => page.getByRole('region', { name: 'Detalhe do item' });
 
+export async function expandFirstAction(page) {
+  const heading = page.locator('.action-card').first().locator('.action-heading');
+  if (await heading.getAttribute('aria-expanded') === 'false') await heading.click();
+}
+
+export async function expandTree(page) {
+  const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
+  for (const axis of await tree.locator('.tree-group.axis').all()) {
+    if (await axis.getAttribute('aria-expanded') === 'false') await axis.click();
+  }
+  for (const objective of await tree.locator('.tree-group.objective').all()) {
+    if (await objective.getAttribute('aria-expanded') === 'false') await objective.click();
+  }
+}
+
 export async function chooseOption(scope, field, label) {
   await scope.getByLabel(field, { exact: true }).first().click();
   await scope.getByRole('option', { name: label, exact: true }).filter({ visible: true }).first().click();
 }
 
 export async function selectItem(page, code) {
+  await expandTree(page);
   await page.getByRole('navigation', { name: 'Itens do planejamento' }).getByRole('link', { name: new RegExp(code.replaceAll('.', '\\.')) }).click();
 }
 

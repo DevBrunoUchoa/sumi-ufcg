@@ -1,4 +1,4 @@
-import { test, expect, chooseOption, openPdi, useSession, selectItem } from './fixtures.js';
+import { test, expect, chooseOption, openPdi, useSession, selectItem, expandFirstAction } from './fixtures.js';
 
 test('consulta pública recebe somente conteúdo publicado', async ({ page }) => {
   await useSession(page, 'public');
@@ -20,6 +20,7 @@ test('gestor do eixo executa e envia, sem administrar a estrutura', async ({ pag
   await expect(page.getByRole('link', { name: 'Minhas pendências' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Validações' })).toHaveCount(0);
   await openPdi(page);
+  await expandFirstAction(page);
   await expect(page.getByRole('button', { name: 'Estrutura', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Editar informações' })).toHaveCount(0);
   await expect(page.getByLabel('Situação de Elaborar a minuta da portaria')).toBeVisible();

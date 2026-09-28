@@ -1,4 +1,4 @@
-import { test, expect, chooseOption, openPdi, openPls, detail, recordNumber, selectItem } from './fixtures.js';
+import { test, expect, chooseOption, openPdi, openPls, detail, recordNumber, selectItem, expandFirstAction, expandTree } from './fixtures.js';
 
 test('visão geral e lista permitem localizar e abrir os planos', async ({ page }) => {
   await page.goto('/');
@@ -12,21 +12,23 @@ test('visão geral e lista permitem localizar e abrir os planos', async ({ page 
   await expect(page.getByRole('heading', { name: /^PLS/ })).toBeVisible();
 });
 
-test('menu lateral pode ser recolhido e preserva a preferência', async ({ page }) => {
+test('menus e ações iniciam recolhidos em cada entrada', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.sidebar')).toHaveCSS('width', '224px');
-  await page.getByRole('button', { name: 'Recolher menu lateral' }).click();
   await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
   await expect(page.locator('.sidebar')).toHaveCSS('width', '72px');
   await expect(page.getByRole('link', { name: 'Planejamentos', exact: true })).toBeVisible();
-  await page.reload();
-  await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
   await page.getByRole('button', { name: 'Expandir menu lateral' }).click();
   await expect(page.locator('.sidebar')).toHaveCSS('width', '224px');
+  await page.reload();
+  await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
+  await openPdi(page);
+  await expect(page.locator('.tree-group.axis').first()).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.action-heading').first()).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('PDI calcula o indicador por etapas e mantém o histórico', async ({ page }) => {
   await openPdi(page);
+  await expandFirstAction(page);
   await expect(page.locator('.execution-summary strong')).toHaveText('20%');
   await chooseOption(page, 'Situação de Elaborar a minuta da portaria', 'Concluída');
   await expect(page.locator('.execution-summary strong')).toHaveText('30%');
@@ -67,16 +69,19 @@ test('busca e filtros atuam sobre eixo, objetivo, item e responsável', async ({
   await openPdi(page);
   const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
   await page.getByRole('searchbox', { name: 'Buscar no plano' }).fill('rankings');
+  await expandTree(page);
   await expect(tree.getByRole('link')).toHaveCount(1);
   await expect(detail(page).getByRole('heading', { level: 2 })).toContainText('rankings');
   await chooseOption(page, 'Filtrar situação', 'Concluída');
   await expect(page.getByRole('heading', { name: 'Nenhum item encontrado' })).toBeVisible();
   await page.getByRole('button', { name: 'Limpar filtros' }).click();
+  await expandTree(page);
   await expect(tree.getByRole('link')).toHaveCount(3);
 });
 
 test('ações aceitam novas etapas com prazo e parceiros', async ({ page }) => {
   await openPdi(page);
+  await expandFirstAction(page);
   const action = page.locator('.action-card').first();
   await action.getByRole('button', { name: /Adicionar etapa/ }).click();
   await page.getByLabel('Nome da etapa').last().fill('Revisar contribuições dos setores');
@@ -85,6 +90,35 @@ test('ações aceitam novas etapas com prazo e parceiros', async ({ page }) => {
   await action.getByRole('button', { name: 'Adicionar', exact: true }).click();
   await expect(action).toContainText('Revisar contribuições dos setores');
   await expect(action).toContainText('Parceiros: STI e Reitoria');
+});
+
+test('cancelar a edição da justificativa preserva a situação da etapa', async ({ page }) => {
+  await openPdi(page);
+  await expandFirstAction(page);
+  const stage = page.locator('.task-row').filter({ hasText: 'Encaminhar para aprovação' });
+  const status = stage.getByLabel('Situação de Encaminhar para aprovação');
+  const progress = page.locator('.execution-summary strong');
+  const originalProgress = await progress.textContent();
+
+  await chooseOption(stage, 'Situação de Encaminhar para aprovação', 'Cancelada');
+  await expect(stage.getByRole('button', { name: 'Confirmar cancelamento' })).toBeVisible();
+  await expect(progress).toHaveText(originalProgress);
+  await stage.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(stage.locator('.justification-form')).toHaveCount(0);
+  await expect(status.getByRole('textbox')).toHaveValue('Não iniciada');
+  await expect(progress).toHaveText(originalProgress);
+
+  await chooseOption(stage, 'Situação de Encaminhar para aprovação', 'Cancelada');
+  await stage.getByLabel('Justificativa do cancelamento').fill('Etapa substituída por outro fluxo.');
+  await stage.getByRole('button', { name: 'Confirmar cancelamento' }).click();
+  await expect(status.getByRole('textbox')).toHaveValue('Cancelada');
+  await expect(stage).toContainText('Etapa substituída por outro fluxo.');
+  await expect(page.locator('.execution-count')).toContainText('2 de 9 etapas ativas');
+  await stage.getByRole('button', { name: 'Editar justificativa' }).click();
+  await stage.getByLabel('Justificativa da etapa').fill('Texto descartado.');
+  await stage.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(stage).toContainText('Etapa substituída por outro fluxo.');
+  await expect(stage).not.toContainText('Texto descartado.');
 });
 
 test('abas oferecem navegação por teclado', async ({ page }) => {

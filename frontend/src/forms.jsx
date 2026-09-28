@@ -187,7 +187,31 @@ export function ActionForm({ plan, item, onClose, onSave }) {
   return <Modal title="Adicionar ação" subtitle={`${plan.template.labels.item} ${item.code}`} onClose={onClose}><form onSubmit={submit}><div className="form-body"><Field label="Código da ação" help={`O código da ${plan.template.labels.item.toLowerCase()} já está preenchido; informe apenas o último número.`}><div className="code-input"><span>{item.code}.</span><Input name="codeSuffix" required inputMode="numeric" pattern="[0-9]+" maxLength={6} aria-label="Último número do código" /></div></Field><Field label="Nome da ação"><Input name="title" required maxLength={180} autoFocus /></Field><Field label="Unidade responsável"><Input name="owner" required defaultValue={item.owner} maxLength={80} /></Field><Field label="Prazo"><Input name="deadline" type="date" min={`${plan.start}-01-01`} max={`${plan.end}-12-31`} required /></Field></div><FormEnd onClose={onClose} submit="Adicionar ação" error={error} /></form></Modal>;
 }
 
-export function RiskForm({ item, action, risk, onClose, onSave }) {
+export function StageForm({ plan, onClose, onSave }) {
+  const [deadline, setDeadline] = useState('');
+  const [error, setError] = useState('');
+
+  function submit(event) {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(event.currentTarget));
+    if (!values.title.trim()) return setError('Informe o nome da etapa.');
+    if (!values.deadline) return setError('Informe o prazo da etapa.');
+    onSave({ title: values.title.trim(), partners: values.partners.trim(), deadline: values.deadline });
+  }
+
+  return <Modal title="Adicionar etapa" onClose={onClose}>
+    <form onSubmit={submit}>
+      <div className="form-body">
+        <Field label="Nome da etapa"><Input name="title" required maxLength={180} autoFocus placeholder="Descreva a etapa…" /></Field>
+        <Field label="Parceiros"><Input name="partners" maxLength={150} placeholder="Parceiros (opcional)" /></Field>
+        <Field label="Prazo"><DatePicker name="deadline" min={`${plan.start}-01-01`} max={`${plan.end}-12-31`} required placeholder="Selecione o prazo" aria-label="Prazo da etapa" value={deadline} onChange={setDeadline} /></Field>
+      </div>
+      <FormEnd onClose={onClose} submit="Adicionar" error={error} />
+    </form>
+  </Modal>;
+}
+
+export function RiskForm({ item, action, stage, risk, onClose, onSave }) {
   const [probability, setProbability] = useState(risk?.probability || 3);
   const [impact, setImpact] = useState(risk?.impact || 3);
   const [maturity, setMaturity] = useState(risk?.maturity || 'Fraco');
@@ -204,11 +228,11 @@ export function RiskForm({ item, action, risk, onClose, onSave }) {
     if (required.some((name) => !values[name].trim())) return setError('Preencha os campos principais do risco.');
     const selectedDeadline = event.currentTarget.querySelector('br-datetime-picker')?.serializedValue || deadline;
     if (!selectedDeadline) return setError('Informe o prazo de conclusão do risco.');
-    onSave({ ...(risk || {}), id: risk?.id || uid(), actionId: action.id, stage: values.stage.trim(), title: values.title.trim(), strategicRisk: values.strategicRisk.trim(), cause: values.cause.trim(), consequence: values.consequence.trim(), category: values.category, probability, impact, controls: values.controls.trim(), controlType: values.controlType, maturity, response: values.response, treatment: values.treatment.trim(), treatmentOwner: values.treatmentOwner.trim(), deadline: selectedDeadline, execution: Number(values.execution || 0), situation: values.situation, review: values.review, status: values.status });
+    onSave({ ...(risk || {}), id: risk?.id || uid(), actionId: action.id, stage: stage?.title || values.stage.trim(), title: values.title.trim(), strategicRisk: values.strategicRisk.trim(), cause: values.cause.trim(), consequence: values.consequence.trim(), category: values.category, probability, impact, controls: values.controls.trim(), controlType: values.controlType, maturity, response: values.response, treatment: values.treatment.trim(), treatmentOwner: values.treatmentOwner.trim(), deadline: selectedDeadline, execution: Number(values.execution || 0), situation: values.situation, review: values.review, status: values.status });
   }
   return <Modal title={risk ? 'Editar risco' : 'Adicionar risco'} subtitle={`${item.code} · ${action.title}`} onClose={onClose} wide><form onSubmit={submit}><div className="form-body">
-    <div className="risk-form-context"><span><b>Ação:</b> {action.title}</span><span><b>Etapa:</b> {risk?.stage || 'Será definida no formulário'}</span></div>
-    <h3>Identificação do risco</h3><Field label="Etapa" help="Associe o risco à etapa específica em que ele foi identificado."><Select name="stage" defaultValue={field('stage') || action.tasks[0]?.title || ''} options={[{ value: '', label: 'Ação sem etapa específica' }, ...action.tasks.map((task) => task.title)]} /></Field>
+    <div className="risk-form-context"><span><b>Ação:</b> {action.title}</span><span><b>Etapa:</b> {stage?.title || risk?.stage || 'Será definida no formulário'}</span></div>
+    <h3>Identificação do risco</h3><Field label="Etapa" help="Associe o risco à etapa específica em que ele foi identificado."><Select name="stage" defaultValue={stage?.title || field('stage') || action.tasks[0]?.title || ''} options={[{ value: '', label: 'Ação sem etapa específica' }, ...action.tasks.map((task) => ({ value: task.title, label: task.title }))]} disabled={Boolean(stage)} /></Field>
     <Field label="Risco do processo"><Textarea name="title" rows="2" required maxLength={240} defaultValue={field('title')} placeholder="Ex.: Dados institucionais incompletos para a inscrição" /></Field>
     <Field label="Risco estratégico da iniciativa"><Textarea name="strategicRisk" rows="2" maxLength={240} defaultValue={field('strategicRisk')} placeholder="Ex.: Não cumprir a meta institucional no prazo" /></Field>
     <div className="form-grid"><Field label="Causa do risco"><Textarea name="cause" rows="2" required maxLength={300} defaultValue={field('cause')} /></Field><Field label="Efeito / consequência"><Textarea name="consequence" rows="2" required maxLength={300} defaultValue={field('consequence')} /></Field></div>

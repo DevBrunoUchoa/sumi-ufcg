@@ -5,7 +5,7 @@ defineBrDatetimePicker();
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTableCellsLarge, faLayerGroup, faPlus, faArrowRight, faChevronRight, faMagnifyingGlass, faCheck, faXmark, faPen, faRotateLeft, 
-faChartColumn, faListUl, faBook, faLeaf, faCircleInfo, faUser, faCalendar, faLink, faDownload, faUpload } from '@fortawesome/free-solid-svg-icons';
+faChartColumn, faListUl, faBook, faLeaf, faCircleInfo, faUser, faCalendar, faLink, faDownload, faUpload, faExclamation, faEye } from '@fortawesome/free-solid-svg-icons';
 
 const iconMap = {
   grid: faTableCellsLarge,
@@ -28,6 +28,8 @@ const iconMap = {
   link: faLink,
   download: faDownload,
   upload: faUpload,
+  danger: faExclamation,
+  eye: faEye,
 };
 
 export function Icon({ name, size = 18, ...props }) {

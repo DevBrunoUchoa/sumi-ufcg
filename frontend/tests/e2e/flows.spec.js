@@ -84,10 +84,12 @@ test('ações aceitam novas etapas com prazo e parceiros', async ({ page }) => {
   await expandFirstAction(page);
   const action = page.locator('.action-card').first();
   await action.getByRole('button', { name: /Adicionar etapa/ }).click();
-  await page.getByLabel('Nome da etapa').last().fill('Revisar contribuições dos setores');
-  await page.getByLabel('Prazo da etapa').locator('input').first().fill('30/11/2026');
-  await page.getByLabel('Parceiros da etapa').last().fill('STI e Reitoria');
-  await action.getByRole('button', { name: 'Adicionar', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Nome da etapa').fill('Revisar contribuições dos setores');
+  await dialog.getByLabel('Prazo da etapa').locator('input').first().fill('30/11/2026');
+  await dialog.getByLabel('Parceiros').fill('STI e Reitoria');
+  await dialog.getByRole('button', { name: 'Adicionar', exact: true }).click();
   await expect(action).toContainText('Revisar contribuições dos setores');
   await expect(action).toContainText('Parceiros: STI e Reitoria');
 });
@@ -114,11 +116,18 @@ test('cancelar a edição da justificativa preserva a situação da etapa', asyn
   await expect(status.getByRole('textbox')).toHaveValue('Cancelada');
   await expect(stage).toContainText('Etapa substituída por outro fluxo.');
   await expect(page.locator('.execution-count')).toContainText('2 de 9 etapas ativas');
-  await stage.getByRole('button', { name: 'Editar justificativa' }).click();
-  await stage.getByLabel('Justificativa da etapa').fill('Texto descartado.');
-  await stage.getByRole('button', { name: 'Cancelar', exact: true }).click();
-  await expect(stage).toContainText('Etapa substituída por outro fluxo.');
+  await stage.getByRole('button', { name: 'Ver justificativa' }).click();
+  const justificationDialog = page.getByRole('dialog');
+  await justificationDialog.getByRole('button', { name: 'Editar justificativa' }).click();
+  await justificationDialog.getByLabel('Justificativa da etapa').fill('Texto descartado.');
+  await justificationDialog.getByRole('button', { name: 'Fechar', exact: true }).click();
   await expect(stage).not.toContainText('Texto descartado.');
+  await stage.getByRole('button', { name: 'Ver justificativa' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Editar justificativa' }).click();
+  await page.getByRole('dialog').getByLabel('Justificativa da etapa').fill('Texto atualizado.');
+  await page.getByRole('dialog').getByRole('button', { name: 'Salvar justificativa' }).click();
+  await stage.getByRole('button', { name: 'Ver justificativa' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Texto atualizado.');
 });
 
 test('abas oferecem navegação por teclado', async ({ page }) => {

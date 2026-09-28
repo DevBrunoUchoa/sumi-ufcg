@@ -50,7 +50,7 @@ export function LoginPage({ onSuccess }) {
       <form className="login-form" onSubmit={submit}>
         <div className="form-body">
           <Field label="E-mail institucional">
-            <input type="email" name="email" autoFocus required autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} />
+            <input type="email" name="email" required autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} />
           </Field>
           <Field label="Senha">
             <input type="password" name="senha" required autoComplete="current-password" value={senha} onChange={(event) => setSenha(event.target.value)} />

@@ -44,11 +44,13 @@ async function logout() {
 
 const planningClient = createPlanningClient();
 const SIDEBAR_PREFERENCE_KEY = 'sumi.ui.sidebar-collapsed';
+const ALTO_CONTRASTE_KEY = 'sumi.ui.alto-contraste';
 const planUrl = (id, item, tab = 'acoes', period) => `/plano/${id}${item ? `?item=${item}&tab=${tab}${period ? `&period=${period}` : ''}` : ''}`;
 const navigate = (path) => { window.location.hash = path; };
 const readRoute = () => { const [path, query] = (window.location.hash.slice(1) || '/inicio').split('?'); return { path, query: new URLSearchParams(query) }; };
 const statusTone = (status) => status === 'Concluída' || status === 'Meta atingida' || status === 'Validado' ? 'green' : status === 'Em andamento' || status === 'Aguardando validação' ? 'blue' : status === 'Correção solicitada' ? 'attention' : 'neutral';
 const readSidebarPreference = () => { try { return localStorage.getItem(SIDEBAR_PREFERENCE_KEY) === 'true'; } catch { return false; } };
+const readAltoContrastePreference = () => { try { return localStorage.getItem(ALTO_CONTRASTE_KEY) === 'true'; } catch { return false; } };
 
 function Progress({ done, total, percent, label = 'etapas', compact = false }) {
   const value = percent ?? (total ? done / total * 100 : 0);
@@ -80,7 +82,11 @@ function App({ auth, initialData }) {
   const [saveError, setSaveError] = useState('');
   const [readyToSave, setReadyToSave] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
+  const [altoContraste, setAltoContraste] = useState(readAltoContrastePreference);
   useEffect(() => { const changed = () => { setRoute(readRoute()); setModal(null); }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange', changed); }, []);
+  // No <html>, não só no app-shell, pra cobrir qualquer conteúdo fora da árvore
+  // do React (ex.: o widget do VLibras injetado direto no index.html).
+  useEffect(() => { document.documentElement.toggleAttribute('data-alto-contraste', altoContraste); }, [altoContraste]);
   useEffect(() => { if (!readyToSave) return setReadyToSave(true); const timer = setTimeout(() => planningClient.save(data).then(() => setSaveError('')).catch(() => setSaveError('Não foi possível salvar as alterações.')), 150); return () => clearTimeout(timer); }, [data]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   const update = (mutate, message) => { setData((current) => { const next = structuredClone(current); mutate(next); return next; }); if (message) setToast(message); };
@@ -105,6 +111,7 @@ function App({ auth, initialData }) {
   const changeItem = (planId, itemId, change, message) => update((draft) => { const plan = draft.plans.find((candidate) => candidate.id === planId); const index = plan.items.findIndex((item) => item.id === itemId); plan.items[index] = change(plan.items[index]); }, message);
   const close = () => setModal(null);
   const toggleSidebar = () => setSidebarCollapsed((current) => { const next = !current; try { localStorage.setItem(SIDEBAR_PREFERENCE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
+  const toggleAltoContraste = () => setAltoContraste((current) => { const next = !current; try { localStorage.setItem(ALTO_CONTRASTE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
   const planId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
   const visiblePlans = data.plans.filter((plan) => can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan)) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, resourceFor(plan))));
   const plan = visiblePlans.find((candidate) => candidate.id === planId);
@@ -142,7 +149,7 @@ function App({ auth, initialData }) {
       <div className="sidebar-bottom"><div className="institution">Universidade Federal<br />de Campina Grande</div></div>
     </aside>
     <div className="workspace">
-      <header className="topbar"><div className="breadcrumb"><a href="#/inicio">SUMI</a>{plan && <><Icon name="chevron" size={13} /><a href="#/planejamentos">Planejamentos</a><Icon name="chevron" size={13} /><strong>{plan.shortName}</strong></>}</div><div className="account-summary"><span className="account-avatar"><Icon name="user" size={16} /></span><span><strong>{session.user?.name || 'Comunidade UFCG'}</strong><small>{roles}</small></span>{session.authenticated ? <button type="button" className="text-button" onClick={() => logout().then(auth.reload)}>Sair</button> : <a className="text-button" href="#/login">Entrar</a>}</div></header>
+      <header className="topbar"><div className="breadcrumb"><a href="#/inicio">SUMI</a>{plan && <><Icon name="chevron" size={13} /><a href="#/planejamentos">Planejamentos</a><Icon name="chevron" size={13} /><strong>{plan.shortName}</strong></>}</div><div className="account-summary"><button type="button" className="text-button accessibility-toggle" aria-pressed={altoContraste} onClick={toggleAltoContraste} title={altoContraste ? 'Desativar alto contraste' : 'Ativar alto contraste'}><Icon name="contrast" size={16} />{altoContraste ? 'Contraste padrão' : 'Alto contraste'}</button><span className="account-avatar"><Icon name="user" size={16} /></span><span><strong>{session.user?.name || 'Comunidade UFCG'}</strong><small>{roles}</small></span>{session.authenticated ? <button type="button" className="text-button" onClick={() => logout().then(auth.reload)}>Sair</button> : <a className="text-button" href="#/login">Entrar</a>}</div></header>
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
       <main id="main-content" tabIndex={-1}>
         {/* workspace foi buscado uma vez no mount, antes do login — sem recarregar aqui, planos internos/rascunho ficam invisíveis até um refresh manual da página */}
@@ -354,6 +361,7 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
             {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} onChange={onChange} itemId={item.id} />)}
             {!action.tasks.length && <p className="hint px-5 pt-3">Esta ação ainda não possui etapas.</p>}
             {adding === action.id ? <form className="inline-task-form" onSubmit={(event) => submitTask(event, action.id)}>
+              {/* eslint-disable-next-line jsx-a11y/no-autofocus -- form revelado pelo próprio clique do usuário em "Adicionar etapa", não no carregamento da página */}
               <input aria-label="Nome da etapa" autoFocus required maxLength={180} placeholder="Descreva a etapa…" value={taskName} onChange={(event) => setTaskName(event.target.value)} />
               <input aria-label="Prazo da etapa" type="date" min={`${plan.start}-01-01`} max={`${plan.end}-12-31`} required value={taskDeadline} onChange={(event) => setTaskDeadline(event.target.value)} />
               <input aria-label="Parceiros da etapa" maxLength={150} placeholder="Parceiros (opcional)" value={taskPartners} onChange={(event) => setTaskPartners(event.target.value)} />

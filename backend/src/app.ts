@@ -20,7 +20,23 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(helmet());
+  app.use(
+    helmet({
+      // CSP padrão do helmet só libera 'self' em script/connect/img/media —
+      // o widget do VLibras (tradutor de Libras, vlibras.gov.br) carrega um
+      // script externo e baixa os assets do avatar (Unity/WebGL) desse
+      // mesmo domínio, então precisa de uma exceção explícita.
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          "script-src": ["'self'", "https://vlibras.gov.br"],
+          "connect-src": ["'self'", "https://vlibras.gov.br"],
+          "img-src": ["'self'", "data:", "https://vlibras.gov.br"],
+          "media-src": ["'self'", "https://vlibras.gov.br"],
+        },
+      },
+    }),
+  );
   app.use(cors({ origin: true, credentials: true }));
   // O PUT do workspace envia todos os planos de uma vez (sem persistência
   // incremental por item) — o padrão de 100kb do express.json() já é

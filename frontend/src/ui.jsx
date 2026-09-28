@@ -21,6 +21,7 @@ const paths = {
   link: 'm10 13 4-4 M8 16l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0 M16 8l2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0',
   download: 'M12 3v12 M7 10l5 5 5-5 M4 20h16',
   upload: 'M12 21V9 M7 14l5-5 5 5 M4 20h16',
+  contrast: 'M12 2a10 10 0 1 0 0 20V2z M12 2a10 10 0 0 1 0 20',
 };
 export function Icon({ name, size = 18, ...props }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name] || paths.book} /></svg>;
@@ -31,7 +32,11 @@ export function Button({ children, icon, variant = 'secondary', className = '', 
 export function Badge({ children, tone = 'neutral' }) { return <span className={`badge ${tone}`}>{children}</span>; }
 export function Field({ label, help, children, className = '' }) {
   const id = useId();
-  return <div className={`field ${className}`}><label htmlFor={id}>{label}</label>{React.cloneElement(children, { id, 'data-initial-focus': children.props.autoFocus ? 'true' : undefined, 'aria-describedby': help ? `${id}-help` : undefined })}{help && <small id={`${id}-help`}>{help}</small>}</div>;
+  // data-initial-focus (não autoFocus) é o que o Modal usa pra decidir qual campo
+  // focar ao abrir — o atributo HTML autoFocus nativo dispara antes do React
+  // terminar de montar o <dialog>, o que o jsx-a11y/no-autofocus sinaliza com
+  // razão (contexto muda sem o leitor de tela ter chance de anunciar o diálogo).
+  return <div className={`field ${className}`}><label htmlFor={id}>{label}</label>{React.cloneElement(children, { id, 'data-initial-focus': children.props['data-initial-focus'] ?? (children.props.autoFocus ? 'true' : undefined), 'aria-describedby': help ? `${id}-help` : undefined })}{help && <small id={`${id}-help`}>{help}</small>}</div>;
 }
 export function Empty({ title, children, action }) {
   return <div className="empty"><span className="empty-icon"><Icon name="layers" size={25} /></span><h3>{title}</h3>{children && <p>{children}</p>}{action}</div>;

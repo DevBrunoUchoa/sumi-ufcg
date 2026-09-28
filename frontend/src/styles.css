@@ -65,13 +65,19 @@ svg { flex-shrink: 0; }
 .breadcrumb a:hover { color: #13597b; }
 .breadcrumb strong { color: #2d475c; font-weight: 500; }
 .account-summary { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.accessibility-toggle { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #cbd7de; border-radius: 5px; margin-right: 6px; }
+.accessibility-toggle:hover { text-decoration: none; background: #f6f8f9; }
+.accessibility-toggle[aria-pressed="true"] { background: #133f61; color: #fff; border-color: #133f61; }
 .account-summary > span:last-child { display: flex; flex-direction: column; min-width: 0; }
 .account-summary strong { color: #364550; font-size: 13px; font-weight: 600; }
 .account-summary small { color: #5c6871; font-size: 12px; }
 .account-avatar { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #edf4f8; color: #356682; }
 .warning-strip { background: #fff1d9; color: #704e13; padding: 12px 35px; display: flex; justify-content: space-between; gap: 20px; }
 .warning-strip button { text-decoration: underline; }
-main:focus { outline: none; }
+/* #main-content só recebe foco programático pelo skip link ("Pular para o
+   conteúdo") — sem indicador visível aqui, quem usa teclado não vê
+   confirmação de que o salto funcionou. */
+main:focus { outline: 3px solid #2580b5; outline-offset: -3px; }
 .page { max-width: 1400px; padding: 35px 40px 55px; margin: auto; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-bottom: 30px; }
 .page-heading > div > p:last-child { margin-top: 9px; color: #5c6871; font-size: 13px; }
@@ -590,4 +596,26 @@ main:focus { outline: none; }
 .axis-user-picker ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
 .axis-user-picker label { display: flex; align-items: center; gap: 7px; font-weight: 400; }
 .axis-user-picker small { color: #5c6871; }
+
+/* Alto contraste (barra de acessibilidade, padrão gov.br) — ativado por
+   toggleAltoContraste em main.jsx, persistido em localStorage. Não troca a
+   paleta inteira (o app não usa variáveis de cor sistematicamente), só
+   escurece texto secundário e reforça bordas, que é onde a maior parte do
+   app fica abaixo do contraste mínimo do WCAG AA (4.5:1) hoje — cinzas como
+   #5c6871/#8a97a1 em fundo branco. */
+html[data-alto-contraste="true"] {
+  --color-ink: #000;
+}
+html[data-alto-contraste="true"] body,
+html[data-alto-contraste="true"] :is(p, span, small, td, th, label, li) {
+  color: #000;
+}
+html[data-alto-contraste="true"] a { text-decoration: underline; }
+html[data-alto-contraste="true"] :is(.hint, .eyebrow, small) { color: #1a1a1a; }
+html[data-alto-contraste="true"] :is(.field, .risk-card, .tree-item, .axis-user-picker, .login-form, input, select, textarea) {
+  border-color: #000 !important;
+}
+html[data-alto-contraste="true"] button {
+  border: 1px solid #000;
+}
 

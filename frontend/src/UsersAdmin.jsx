@@ -73,6 +73,7 @@ export function UsersAdmin({ currentUserId }) {
     {error && <p role="alert" className="form-error">{error}</p>}
     {creating && <form className="user-create-form" onSubmit={handleCreate}>
       <div className="form-grid three">
+        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- form revelado pelo próprio clique do usuário em "Novo usuário", não no carregamento da página */}
         <Field label="Nome"><input name="nome" required maxLength={120} autoFocus /></Field>
         <Field label="E-mail"><input name="email" type="email" required maxLength={180} /></Field>
         <Field label="Senha provisória"><input name="senha" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" /></Field>
@@ -88,6 +89,7 @@ export function UsersAdmin({ currentUserId }) {
           <tbody>{state.usuarios.map((usuario) => editingId === usuario.id ? <tr key={usuario.id}><td colSpan={4}>
             <form className="user-edit-form" onSubmit={(event) => handleUpdate(event, usuario)}>
               <div className="form-grid three">
+                {/* eslint-disable-next-line jsx-a11y/no-autofocus -- form revelado pelo próprio clique do usuário em "Editar", não no carregamento da página */}
                 <Field label="Nome"><input name="nome" required maxLength={120} defaultValue={usuario.nome} autoFocus /></Field>
                 <Field label="E-mail"><input value={usuario.email} disabled /></Field>
                 <Field label="Nova senha (opcional)" help="Deixe em branco para manter a atual."><input name="senha" type="password" minLength={8} /></Field>

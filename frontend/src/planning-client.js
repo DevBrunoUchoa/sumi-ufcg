@@ -36,6 +36,7 @@ function createHttpClient() {
   const request = async (path, options = {}) => {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       credentials: 'include',
+      cache: 'no-store',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...options.headers },
       ...options,
     });

@@ -22,6 +22,7 @@ export function LoginPage({ onSuccess }) {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: 'POST',
         credentials: 'include',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ email, senha }),
       });

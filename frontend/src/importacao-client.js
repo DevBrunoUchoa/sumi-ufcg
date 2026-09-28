@@ -22,6 +22,7 @@ export async function importarPlanilha(planId, arquivo) {
   const response = await fetch(`${API_BASE_URL}/api/v1/planning/planos/${planId}/importacao`, {
     method: 'POST',
     credentials: 'include',
+    cache: 'no-store',
     body: formData,
   });
   const body = await response.json().catch(() => null);

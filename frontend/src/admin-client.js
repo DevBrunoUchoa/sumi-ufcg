@@ -8,6 +8,7 @@ const API_BASE_URL = (env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: 'include',
+    cache: 'no-store',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...options.headers },
     ...options,
   });

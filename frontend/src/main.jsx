@@ -39,7 +39,7 @@ function setMetaDescription(text) {
 
 const authApiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 async function logout() {
-  await fetch(`${authApiBase}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' });
+  await fetch(`${authApiBase}/api/v1/auth/logout`, { method: 'POST', credentials: 'include', cache: 'no-store' });
 }
 
 const planningClient = createPlanningClient();

@@ -1,0 +1,8 @@
+# O backend já manda Cache-Control: private, no-store em toda resposta de
+# /api/*, mas o cache de borda da Netlify observado em produção variava só
+# por query string (netlify-vary: query), ignorando o cookie de sessão — uma
+# resposta autenticada podia ser servida para outra sessão. Reforça aqui pra
+# não depender só do header de origem (mesma regra do [[headers]] no
+# netlify.toml da raiz — repetida aqui pelo mesmo motivo do _redirects).
+/api/*
+  Cache-Control: private, no-store

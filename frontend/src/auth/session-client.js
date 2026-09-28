@@ -38,6 +38,7 @@ async function loadApiSession({ signal } = {}) {
   const response = await fetch(`${API_BASE_URL}${SESSION_PATH}`, {
     method: 'GET',
     credentials: 'include',
+    cache: 'no-store',
     headers: { Accept: 'application/json' },
     signal,
   });

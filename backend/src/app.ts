@@ -34,6 +34,20 @@ export function createApp() {
   // ou "consulta pública" quando não há cookie válido) para todas as rotas.
   app.use(sessionMiddleware);
 
+  // Toda resposta de /api/* varia por sessão (o mesmo GET devolve dados
+  // diferentes dependendo do cookie), mas nenhuma rota aqui declarava isso —
+  // sem Cache-Control, um cache intermediário (CDN/edge da hospedagem do
+  // frontend, proxy corporativo) pode reter e reservir a resposta de uma
+  // sessão para outra. Visto em produção: o workspace autenticado de um
+  // usuário aparecia para outra sessão (ou a pública aparecia para quem
+  // tinha acabado de logar) por causa de cache de borda que não varia por
+  // cookie. private+no-store cobre isso para toda a API de uma vez, sem
+  // depender de cada rota lembrar de declarar.
+  app.use("/api", (_req, res, next) => {
+    res.set("Cache-Control", "private, no-store");
+    next();
+  });
+
   // Rotas de domínio entram aqui conforme forem implementadas em src/modules/*.
   app.use(authRouter);
   app.use(usuariosAdminRouter);

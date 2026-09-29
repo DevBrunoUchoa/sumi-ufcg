@@ -1,4 +1,4 @@
-import { test, expect, openPdi, useSession, selectItem } from './fixtures.js';
+import { test, expect, chooseOption, openPdi, useSession, selectItem, expandFirstAction } from './fixtures.js';
 
 test('consulta pública recebe somente conteúdo publicado', async ({ page }) => {
   await useSession(page, 'public');
@@ -9,9 +9,8 @@ test('consulta pública recebe somente conteúdo publicado', async ({ page }) =>
   await expect(page.locator('.workflow-banner')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Editar informações' })).toHaveCount(0);
   await expect(page.locator('.stage-status-select')).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: /Riscos/ })).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: 'Histórico' })).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Indicador e metas' }).click();
+  await expect(page.getByRole('link', { name: 'Histórico' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Riscos da ação/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Registrar resultado' })).toHaveCount(0);
 });
 
@@ -20,14 +19,16 @@ test('gestor do eixo executa e envia, sem administrar a estrutura', async ({ pag
   await expect(page.getByRole('link', { name: 'Minhas pendências' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Validações' })).toHaveCount(0);
   await openPdi(page);
+  await expandFirstAction(page);
   await expect(page.getByRole('button', { name: 'Estrutura', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Editar informações' })).toHaveCount(0);
   await expect(page.getByLabel('Situação de Elaborar a minuta da portaria')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Adicionar etapa/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Adicionar etapa/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remover etapa' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Enviar para validação' })).toBeVisible();
   await page.getByRole('button', { name: 'Enviar para validação' }).click();
   await expect(page.locator('.workflow-banner')).toContainText('Aguardando validação');
-  await page.getByLabel('Situação de Elaborar a minuta da portaria').selectOption('completed');
+  await chooseOption(page, 'Situação de Elaborar a minuta da portaria', 'Concluída');
   await expect(page.locator('.workflow-banner')).toContainText('Em elaboração');
 });
 
@@ -35,7 +36,6 @@ test('escopo do gestor não libera mutações no PLS', async ({ page }) => {
   await useSession(page, 'axis_contributor');
   await page.goto('/#/plano/pls');
   await expect(page.locator('.stage-status-select')).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Indicador e metas' }).click();
   await expect(page.getByRole('button', { name: 'Registrar resultado' })).toHaveCount(0);
 });
 
@@ -47,7 +47,7 @@ test('responsável do eixo valida sem receber ações de execução', async ({ p
   await expect(page.locator('.stage-status-select')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Validar', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Validar', exact: true }).click();
-  await page.getByLabel('Observação da validação').fill('Informações conferidas.');
+  await page.getByLabel('Observação da validação').last().fill('Informações conferidas.');
   await page.getByRole('button', { name: 'Confirmar validação' }).click();
   await expect(page.locator('.workflow-banner')).toContainText('Validado');
 });

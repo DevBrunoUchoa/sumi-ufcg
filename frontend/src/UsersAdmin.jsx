@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Badge, Button, Empty, Field, Icon } from './ui.jsx';
+import { Badge, Button, Empty, Field, Icon, Input } from './ui.jsx';
 import { atualizarUsuario, criarUsuario, listarUsuarios, removerUsuario } from './admin-client.js';
 
 // Tela restrita ao Administrador Estratégico (model.manage) — Plano de
@@ -73,10 +73,10 @@ export function UsersAdmin({ currentUserId }) {
     {error && <p role="alert" className="form-error">{error}</p>}
     {creating && <form className="user-create-form" onSubmit={handleCreate}>
       <div className="form-grid three">
-        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- form revelado pelo próprio clique do usuário em "Novo usuário", não no carregamento da página */}
-        <Field label="Nome"><input name="nome" required maxLength={120} autoFocus /></Field>
-        <Field label="E-mail"><input name="email" type="email" required maxLength={180} /></Field>
-        <Field label="Senha provisória"><input name="senha" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" /></Field>
+        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- formulário revelado pelo clique em "Novo usuário" */}
+        <Field label="Nome"><Input name="nome" required maxLength={120} autoFocus /></Field>
+        <Field label="E-mail"><Input name="email" type="email" required maxLength={180} /></Field>
+        <Field label="Senha provisória"><Input name="senha" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" /></Field>
       </div>
       <label className="checkbox-field"><input name="papelAdmin" type="checkbox" /> Administrador Estratégico (acesso total)</label>
       <div className="form-end"><Button onClick={() => { setCreating(false); setError(''); }}>Cancelar</Button><Button type="submit" variant="primary">Criar usuário</Button></div>
@@ -89,10 +89,10 @@ export function UsersAdmin({ currentUserId }) {
           <tbody>{state.usuarios.map((usuario) => editingId === usuario.id ? <tr key={usuario.id}><td colSpan={4}>
             <form className="user-edit-form" onSubmit={(event) => handleUpdate(event, usuario)}>
               <div className="form-grid three">
-                {/* eslint-disable-next-line jsx-a11y/no-autofocus -- form revelado pelo próprio clique do usuário em "Editar", não no carregamento da página */}
-                <Field label="Nome"><input name="nome" required maxLength={120} defaultValue={usuario.nome} autoFocus /></Field>
-                <Field label="E-mail"><input value={usuario.email} disabled /></Field>
-                <Field label="Nova senha (opcional)" help="Deixe em branco para manter a atual."><input name="senha" type="password" minLength={8} /></Field>
+                {/* eslint-disable-next-line jsx-a11y/no-autofocus -- formulário revelado pelo clique em "Editar" */}
+                <Field label="Nome"><Input name="nome" required maxLength={120} defaultValue={usuario.nome} autoFocus /></Field>
+                <Field label="E-mail"><Input value={usuario.email} disabled /></Field>
+                <Field label="Nova senha (opcional)" help="Deixe em branco para manter a atual."><Input name="senha" type="password" minLength={8} /></Field>
               </div>
               <label className="checkbox-field"><input name="papelAdmin" type="checkbox" defaultChecked={usuario.papelAdmin} /> Administrador Estratégico (acesso total)</label>
               <div className="form-end"><Button onClick={() => { setEditingId(null); setError(''); }}>Cancelar</Button><Button type="submit" variant="primary" disabled={busyId === usuario.id}>Salvar</Button></div>

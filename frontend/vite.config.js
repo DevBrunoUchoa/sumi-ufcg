@@ -22,6 +22,16 @@ function developmentSession() {
           response.end(JSON.stringify(initialState()));
           return;
         }
+        if (request.method === 'GET' && request.url?.split('?')[0] === '/api/v1/admin/usuarios') {
+          response.statusCode = 200;
+          response.setHeader('Content-Type', 'application/json; charset=utf-8');
+          response.setHeader('Cache-Control', 'no-store');
+          response.end(JSON.stringify(['administrator', 'axis_contributor', 'axis_reviewer'].map((profile) => {
+            const { id, name: nome, email } = developmentSessions[profile].user;
+            return { id, nome, email, papelAdmin: profile === 'administrator' };
+          })));
+          return;
+        }
         const profileMatch = request.url?.match(/^\/__dev\/session\/(administrator|public|axis_contributor|axis_reviewer)$/);
         if (request.method === 'GET' && profileMatch) {
           response.statusCode = 302;

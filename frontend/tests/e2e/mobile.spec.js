@@ -6,7 +6,6 @@ test('consulta e acompanhamento permanecem utilizáveis em tela estreita', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await openPls(page);
   await selectItem(page, '11.1');
-  await page.getByRole('tab', { name: 'Indicador e metas' }).click();
   await expect(page.locator('.current-result')).toContainText('Em elaboração');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Registrar resultado' }).click();

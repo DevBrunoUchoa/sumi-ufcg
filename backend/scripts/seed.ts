@@ -185,7 +185,7 @@ async function main() {
     dados: {
       code: "8",
       name: "Governança e Gestão Institucional",
-      color: "#2f78a5",
+      color: "#b5336f",
       ownerUnit: "SEPLAN",
       managerIds: gestorId ? [gestorId] : [],
       reviewerIds: responsavelId ? [responsavelId] : [],
@@ -203,9 +203,9 @@ async function main() {
     chaveNatural: "shortName",
   });
   const plsEixos: [string, string, string, string][] = [
-    ["1", "Promoção da racionalização e do consumo consciente de bens e serviços", "#4c8c68", "SEPLAN"],
-    ["3", "Identificação dos objetos de menor impacto ambiental", "#7656a8", "PRGAF"],
-    ["7", "Qualidade de vida", "#d29b18", "SRH"],
+    ["1", "Promoção da racionalização e do consumo consciente de bens e serviços", "#1b9afb", "SEPLAN"],
+    ["3", "Identificação dos objetos de menor impacto ambiental", "#a19177", "PRGAF"],
+    ["7", "Qualidade de vida", "#c23929", "SRH"],
   ];
   for (const [index, [code, name, color, ownerUnit]] of plsEixos.entries()) {
     await upsertNoPlano({

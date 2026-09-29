@@ -20,7 +20,14 @@ export const templates = [
 ];
 
 const pdiAxes = [
-  { id: 'pdi-axis-8', code: '8', name: 'Governança e Gestão Institucional', color: '#2f78a5', ownerUnit: 'SEPLAN', managerIds: ['dev-contributor'], reviewerIds: ['dev-reviewer'] },
+  { id: 'pdi-axis-1', code: '1', name: 'Ensino', color: '#1b9afb', ownerUnit: 'A definir', managerIds: [], reviewerIds: [] },
+  { id: 'pdi-axis-2', code: '2', name: 'Pesquisa e Inovação', color: '#009330', ownerUnit: 'A definir', managerIds: [], reviewerIds: [] },
+  { id: 'pdi-axis-3', code: '3', name: 'Extensão', color: '#a19177', ownerUnit: 'A definir', managerIds: [], reviewerIds: [] },
+  { id: 'pdi-axis-4', code: '4', name: 'Assistência Estudantil', color: '#016168', ownerUnit: 'A definir', managerIds: [], reviewerIds: [] },
+  { id: 'pdi-axis-5', code: '5', name: 'Internacionalização', color: '#e39010', ownerUnit: 'A definir', managerIds: [], reviewerIds: [] },
+  { id: 'pdi-axis-6', code: '6', name: 'Infraestrutura, acessibilidade e inclusão', color: '#8b4b0e', ownerUnit: 'A definir', managerIds: [], reviewerIds: [] },
+  { id: 'pdi-axis-7', code: '7', name: 'Gestão de Pessoas', color: '#c23929', ownerUnit: 'A definir', managerIds: [], reviewerIds: [] },
+  { id: 'pdi-axis-8', code: '8', name: 'Governança e Gestão Institucional', color: '#b5336f', ownerUnit: 'SEPLAN', managerIds: ['dev-contributor'], reviewerIds: ['dev-reviewer'] },
 ];
 
 const pdiObjectives = [
@@ -77,9 +84,9 @@ const pdiItems = [
 ];
 
 const plsAxes = [
-  { id: 'pls-axis-1', code: '1', name: 'Promoção da racionalização e do consumo consciente de bens e serviços', color: '#4c8c68', ownerUnit: 'SEPLAN', managerIds: ['dev-contributor'], reviewerIds: ['dev-reviewer'] },
-  { id: 'pls-axis-3', code: '3', name: 'Identificação dos objetos de menor impacto ambiental', color: '#7656a8', ownerUnit: 'PRGAF', managerIds: [], reviewerIds: ['dev-reviewer'] },
-  { id: 'pls-axis-7', code: '7', name: 'Qualidade de vida', color: '#d29b18', ownerUnit: 'SRH', managerIds: [], reviewerIds: ['dev-reviewer'] },
+  { id: 'pls-axis-1', code: '1', name: 'Promoção da racionalização e do consumo consciente de bens e serviços', color: '#1b9afb', ownerUnit: 'SEPLAN', managerIds: ['dev-contributor'], reviewerIds: ['dev-reviewer'] },
+  { id: 'pls-axis-3', code: '3', name: 'Identificação dos objetos de menor impacto ambiental', color: '#a19177', ownerUnit: 'PRGAF', managerIds: [], reviewerIds: ['dev-reviewer'] },
+  { id: 'pls-axis-7', code: '7', name: 'Qualidade de vida', color: '#c23929', ownerUnit: 'SRH', managerIds: [], reviewerIds: ['dev-reviewer'] },
 ];
 
 const plsObjectives = [

@@ -334,10 +334,14 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 .tree-content { padding: 0; }
 .tree-group { display: flex; gap: var(--spacing-scale-base); text-align: left; align-items: flex-start; width: 100%; font-size: var(--font-size-scale-base); line-height: var(--font-line-height-medium); padding: var(--spacing-scale-base) var(--spacing-scale-half); }
 .tree-group > svg { margin-top: var(--spacing-scale-half); color: var(--text-muted); }
-.tree-group.axis { font-weight: var(--font-weight-semi-bold); color: var(--text-strong); margin-top: var(--spacing-scale-base); }
-.tree-group.axis::before { content: ''; width: 8px; height: 16px; background: var(--axis-color); border-radius: 2px; flex-shrink: 0; margin-top: 0; }
+.tree-group.axis { font-weight: var(--font-weight-semi-bold); color: var(--text-strong); margin-top: var(--spacing-scale-base); align-items: center; }
+.axis-icon { display: inline-grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 7px; background: var(--axis-color); }
+.axis-icon::before { content: ''; width: 29px; height: 29px; background: #fff; -webkit-mask: var(--axis-icon) center / contain no-repeat; mask: var(--axis-icon) center / contain no-repeat; }
+.axis-icon-marker { display: inline-block; width: 8px; height: 16px; flex: 0 0 8px; border-radius: 2px; background: var(--axis-color); }
+.tree-group.axis .axis-icon-marker { margin-top: 2px; }
 .tree-group.axis > svg { order: 2; margin-left: auto; }
-.tree-group.axis > span { flex: 1; }
+.tree-group.axis > span:last-child { flex: 1; }
+.axis-empty { margin: 0 0 var(--spacing-scale-base) 45px; color: var(--text-muted); font-size: var(--font-size-scale-base); }
 .tree-group.objective { color: var(--text-muted); }
 .objective-group { padding-left: var(--spacing-scale-base); }
 .tree-item { display: block; margin: var(--spacing-scale-half) 0 var(--spacing-scale-half) var(--spacing-scale-2x); padding: var(--spacing-scale-base) var(--spacing-scale-2x); font-size: var(--font-size-scale-base); line-height: var(--font-line-height-medium); border-left: 3px solid transparent; color: var(--text-body); }
@@ -739,7 +743,8 @@ br-select::part(option):hover {
 .structure-preview { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-scale-base); padding: 0 0 var(--spacing-scale-2x); color: var(--text-subtle); font-size: var(--font-size-scale-base); }
 .structure-list { display: grid; gap: var(--spacing-scale-base); }
 .structure-row { display: grid; align-items: center; gap: var(--spacing-scale-base); padding: var(--spacing-scale-base); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; }
-.axis-structure { grid-template-columns: 64px minmax(184px, 2fr) minmax(128px, 1fr) 48px auto; }
+.axis-structure { grid-template-columns: 40px 64px minmax(184px, 2fr) minmax(128px, 1fr) 48px auto; }
+.axis-structure > .axis-icon-marker { justify-self: center; }
 .objective-structure { grid-template-columns: minmax(160px, 1fr) 80px minmax(224px, 2fr) auto; }
 .structure-row input, .structure-row select { font-size: var(--font-size-scale-base); }
 .custom-field { padding: var(--spacing-scale-2x) 0; border-top: 1px solid var(--border); display: grid; gap: var(--spacing-scale-baseh); }
@@ -933,4 +938,6 @@ html[data-alto-contraste="true"] :is(p, span, small, td, th, label, li) { color:
 html[data-alto-contraste="true"] a { text-decoration: underline; }
 html[data-alto-contraste="true"] :is(.field, .risk-card, .tree-item, .axis-user-picker, .login-form, input, select, textarea, br-input, br-select, br-textarea) { border-color: #000 !important; }
 html[data-alto-contraste="true"] button { border: 1px solid #000; }
+html[data-alto-contraste="true"] .axis-icon { background: #000; border: 1px solid #000; }
+html[data-alto-contraste="true"] .axis-icon-marker { background: #000; }
 html[data-alto-contraste="true"] .accessibility-toggle[aria-pressed="true"] { color: #fff; }

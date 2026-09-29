@@ -29,7 +29,7 @@ import { HttpError } from "../../lib/http-error.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import { montarWorkspace, salvarWorkspace } from "./planning.service.js";
 import { parseOrLancar, workspaceSchema } from "./planning.schema.js";
-import type { ActionItem, Item, Objective, Risk, Stage } from "./planning.types.js";
+import type { ActionItem, HistoryEntry, Item, Objective, Risk, Stage } from "./planning.types.js";
 
 // ---------------------------------------------------------------------------
 // Normalização e casamento de cabeçalho
@@ -377,6 +377,50 @@ function converterDataBr(texto: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Histórico — cada iniciativa criada ou atualizada por importação registra
+// uma entrada, mesmo sem diferença de conteúdo (reimportar é em si um evento
+// relevante: confirma que alguém revisou/atualizou a fonte). É o único jeito
+// de deixar rastro dessa operação: diferente de uma edição manual pela tela
+// (onde o history já vem pronto do cliente em changeItem), a importação
+// nunca passa pelo fluxo normal de edição — sem isso o item mudava de
+// conteúdo sem nenhum registro de quando ou por quê.
+// ---------------------------------------------------------------------------
+
+function historyEntry(text: string, actor: string): HistoryEntry {
+  return { id: randomUUID(), at: new Date().toISOString(), text, actor };
+}
+
+export function descreverAtualizacao(antes: Item, depois: Item): string[] {
+  const mudancas: string[] = [];
+  if (antes.title !== depois.title) mudancas.push(`título alterado para "${depois.title}"`);
+  if (antes.metric.name !== depois.metric.name) mudancas.push(`indicador alterado para "${depois.metric.name}"`);
+  if (antes.metric.baseline !== depois.metric.baseline) mudancas.push(`linha de base alterada para ${depois.metric.baseline ?? "—"}`);
+
+  const anosMeta = Object.keys(depois.metric.targets).filter((ano) => antes.metric.targets[ano] !== depois.metric.targets[ano]);
+  if (anosMeta.length) mudancas.push(`meta${anosMeta.length > 1 ? "s" : ""} de ${anosMeta.join(", ")} atualizada${anosMeta.length > 1 ? "s" : ""}`);
+
+  if (depois.measurements.length > antes.measurements.length) {
+    const anosNovos = depois.measurements.slice(antes.measurements.length).map((m) => m.year);
+    mudancas.push(`execução de ${anosNovos.join(", ")} registrada`);
+  }
+
+  const acoesAntes = antes.actions.length;
+  const acoesDepois = depois.actions.length;
+  if (acoesDepois > acoesAntes) mudancas.push(`${acoesDepois - acoesAntes} ação${acoesDepois - acoesAntes > 1 ? "ões" : ""} nova${acoesDepois - acoesAntes > 1 ? "s" : ""}`);
+  else if (acoesDepois < acoesAntes) mudancas.push(`${acoesAntes - acoesDepois} ação${acoesAntes - acoesDepois > 1 ? "ões" : ""} removida${acoesAntes - acoesDepois > 1 ? "s" : ""}`);
+
+  const etapasAntes = antes.actions.reduce((total, a) => total + a.tasks.length, 0);
+  const etapasDepois = depois.actions.reduce((total, a) => total + a.tasks.length, 0);
+  if (etapasDepois !== etapasAntes) mudancas.push(`etapas: ${etapasAntes} → ${etapasDepois}`);
+
+  const riscosAntes = antes.risks.length;
+  const riscosDepois = depois.risks.length;
+  if (riscosDepois !== riscosAntes) mudancas.push(`riscos: ${riscosAntes} → ${riscosDepois}`);
+
+  return mudancas;
+}
+
+// ---------------------------------------------------------------------------
 // Fusão com o workspace atual e gravação
 // ---------------------------------------------------------------------------
 
@@ -533,11 +577,18 @@ export async function importarPlanilha(sessao: SessaoUsuario, planId: string, bu
       };
     }).filter((r): r is Risk => r !== null);
 
+    const autor = sessao.user?.name ?? "Importação de planilha";
     if (itemExistente) {
+      const mudancas = descreverAtualizacao(itemExistente, item);
+      const texto = mudancas.length
+        ? `Atualizado pela importação da planilha (Eixo ${eixo.code}): ${mudancas.join("; ")}.`
+        : `Planilha reimportada (Eixo ${eixo.code}) sem alterações de conteúdo.`;
+      item.history = [...itemExistente.history, historyEntry(texto, autor)];
       const index = plano.items.findIndex((i) => i.id === itemExistente.id);
       plano.items[index] = item;
       itensAtualizados += 1;
     } else {
+      item.history = [historyEntry(`Iniciativa criada pela importação da planilha de monitoramento (Eixo ${eixo.code}).`, autor)];
       plano.items.push(item);
       itensDoEixo.push(item);
       itensCriados += 1;

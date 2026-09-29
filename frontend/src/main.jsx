@@ -149,7 +149,17 @@ function App({ auth, initialData }) {
       <div className="sidebar-bottom"><div className="institution">Universidade Federal<br />de Campina Grande</div></div>
     </aside>
     <div className="workspace">
-      <header className="topbar"><div className="breadcrumb"><a href="#/inicio">SUMI</a>{plan && <><Icon name="chevron" size={13} /><a href="#/planejamentos">Planejamentos</a><Icon name="chevron" size={13} /><strong>{plan.shortName}</strong></>}</div><div className="account-summary"><button type="button" className="text-button accessibility-toggle" aria-pressed={altoContraste} onClick={toggleAltoContraste} title={altoContraste ? 'Desativar alto contraste' : 'Ativar alto contraste'}><Icon name="contrast" size={16} />{altoContraste ? 'Contraste padrão' : 'Alto contraste'}</button><span className="account-avatar"><Icon name="user" size={16} /></span><span><strong>{session.user?.name || 'Comunidade UFCG'}</strong><small>{roles}</small></span>{session.authenticated ? <button type="button" className="text-button" onClick={() => logout().then(auth.reload)}>Sair</button> : <a className="text-button" href="#/login">Entrar</a>}</div></header>
+      <header className="topbar">
+        <div className="breadcrumb"><a href="#/inicio">SUMI</a>{plan && <><Icon name="chevron" size={13} /><a href="#/planejamentos">Planejamentos</a><Icon name="chevron" size={13} /><strong>{plan.shortName}</strong></>}</div>
+        <div className="topbar-actions">
+          <button type="button" className="text-button accessibility-toggle" aria-pressed={altoContraste} onClick={toggleAltoContraste} title={altoContraste ? 'Desativar alto contraste' : 'Ativar alto contraste'}><Icon name="contrast" size={16} />{altoContraste ? 'Contraste padrão' : 'Alto contraste'}</button>
+          <div className="account-summary">
+            <span className="account-avatar" aria-hidden="true"><Icon name="user" size={16} /></span>
+            <div className="account-identity"><strong title={session.user?.name || 'Comunidade UFCG'}>{session.user?.name || 'Comunidade UFCG'}</strong><small title={roles}>{roles}</small></div>
+            {session.authenticated ? <button type="button" className="text-button account-session-action" onClick={() => logout().then(auth.reload)}>Sair</button> : <a className="text-button account-session-action" href="#/login">Entrar</a>}
+          </div>
+        </div>
+      </header>
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
       <main id="main-content" tabIndex={-1}>
         {/* workspace foi buscado uma vez no mount, antes do login — sem recarregar aqui, planos internos/rascunho ficam invisíveis até um refresh manual da página */}

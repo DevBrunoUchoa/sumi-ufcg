@@ -12,3 +12,6 @@ Thumbs.db
 
 .idea/
 .vscode/
+.tools/
+frontend/test-results/
+frontend/playwright-report/

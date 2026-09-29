@@ -11,6 +11,10 @@
 *.log
 .idea
 .vscode
+.tools
+docs_locais
+frontend/test-results
+frontend/playwright-report
 
 docs
 README.md

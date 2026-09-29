@@ -19,7 +19,7 @@ export async function useSession(page, profile) {
 
 export async function openPlan(page, shortName) {
   await page.goto('/#/planejamentos');
-  await page.getByRole('link', { name: new RegExp(`Abrir ${shortName}`) }).click();
+  await page.getByRole('button', { name: new RegExp(`Abrir ${shortName}`) }).click();
   await expect(page.getByRole('heading', { name: new RegExp(`^${shortName}`) })).toBeVisible();
 }
 
@@ -27,17 +27,39 @@ export const openPdi = (page) => openPlan(page, 'PDI');
 export const openPls = (page) => openPlan(page, 'PLS');
 export const detail = (page) => page.getByRole('region', { name: 'Detalhe do item' });
 
+export async function expandFirstAction(page) {
+  const overview = page.locator('.action-overview-link').first();
+  if (await overview.count()) await overview.click();
+  const heading = page.locator('.action-card').first().locator('.action-heading');
+  if (await heading.count() && await heading.getAttribute('aria-expanded') === 'false') await heading.click();
+}
+
+export async function expandTree(page) {
+  const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
+  for (const axis of await tree.locator('.tree-group.axis').all()) {
+    if (await axis.getAttribute('aria-expanded') === 'false') await axis.click();
+  }
+  for (const objective of await tree.locator('.tree-group.objective').all()) {
+    if (await objective.getAttribute('aria-expanded') === 'false') await objective.click();
+  }
+}
+
+export async function chooseOption(scope, field, label) {
+  await scope.getByLabel(field, { exact: true }).first().click();
+  await scope.getByRole('option', { name: label, exact: true }).filter({ visible: true }).first().click();
+}
+
 export async function selectItem(page, code) {
+  await expandTree(page);
   await page.getByRole('navigation', { name: 'Itens do planejamento' }).getByRole('link', { name: new RegExp(code.replaceAll('.', '\\.')) }).click();
 }
 
 export async function recordNumber(page, value, note, year) {
-  await page.getByRole('tab', { name: 'Indicador e metas' }).click();
   await page.getByRole('button', { name: 'Registrar resultado', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  if (year) await dialog.getByLabel('Ano do resultado', { exact: true }).selectOption(String(year));
-  await dialog.getByLabel(/^Valor/).fill(String(value));
-  await dialog.getByLabel('Justificativa / observação', { exact: true }).fill(note);
+  if (year) await chooseOption(dialog, 'Ano do resultado', String(year));
+  await dialog.getByLabel(/^Valor/).last().fill(String(value));
+  await dialog.getByLabel('Justificativa / observação', { exact: true }).last().fill(note);
   await dialog.getByRole('button', { name: 'Salvar resultado', exact: true }).click();
   await expect(dialog).not.toBeVisible();
 }

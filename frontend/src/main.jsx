@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { actionProgress, axisFor, axisLabel, controlFactor, currentPeriod, executionProgress, executionStatus, formatDate, formatMetricValue, formatNumber, historyEntry, latestMeasurement, metricAchievement, metricResult, metricStatus, metricTone, normalize, objectiveFor, periodLabel, periods, residualRisk, reviewStatusLabel, riskLevel, riskLevelLabel, riskScore, stageStatusLabel, stageStatusLabels, taskOverdue, uid } from './domain.js';
-import { Badge, Button, Empty, Field, Icon } from './ui.jsx';
-import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, StructureForm, TargetsForm, TemplateForm } from './forms.jsx';
+import { Badge, Button, Empty, Field, Icon, Input, Modal, Select } from './ui.jsx';
+import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, StageForm, StructureForm, TargetsForm, TemplateForm } from './forms.jsx';
 import { SessionProvider, useSession } from './auth/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
 import { LoginPage } from './auth/Login.jsx';
 import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, UnauthorizedPage } from './error-pages.jsx';
-import { Attachments } from './attachments.jsx';
+import { Attachments, AttachmentsProvider } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
 import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
+import '@govbr-ds/core/dist/core.css';
 import './styles.css';
 
 const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login'];
@@ -39,17 +40,15 @@ function setMetaDescription(text) {
 
 const authApiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 async function logout() {
-  await fetch(`${authApiBase}/api/v1/auth/logout`, { method: 'POST', credentials: 'include', cache: 'no-store' });
+  await fetch(`${authApiBase}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' });
 }
 
 const planningClient = createPlanningClient();
-const SIDEBAR_PREFERENCE_KEY = 'sumi.ui.sidebar-collapsed';
 const ALTO_CONTRASTE_KEY = 'sumi.ui.alto-contraste';
-const planUrl = (id, item, tab = 'acoes', period) => `/plano/${id}${item ? `?item=${item}&tab=${tab}${period ? `&period=${period}` : ''}` : ''}`;
+const planUrl = (id, item, view = 'indicadores', period, actionId, stageId) => `/plano/${id}${item ? `?item=${item}&view=${view}${actionId ? `&action=${actionId}` : ''}${stageId ? `&stage=${stageId}` : ''}${period ? `&period=${period}` : ''}` : ''}`;
 const navigate = (path) => { window.location.hash = path; };
 const readRoute = () => { const [path, query] = (window.location.hash.slice(1) || '/inicio').split('?'); return { path, query: new URLSearchParams(query) }; };
 const statusTone = (status) => status === 'Concluída' || status === 'Meta atingida' || status === 'Validado' ? 'green' : status === 'Em andamento' || status === 'Aguardando validação' ? 'blue' : status === 'Correção solicitada' ? 'attention' : 'neutral';
-const readSidebarPreference = () => { try { return localStorage.getItem(SIDEBAR_PREFERENCE_KEY) === 'true'; } catch { return false; } };
 const readAltoContrastePreference = () => { try { return localStorage.getItem(ALTO_CONTRASTE_KEY) === 'true'; } catch { return false; } };
 
 function Progress({ done, total, percent, label = 'etapas', compact = false }) {
@@ -81,12 +80,13 @@ function App({ auth, initialData }) {
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
   const [readyToSave, setReadyToSave] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarPreference);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [altoContraste, setAltoContraste] = useState(readAltoContrastePreference);
   useEffect(() => { const changed = () => { setRoute(readRoute()); setModal(null); }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange', changed); }, []);
-  // No <html>, não só no app-shell, pra cobrir qualquer conteúdo fora da árvore
-  // do React (ex.: o widget do VLibras injetado direto no index.html).
-  useEffect(() => { document.documentElement.toggleAttribute('data-alto-contraste', altoContraste); }, [altoContraste]);
+  useEffect(() => {
+    if (altoContraste) document.documentElement.setAttribute('data-alto-contraste', 'true');
+    else document.documentElement.removeAttribute('data-alto-contraste');
+  }, [altoContraste]);
   useEffect(() => { if (!readyToSave) return setReadyToSave(true); const timer = setTimeout(() => planningClient.save(data).then(() => setSaveError('')).catch(() => setSaveError('Não foi possível salvar as alterações.')), 150); return () => clearTimeout(timer); }, [data]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   const update = (mutate, message) => { setData((current) => { const next = structuredClone(current); mutate(next); return next; }); if (message) setToast(message); };
@@ -110,7 +110,7 @@ function App({ auth, initialData }) {
   };
   const changeItem = (planId, itemId, change, message) => update((draft) => { const plan = draft.plans.find((candidate) => candidate.id === planId); const index = plan.items.findIndex((item) => item.id === itemId); plan.items[index] = change(plan.items[index]); }, message);
   const close = () => setModal(null);
-  const toggleSidebar = () => setSidebarCollapsed((current) => { const next = !current; try { localStorage.setItem(SIDEBAR_PREFERENCE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
+  const toggleSidebar = () => setSidebarCollapsed((current) => !current);
   const toggleAltoContraste = () => setAltoContraste((current) => { const next = !current; try { localStorage.setItem(ALTO_CONTRASTE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
   const planId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
   const visiblePlans = data.plans.filter((plan) => can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan)) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, resourceFor(plan))));
@@ -176,7 +176,8 @@ function App({ auth, initialData }) {
     {modal?.type === 'structure' && <StructureForm plan={plan} onClose={close} onSave={(structure) => { update((draft) => { const current = draft.plans.find((candidate) => candidate.id === plan.id); current.axes = structure.axes; current.objectives = structure.objectives; }, 'Estrutura atualizada.'); close(); }} />}
     {modal?.type === 'item' && plan && <ItemForm plan={plan} item={modal.item} actor={actor} onClose={close} onSave={(item) => saveItem(item, plan.id)} />}
     {modal?.type === 'action' && plan && <ActionForm plan={plan} item={modal.item} onClose={close} onSave={(action) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, actions: [...item.actions, action], history: [...item.history, historyEntry(`Ação adicionada: ${action.title}.`, actor)] }), 'Ação adicionada.'); close(); }} />}
-    {modal?.type === 'risk' && plan && <RiskForm item={modal.item} action={modal.action} risk={modal.risk} onClose={close} onSave={(nextRisk) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, risks: modal.risk ? item.risks.map((current) => current.id === nextRisk.id ? nextRisk : current) : [...(item.risks || []), nextRisk], history: [...item.history, historyEntry(`${modal.risk ? 'Risco atualizado' : 'Risco adicionado'}: ${nextRisk.title}.`, actor)] }), modal.risk ? 'Risco atualizado.' : 'Risco adicionado.'); close(); }} />}
+    {modal?.type === 'stage' && plan && <StageForm plan={plan} onClose={close} onSave={(stage) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, actions: item.actions.map((action) => action.id === modal.action.id ? { ...action, tasks: [...action.tasks, { id: uid(), ...stage, status: 'not_started', justification: '' }] } : action), history: [...item.history, historyEntry(`Etapa adicionada: ${stage.title}.`, actor)] }), 'Etapa adicionada.'); close(); }} />}
+    {modal?.type === 'risk' && plan && <RiskForm item={modal.item} action={modal.action} stage={modal.stage} risk={modal.risk} onClose={close} onSave={(nextRisk) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, risks: modal.risk ? item.risks.map((current) => current.id === nextRisk.id ? nextRisk : current) : [...(item.risks || []), nextRisk], history: [...item.history, historyEntry(`${modal.risk ? 'Risco atualizado' : 'Risco adicionado'}: ${nextRisk.title}.`, actor)] }), modal.risk ? 'Risco atualizado.' : 'Risco adicionado.'); close(); }} />}
     {modal?.type === 'measurement' && plan && <MeasurementForm plan={plan} item={modal.item} year={modal.period} onClose={close} onSave={(entry) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', measurements: [...item.measurements, entry], history: [...item.history, historyEntry(`Resultado registrado para ${periodLabel(plan, item, entry.year)}: ${formatMetricValue(item, entry.value)}${item.metric.unit ? ` ${item.metric.unit}` : ''}. ${entry.note}`, actor)] }), 'Resultado registrado.'); close(); navigate(planUrl(plan.id, modal.item.id, 'indicadores', entry.year)); }} />}
     {modal?.type === 'targets' && plan && <TargetsForm plan={plan} item={modal.item} onClose={close} onSave={(targets) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', metric: { ...item.metric, targets }, history: [...item.history, historyEntry('Metas atualizadas.', actor)] }), 'Metas salvas.'); close(); }} />}
     {modal?.type === 'review' && plan && <ReviewForm item={modal.item} decision={modal.decision} onClose={close} onSave={({ status, note }) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: status, reviewNote: note, history: [...item.history, historyEntry(status === 'validated' ? 'Informações validadas.' : `Correção solicitada: ${note}`, actor)] }), status === 'validated' ? 'Informações validadas.' : 'Correção solicitada.'); close(); }} />}
@@ -213,8 +214,8 @@ function PlanList({ data, can, onCreate }) {
   const [search, setSearch] = useState('');
   const filtered = data.plans.filter((plan) => (filter === 'Todos' || plan.type === filter) && normalize(`${plan.shortName} ${plan.name}`).includes(normalize(search)));
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">PLANEJAMENTOS</p><h1>Planos institucionais</h1><p>Acompanhe estrutura, execução e resultados em um único lugar.</p></div>{can(PERMISSIONS.MANAGE_PLAN) && <Button icon="plus" variant="primary" onClick={onCreate}>Novo planejamento</Button>}</div>
-    <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><label className="search"><Icon name="search" size={17} /><input aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
-    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress"><Progress {...progress} /></div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><a className="open-plan" href={`#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></a></div></article>; })}</div> : <Empty title="Nenhum planejamento encontrado" action={<Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button>}>Tente outro nome ou tipo.</Empty>}
+    <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className='searchbar'><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>
+    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress"><Progress {...progress} /></div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title="Nenhum planejamento encontrado" action={<Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button>}>Tente outro nome ou tipo.</Empty>}
   </div>;
 }
 
@@ -253,25 +254,52 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
   const [search, setSearch] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState('');
-  const [collapsed, setCollapsed] = useState([]);
+  const [expanded, setExpanded] = useState([]);
   const filtered = plan.items.filter((item) => { const axis = axisFor(plan, item); const objective = objectiveFor(plan, item); return normalize(`${item.code} ${item.title} ${axisLabel(axis)} ${objective?.title}`).includes(normalize(search)) && (!owner || item.owner === owner) && (!status || executionStatus(item) === status); });
   const item = filtered.find((candidate) => candidate.id === route.query.get('item')) || filtered[0];
+  const action = item?.actions.find((candidate) => candidate.id === route.query.get('action'));
+  const stage = action?.tasks.find((candidate) => candidate.id === route.query.get('stage'));
   const selectedPeriod = Number(route.query.get('period'));
   const period = item && periods(plan, item).includes(selectedPeriod) ? selectedPeriod : currentPeriod(plan, item);
   const resource = resourceFor(plan, item);
-  const tabs = [['acoes', 'list', 'Ações e etapas'], ['indicadores', 'chart', 'Indicador e metas'], ['riscos', 'info', `Riscos${item?.risks?.length ? ` (${item.risks.length})` : ''}`], ['historico', 'history', 'Histórico']].filter(([value]) => value !== 'riscos' || can(PERMISSIONS.VIEW_RISK, resource)).filter(([value]) => value !== 'historico' || can(PERMISSIONS.VIEW_HISTORY, resource));
-  const tab = tabs.some(([value]) => value === route.query.get('tab')) ? route.query.get('tab') : 'acoes';
-  const setPeriod = (next) => navigate(planUrl(plan.id, item.id, tab, next));
+  const legacyView = route.query.get('view') || route.query.get('tab');
+  const view = action && legacyView === 'riscos' && can(PERMISSIONS.VIEW_RISK, resource) ? 'riscos' : action ? 'acao' : legacyView === 'historico' && can(PERMISSIONS.VIEW_HISTORY, resource) ? 'historico' : 'indicadores';
+  const setPeriod = (next) => navigate(planUrl(plan.id, item.id, 'indicadores', next));
   const groups = plan.axes.filter((axis) => filtered.some((candidate) => candidate.axisId === axis.id));
-  const toggle = (key) => setCollapsed((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+  const toggle = (key) => setExpanded((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const resetFilters = () => { setSearch(''); setOwner(''); setStatus(''); };
   return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
-    <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><label className="search"><Icon name="search" size={15} /><input aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /></label><div className="tree-filters"><select aria-label="Filtrar responsável" value={owner} onChange={(event) => setOwner(event.target.value)}><option value="">Todos os responsáveis</option>{[...new Set(plan.items.map((candidate) => candidate.owner))].map((value) => <option key={value}>{value}</option>)}</select><select aria-label="Filtrar situação" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todas as situações</option>{['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'].map((value) => <option key={value}>{value}</option>)}</select></div>
-      <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={!collapsed.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={!collapsed.includes(axis.id) ? 'rotated' : ''} /><span>{axisLabel(axis)}</span></button>{!collapsed.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={!collapsed.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={!collapsed.includes(objective.id) ? 'rotated' : ''} /><span>{objective.code} · {objective.title}</span></button>{!collapsed.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <a key={candidate.id} href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
-      <section className="detail" aria-label="Detalhe do item">{item ? <ItemDetail plan={plan} item={item} actor={actor} can={can} tab={tab} tabs={tabs} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} /> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
+    <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /><div className="tree-filters">
+      <Select
+        aria-label="Filtrar responsável"
+        placeholder="Todos os responsáveis"
+        value={owner}
+        onChange={(event) => setOwner(event.currentTarget.value)}
+        options={Array.from(
+          new Set(plan.items.map((item) => item.owner))
+        )
+          .filter(Boolean)
+          .map((owner) => ({
+            value: owner,
+            label: owner,
+          }))}
+      /><Select
+      aria-label="Filtrar situação"
+      placeholder="Todas as situações"
+      value={status}
+      onChange={(event) => setStatus(event.target.value)}
+      options={[
+        'Não iniciada',
+        'Em andamento',
+        'Concluída',
+        'Cancelada'
+      ]}
+    /></div>
+    <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={expanded.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={expanded.includes(axis.id) ? 'rotated' : ''} /><span>{plan.template.labels.axis} {axisLabel(axis)}</span></button>{expanded.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={expanded.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={expanded.includes(objective.id) ? 'rotated' : ''} /><span>{plan.template.labels.objective} {objective.code} · {objective.title}</span></button>{expanded.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <div className="initiative-group" key={candidate.id}><div className="tree-item-row"><button className="tree-expand" aria-label={`${expanded.includes(candidate.id) ? 'Recolher' : 'Expandir'} ações de ${candidate.code}`} aria-expanded={expanded.includes(candidate.id)} onClick={() => toggle(candidate.id)}><Icon name="chevron" size={12} className={expanded.includes(candidate.id) ? 'rotated' : ''} /></button><a href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id && view === 'indicadores' ? 'selected' : ''}`} aria-current={item?.id === candidate.id && view === 'indicadores' ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a></div>{expanded.includes(candidate.id) && <div className="action-tree">{candidate.actions.map((candidateAction) => <a key={candidateAction.id} href={`#${planUrl(plan.id, candidate.id, 'acao', undefined, candidateAction.id)}`} className={`tree-action ${item?.id === candidate.id && action?.id === candidateAction.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id && action?.id === candidateAction.id ? 'page' : undefined}><span><small>Ação {candidateAction.code}</small>{candidateAction.title}</span></a>)}</div>}</div>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
+    <section className="detail" aria-label="Detalhe do item">{item ? <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resource)}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
 }
 
-function ItemDetail({ plan, item, actor, can, tab, tabs, period, setPeriod, onModal, changeItem }) {
+  function ItemHeader({ plan, item, actor, can, onModal, changeItem, hideDetails = false, children }) {
   const axis = axisFor(plan, item);
   const objective = objectiveFor(plan, item);
   const resource = resourceFor(plan, item);
@@ -279,61 +307,162 @@ function ItemDetail({ plan, item, actor, can, tab, tabs, period, setPeriod, onMo
   const presentExtra = (field, value) => field.type === 'date' ? formatDate(value) : field.type === 'number' ? formatNumber(value) : value;
   const extraFields = plan.template.fields.filter((field) => item.extras?.[field.id] !== '' && item.extras?.[field.id] != null);
   const submit = () => changeItem(plan.id, item.id, (current) => ({ ...current, reviewStatus: 'submitted', reviewNote: '', history: [...current.history, historyEntry('Informações enviadas para validação.', actor)] }), 'Enviado para validação.');
-  const selectTab = (nextTab) => navigate(planUrl(plan.id, item.id, nextTab, period));
-  const moveTab = (event, index) => {
-    const keys = { ArrowRight: 1, ArrowLeft: -1, Home: -index, End: tabs.length - index - 1 };
-    if (!(event.key in keys)) return;
-    event.preventDefault();
-    const nextIndex = (index + keys[event.key] + tabs.length) % tabs.length;
-    selectTab(tabs[nextIndex][0]);
-    requestAnimationFrame(() => document.querySelectorAll('.detail-tabs [role="tab"]')[nextIndex]?.focus());
-  };
-  return <><div className="item-heading" style={{ '--axis-color': axis?.color || '#2f78a5' }}><div className="section-heading"><div className="flex items-center gap-3"><span className="item-code">{plan.template.labels.item} {item.code}</span><Badge tone={statusTone(executionStatus(item))}>{executionStatus(item)}</Badge></div>{can(PERMISSIONS.EDIT_ITEM, resource) && <Button icon="edit" variant="ghost" onClick={() => onModal({ type: 'item', item })}>Editar informações</Button>}</div><h2>{item.title}</h2><p>{item.description}</p><div className="item-meta"><span><Icon name="layers" size={15} /><strong>{objective?.code} · {objective?.title}</strong></span><span><Icon name="user" size={15} /><strong>{item.owner}</strong></span>{item.partners && <span>Parceiros: {item.partners}</span>}</div>{extraFields.length > 0 && <div className="extra-values">{extraFields.map((field) => <span key={field.id}><b>{field.label}:</b> {presentExtra(field, item.extras[field.id])}</span>)}</div>}</div>
+  return <>{!hideDetails && <div className="item-heading" style={{ '--axis-color': axis?.color || '#2f78a5' }}><div className="section-heading"><div className="flex items-center gap-3"><span className="item-code">{plan.template.labels.item} {item.code}</span><Badge tone={statusTone(executionStatus(item))}>{executionStatus(item)}</Badge></div>{can(PERMISSIONS.EDIT_ITEM, resource) && <Button icon="edit" variant="tertiary" onClick={() => onModal({ type: 'item', item })}>Editar informações</Button>}</div><h2>{item.title}</h2><p>{item.description}</p><div className="item-meta"><span><Icon name="layers" size={15} /><strong>{objective?.code} · {objective?.title}</strong></span><span><Icon name="user" size={15} /><strong>{item.owner}</strong></span>{item.partners && <span>Parceiros: {item.partners}</span>}</div>{extraFields.length > 0 && <div className="extra-values">{extraFields.map((field) => <span key={field.id}><b>{field.label}:</b> {presentExtra(field, item.extras[field.id])}</span>)}</div>}</div>}
     {canSeeWorkflow && <div className={`workflow-banner ${item.reviewStatus}`}><div><span>Validação</span><strong>{reviewStatusLabel(item.reviewStatus)}</strong>{item.reviewNote && <p>{item.reviewNote}</p>}</div><div>{can(PERMISSIONS.SUBMIT_ITEM, resource) && ['draft', 'changes_requested'].includes(item.reviewStatus) && <Button variant="primary" onClick={submit}>Enviar para validação</Button>}{can(PERMISSIONS.REVIEW_ITEM, resource) && item.reviewStatus === 'submitted' && <><Button onClick={() => onModal({ type: 'review', item, decision: 'changes_requested' })}>Solicitar correção</Button><Button variant="primary" onClick={() => onModal({ type: 'review', item, decision: 'validated' })}>Validar</Button></>}</div></div>}
-    {item.linkedPlan && <a className="linked-plan" href={`#${planUrl(item.linkedPlan)}`}><Icon name="link" size={16} /><span>Relacionado ao Plano Diretor de Logística Sustentável</span><Icon name="arrow" size={14} /></a>}
-    <div className="detail-tabs" role="tablist">{tabs.map(([value, , label], index) => <button key={value} className={tab === value ? 'active' : ''} role="tab" aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} onClick={() => selectTab(value)} onKeyDown={(event) => moveTab(event, index)}>{label}</button>)}</div><div className="tab-content" role="tabpanel">
-      {tab === 'acoes' && <Actions item={item} actor={actor} can={can} plan={plan} onAdd={() => onModal({ type: 'action', item })} onAddRisk={(action) => onModal({ type: 'risk', item, action })} onChange={(change, message) => changeItem(plan.id, item.id, (current) => ({ ...change(current), reviewStatus: ['submitted', 'validated'].includes(current.reviewStatus) ? 'draft' : current.reviewStatus }), message)} />}
-      {tab === 'indicadores' && <Indicators key={item.id} item={item} can={can} plan={plan} period={period} setPeriod={setPeriod} onRecord={() => onModal({ type: 'measurement', item, period })} onTargets={() => onModal({ type: 'targets', item })} />}
-      {tab === 'riscos' && <Risks item={item} canEdit={can(PERMISSIONS.MANAGE_RISK, resource)} onEdit={(risk) => onModal({ type: 'risk', item, action: item.actions.find((action) => action.id === risk.actionId), risk })} />}
-      {tab === 'historico' && <History item={item} canComment={can(PERMISSIONS.COMMENT_HISTORY, resource)} onComment={(text) => changeItem(plan.id, item.id, (current) => ({ ...current, history: [...current.history, historyEntry(text, actor)] }), 'Observação adicionada.')} />}
-    </div><footer className="source-note"><Icon name="info" size={13} />{item.source}</footer></>;
+    {item.linkedPlan && <a className="linked-plan" href={`#${planUrl(item.linkedPlan)}`}><Icon name="link" size={16} /><span>Relacionado ao Plano Diretor de Logística Sustentável</span><Icon name="arrow" size={14} /></a>}{children}</>;
 }
 
-function StageRow({ task, action, actor, canUpdate, onChange, itemId }) {
+function ItemDetail({ plan, item, actor, can, view, period, setPeriod, onModal, changeItem }) {
+  const resource = resourceFor(plan, item);
+  return <ItemHeader plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem}>
+    {can(PERMISSIONS.VIEW_HISTORY, resource) && <div className="detail-actions"><a className={view === 'historico' ? 'active' : ''} href={`#${planUrl(plan.id, item.id, 'historico')}`}>Histórico</a></div>}
+    {view === 'historico' ? <History item={item} canComment={can(PERMISSIONS.COMMENT_HISTORY, resource)} onComment={(text) => changeItem(plan.id, item.id, (current) => ({ ...current, history: [...current.history, historyEntry(text, actor)] }), 'Observação adicionada.')} /> : <>
+      <Indicators key={item.id} item={item} can={can} plan={plan} period={period} setPeriod={setPeriod} onRecord={() => onModal({ type: 'measurement', item, period })} onTargets={() => onModal({ type: 'targets', item })} />
+      <div className="section-heading actions-heading"><h3>Ações estratégicas <span>{item.actions.length}</span></h3>{can(PERMISSIONS.MANAGE_ACTION, resource) && <Button icon="plus" onClick={() => onModal({ type: 'action', item })}>Adicionar ação</Button>}</div>
+      {item.actions.length ? <div className="actions-list">{item.actions.map((action) => <a key={action.id} className="action-overview-link" href={`#${planUrl(plan.id, item.id, 'acao', undefined, action.id)}`}><span><small>Ação {action.code}</small><strong>{action.title}</strong></span><span>{actionProgress(action).percent}% <Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title="Nenhuma ação cadastrada">As ações desta iniciativa aparecerão aqui.</Empty>}
+    </>}
+    <footer className="source-note"><Icon name="info" size={13} />{item.source}</footer>
+  </ItemHeader>;
+}
+
+function ActionDetail({ plan, item, action, actor, can, onModal, changeItem }) {
+  return <ItemHeader plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem} hideDetails>
+    <div className="action-detail-heading">
+      <div className="action-detail-info">
+        <span className="item-code">Ação {action.code}</span>
+        <h2>{action.title}</h2>
+        <div className="item-meta"><span>Responsável: <strong>{action.owner}</strong></span><span>Prazo: <strong>{formatDate(action.deadline)}</strong></span></div>
+      </div>
+      <div className="action-detail-cta">
+        {can(PERMISSIONS.VIEW_RISK, resourceFor(plan, item)) && <Button variant="tertiary" icon="danger" onClick={() => navigate(planUrl(plan.id, item.id, 'riscos', undefined, action.id))}>Riscos da ação ({item.risks.filter((risk) => risk.actionId === action.id).length})</Button>}
+        {(can(PERMISSIONS.MANAGE_ACTION, resourceFor(plan, item)) || can(PERMISSIONS.UPDATE_STAGE, resourceFor(plan, item))) && <Button variant="tertiary" icon="plus" onClick={() => onModal({ type: 'stage', item, action })}>Adicionar etapa</Button>}
+      </div>
+    </div>
+    <Actions item={item} action={action} actor={actor} can={can} plan={plan} onAdd={() => onModal({ type: 'action', item })} onModal={onModal} onChange={(change, message) => changeItem(plan.id, item.id, (current) => ({ ...change(current), reviewStatus: ['submitted', 'validated'].includes(current.reviewStatus) ? 'draft' : current.reviewStatus }), message)} />
+    <footer className="source-note"><Icon name="info" size={13} />{item.source}</footer>
+  </ItemHeader>;
+}
+
+function ActionRiskDetail({ plan, item, action, stage, actor, can, onModal, changeItem }) {
+  const resource = resourceFor(plan, item);
+  return <ItemHeader plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem} hideDetails>
+    <div className="risk-detail-header">
+      <div>
+        <h3>{stage ? 'Riscos da etapa' : 'Riscos da ação'}</h3>
+        <h2>{stage?.title || action.title}</h2>
+        {stage && <p>Ação {action.code} · {action.title}</p>}
+      </div>
+      {stage && <div className="risk-detail-deadline">Prazo: <strong>{formatDate(stage.deadline)}</strong></div>}
+    </div>
+    <a className="back-link" href={`#${planUrl(plan.id, item.id, 'acao', undefined, action.id)}`}>← Voltar à ação</a>
+    <Risks key={`${action.id}:${stage?.id || 'all'}`} item={item} action={action} stage={stage} canEdit={can(PERMISSIONS.MANAGE_RISK, resource)} onAdd={() => onModal({ type: 'risk', item, action, stage })} onEdit={(risk) => onModal({ type: 'risk', item, action, stage, risk })} />
+    <footer className="source-note"><Icon name="info" size={13} />{item.source}</footer>
+  </ItemHeader>;
+}
+
+function StageRow({ task, action, actor, canUpdate, canManageAction, canViewRisk, riskCount, onChange, onViewRisks, itemId }) {
   const [justifying, setJustifying] = useState(false);
   const [justification, setJustification] = useState(task.justification || '');
+  const [justificationModalOpen, setJustificationModalOpen] = useState(false);
+  const [editingJustification, setEditingJustification] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
   const [error, setError] = useState('');
   const overdue = taskOverdue(task);
-  const changeStatus = (status) => { onChange((current) => ({ ...current, actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, status } : stage) } : candidate), history: [...current.history, historyEntry(`Etapa “${task.title}” alterada para ${stageStatusLabel(status)}.`, actor)] }), 'Situação da etapa atualizada.'); if (status === 'cancelled' && !task.justification) setJustifying(true); };
-  const saveJustification = (event) => { event.preventDefault(); if (!justification.trim()) return setError('Informe uma justificativa.'); onChange((current) => ({ ...current, actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, justification: justification.trim() } : stage) } : candidate), history: [...current.history, historyEntry(`Justificativa registrada para a etapa “${task.title}”.`, actor)] }), 'Justificativa salva.'); setJustifying(false); setError(''); };
+  const cancelJustification = () => { setPendingStatus(null); setJustifying(false); setJustification(task.justification || ''); setError(''); };
+  const openJustification = () => { setJustification(task.justification || ''); setEditingJustification(false); setJustificationModalOpen(true); setError(''); };
+  const closeJustification = () => { setJustificationModalOpen(false); setEditingJustification(false); setJustification(task.justification || ''); setError(''); };
+  const changeStatus = (status) => {
+    if (status === 'cancelled' && task.status !== 'cancelled') {
+      setPendingStatus(status);
+      setJustification('');
+      setJustifying(true);
+      setError('');
+      return;
+    }
+    cancelJustification();
+    if (status === task.status) return;
+    onChange((current) => ({ ...current, actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, status } : stage) } : candidate), history: [...current.history, historyEntry(`Etapa “${task.title}” alterada para ${stageStatusLabel(status)}.`, actor)] }), 'Situação da etapa atualizada.');
+  };
+  const saveJustification = (event) => {
+    event.preventDefault();
+    const note = justification.trim();
+    if (!note) return setError('Informe uma justificativa.');
+    onChange((current) => ({
+      ...current,
+      actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.map((stage) => stage.id === task.id ? { ...stage, status: pendingStatus || stage.status, justification: note } : stage) } : candidate),
+      history: [...current.history, historyEntry(pendingStatus ? `Etapa “${task.title}” cancelada. Justificativa: ${note}` : `Justificativa registrada para a etapa “${task.title}”.`, actor)],
+    }), pendingStatus ? 'Etapa cancelada com justificativa.' : 'Justificativa salva.');
+    setPendingStatus(null);
+    setJustifying(false);
+    setError('');
+    setJustificationModalOpen(false);
+    setEditingJustification(false);
+  };
+  const removeStage = () => {
+    if (riskCount > 0) return;
+    onChange((current) => ({
+      ...current,
+      actions: current.actions.map((candidate) => candidate.id === action.id ? { ...candidate, tasks: candidate.tasks.filter((stage) => stage.id !== task.id) } : candidate),
+      history: [...current.history, historyEntry(`Etapa removida: ${task.title}.`, actor)],
+    }), 'Etapa removida.');
+    setConfirmingRemoval(false);
+  };
   return <div className={`task-row ${task.status === 'completed' ? 'done' : ''} ${!canUpdate ? 'read-only' : ''} ${overdue ? 'overdue' : ''}`}>
-    <div className="task-main"><span>{task.title}</span>{task.partners && <small>Parceiros: {task.partners}</small>}</div>
-    <div className="task-deadline"><span className="mobile-field-label">Prazo</span><time dateTime={task.deadline}>{formatDate(task.deadline)}</time>{overdue && <span className="overdue-label">Atrasada</span>}</div>
+    <div className="task-main"><span className="stage-field-label">Etapa:</span><strong>{task.title}</strong>{task.partners && <small>Parceiros: {task.partners}</small>}</div>
+    <div className="task-deadline"><span className="stage-field-label">Prazo:</span><time dateTime={task.deadline}>{formatDate(task.deadline)}</time>{overdue && <span className="overdue-label">Atrasada</span>}</div>
     <div className="stage-control">
-      {canUpdate ? <select className="stage-status-select" aria-label={`Situação de ${task.title}`} value={task.status} onChange={(event) => changeStatus(event.target.value)}>{Object.entries(stageStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select> : <Badge tone={statusTone(stageStatusLabel(task.status))}>{stageStatusLabel(task.status)}</Badge>}
-      {canUpdate && (overdue || task.status === 'cancelled' || task.justification) && <button type="button" className="justification-button" aria-expanded={justifying} onClick={() => setJustifying((current) => !current)}>{task.justification ? 'Justificativa' : 'Justificar'}</button>}
+      <span className="stage-field-label">Situação:</span>
+      {canUpdate ? <Select
+        className="stage-status-select"
+        aria-label={`Situação de ${task.title}`}
+        value={pendingStatus || task.status}
+        onChange={(event) => changeStatus(event.target.value)}
+        options={Object.entries(stageStatusLabels).map(([value, label]) => ({
+          value,
+          label,
+        }))}
+      /> : <Badge tone={statusTone(stageStatusLabel(task.status))}>{stageStatusLabel(task.status)}</Badge>}
     </div>
-    {justifying && canUpdate && <form className="justification-form" onSubmit={saveJustification}><label htmlFor={`justification-${task.id}`}>Justificativa da etapa</label><textarea id={`justification-${task.id}`} rows="2" maxLength={400} value={justification} onChange={(event) => setJustification(event.target.value)} placeholder="Informe a causa e, se possível, a nova previsão." />{error && <p role="alert" className="form-error">{error}</p>}<div><button type="submit" className="button primary">Salvar justificativa</button><button type="button" className="button" onClick={() => setJustifying(false)}>Cancelar</button></div></form>}
-    {!justifying && task.justification && <p className="justification-text"><b>Justificativa:</b> {task.justification}</p>}
-    <Attachments itemId={itemId} etapaId={task.id} canManage={canUpdate} />
+    <div className="stage-tools">
+      {!justifying && canUpdate && (overdue || task.status === 'cancelled') && !task.justification && <Button variant="tertiary" icon="edit" aria-expanded={false} onClick={() => { setJustification(''); setJustifying(true); setError(''); }}>{task.status === 'cancelled' ? 'Justificar cancelamento' : 'Justificar atraso'}</Button>}
+      {canViewRisk && <Button variant="tertiary" icon="danger" onClick={() => onViewRisks(task)}>Riscos</Button>}
+      <Attachments itemId={itemId} etapaId={task.id} canManage={canUpdate} buttonVariant="tertiary" />
+    </div>
+    {task.justification && <Button variant="tertiary" icon="eye" className="justification-trigger" onClick={openJustification}>Ver justificativa</Button>}
+    {canManageAction && riskCount === 0 && <Button variant="tertiary" icon="close" className="remove-stage-button" onClick={() => setConfirmingRemoval(true)}>Remover etapa</Button>}
+    <div className="stage-footer">
+      {canManageAction && riskCount > 0 && <p className="hint">Reatribua os {riskCount} risco{riskCount === 1 ? '' : 's'} desta etapa antes de removê-la.</p>}
+      {justifying && canUpdate && <form className="justification-form" onSubmit={saveJustification}><label htmlFor={`justification-${task.id}`}>{pendingStatus ? 'Justificativa do cancelamento' : 'Justificativa da etapa'}</label>{pendingStatus && <p className="justification-help">A situação só será alterada após a confirmação.</p>}<textarea id={`justification-${task.id}`} rows="2" maxLength={400} value={justification} onChange={(event) => setJustification(event.target.value)} placeholder={pendingStatus ? 'Explique por que esta etapa será cancelada.' : 'Informe a causa e, se possível, a nova previsão.'} />{error && <p role="alert" className="form-error">{error}</p>}<div><Button type="button" onClick={cancelJustification}>Cancelar</Button><Button type="submit" variant="primary">{pendingStatus ? 'Confirmar cancelamento' : 'Salvar justificativa'}</Button></div></form>}
+    </div>
+    {justificationModalOpen && <Modal title="Justificativa da etapa" subtitle={task.title} onClose={closeJustification}>
+      <form onSubmit={saveJustification}>
+        <div className="form-body">
+          {!editingJustification ? <p className="justification-modal-text">{task.justification}</p> : <><label htmlFor={`justification-modal-${task.id}`}>Justificativa da etapa</label><textarea id={`justification-modal-${task.id}`} rows="5" maxLength="400" value={justification} onChange={(event) => setJustification(event.target.value)} /></>}
+          {error && <p role="alert" className="form-error">{error}</p>}
+        </div>
+        <div className="form-end">
+          <Button type="button" onClick={closeJustification}>Fechar</Button>
+          {!editingJustification ? <Button type="button" variant="primary" icon="edit" onClick={() => setEditingJustification(true)}>Editar justificativa</Button> : <Button type="submit" variant="primary">Salvar justificativa</Button>}
+        </div>
+      </form>
+    </Modal>}
+    {confirmingRemoval && <Modal title="Remover etapa?" subtitle={task.title} onClose={() => setConfirmingRemoval(false)}>
+      <div className="form-body"><p>Tem certeza de que deseja remover esta etapa? Essa ação não pode ser desfeita.</p></div>
+      <div className="form-end"><Button onClick={() => setConfirmingRemoval(false)}>Cancelar</Button><Button variant="primary" className="danger-primary" onClick={removeStage}>Remover etapa</Button></div>
+    </Modal>}
   </div>;
 }
 
-function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
-  const [collapsed, setCollapsed] = useState([]);
-  const [adding, setAdding] = useState(null);
-  const [taskName, setTaskName] = useState('');
-  const [taskDeadline, setTaskDeadline] = useState('');
-  const [taskPartners, setTaskPartners] = useState('');
-  const [error, setError] = useState('');
-  const progress = executionProgress(item);
+function Actions({ item, action: selectedAction, actor, can, plan, onAdd, onModal, onChange }) {
+  const [expanded, setExpanded] = useState(selectedAction ? [selectedAction.id] : []);
+  const progress = selectedAction ? actionProgress(selectedAction) : executionProgress(item);
   const resource = resourceFor(plan, item);
   const canManageAction = can(PERMISSIONS.MANAGE_ACTION, resource);
   const canUpdateStage = can(PERMISSIONS.UPDATE_STAGE, resource);
-  const canManageRisk = can(PERMISSIONS.MANAGE_RISK, resource);
-  const submitTask = (event, actionId) => { event.preventDefault(); if (!taskName.trim()) return setError('Informe o nome da etapa.'); if (!taskDeadline) return setError('Informe o prazo da etapa.'); onChange((current) => ({ ...current, actions: current.actions.map((action) => action.id === actionId ? { ...action, tasks: [...action.tasks, { id: uid(), title: taskName.trim(), status: 'not_started', deadline: taskDeadline, justification: '', partners: taskPartners.trim() }] } : action), history: [...current.history, historyEntry(`Etapa adicionada: ${taskName.trim()}.`, actor)] }), 'Etapa adicionada.'); setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError(''); };
-  const toggleAction = (actionId) => setCollapsed((current) => current.includes(actionId) ? current.filter((id) => id !== actionId) : [...current, actionId]);
-  const cancelStage = () => { setAdding(null); setTaskName(''); setTaskDeadline(''); setTaskPartners(''); setError(''); };
+  const canViewRisk = can(PERMISSIONS.VIEW_RISK, resource);
+  const toggleAction = (actionId) => setExpanded((current) => current.includes(actionId) ? current.filter((id) => id !== actionId) : [...current, actionId]);
+
   return <>
     <div className="execution-summary" style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
       <span>Execução das etapas</span>
@@ -341,37 +470,27 @@ function Actions({ item, actor, can, plan, onAdd, onAddRisk, onChange }) {
       <span className="execution-count">{progress.done} de {progress.total} etapas ativas concluídas</span>
       <div className="execution-bar" role="progressbar" aria-label="Execução das etapas" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-valuetext={`${progress.done} de ${progress.total} etapas ativas concluídas`}><span style={{ width: `${progress.percent}%` }} /></div>
     </div>
-    <div className="section-heading actions-heading">
+    {!selectedAction && <div className="section-heading actions-heading">
       <h3>Ações estratégicas <span>{item.actions.length}</span></h3>
       {canManageAction && <Button icon="plus" onClick={onAdd}>Adicionar ação</Button>}
-    </div>
+    </div>}
     {!item.actions.length && <Empty title="Nenhuma ação cadastrada">Adicione uma ação para organizar sua execução.</Empty>}
     <div className="actions-list">
-      {item.actions.map((action) => {
+      {(selectedAction ? [selectedAction] : item.actions).map((action) => {
         const state = actionProgress(action);
-        const closed = collapsed.includes(action.id);
+        const closed = !expanded.includes(action.id);
         return <article className="action-card" key={action.id} style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
-          <button className="action-heading" aria-expanded={!closed} onClick={() => toggleAction(action.id)}>
-            <span className="action-name"><span className="action-number">{action.code}</span><span className="action-title">{action.title}</span><small>{action.owner} <span>·</span> Prazo: {formatDate(action.deadline)}</small></span>
+          {!selectedAction && <div className="action-header">
+            <button className="action-heading" aria-expanded={!closed} onClick={() => toggleAction(action.id)}>
+              <span className="action-name"><span className="action-number">{action.code}</span><span className="action-title">{action.title}</span><small>{action.owner} <span>·</span> Prazo: {formatDate(action.deadline)}</small></span>
+            </button>
+            {(canManageAction || canUpdateStage) && <Button variant="tertiary" icon="plus" className="add-task" onClick={() => onModal({ type: 'stage', item, action })}>Adicionar etapa<span className="sr-only"> em {action.title}</span></Button>}
             <span className="task-count"><span>{state.done} de {state.total} {state.total === 1 ? 'etapa concluída' : 'etapas concluídas'}</span><strong>{state.percent}%</strong></span>
             <Icon name="chevron" size={14} className={!closed ? 'rotated' : ''} />
-          </button>
-          {!closed && <div className="action-body">
-            {action.tasks.length > 0 && <div className="stage-columns" aria-hidden="true"><span>Etapa</span><span>Prazo</span><span>Situação</span></div>}
-            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} onChange={onChange} itemId={item.id} />)}
+          </div>}
+          {(selectedAction || !closed) && <div className="action-body">
+            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} canManageAction={canManageAction} canViewRisk={canViewRisk} riskCount={(item.risks || []).filter((risk) => risk.actionId === action.id && risk.stage === task.title).length} onViewRisks={() => navigate(planUrl(plan.id, item.id, 'riscos', undefined, action.id, task.id))} onChange={onChange} itemId={item.id} />)}
             {!action.tasks.length && <p className="hint px-5 pt-3">Esta ação ainda não possui etapas.</p>}
-            {adding === action.id ? <form className="inline-task-form" onSubmit={(event) => submitTask(event, action.id)}>
-              {/* eslint-disable-next-line jsx-a11y/no-autofocus -- form revelado pelo próprio clique do usuário em "Adicionar etapa", não no carregamento da página */}
-              <input aria-label="Nome da etapa" autoFocus required maxLength={180} placeholder="Descreva a etapa…" value={taskName} onChange={(event) => setTaskName(event.target.value)} />
-              <input aria-label="Prazo da etapa" type="date" min={`${plan.start}-01-01`} max={`${plan.end}-12-31`} required value={taskDeadline} onChange={(event) => setTaskDeadline(event.target.value)} />
-              <input aria-label="Parceiros da etapa" maxLength={150} placeholder="Parceiros (opcional)" value={taskPartners} onChange={(event) => setTaskPartners(event.target.value)} />
-              <Button type="submit" variant="primary">Adicionar</Button>
-              <Button onClick={cancelStage}>Cancelar</Button>
-              {error && <p role="alert" className="form-error">{error}</p>}
-            </form> : (canManageAction || canUpdateStage || canManageRisk) && <div className="action-tools">
-              {(canManageAction || canUpdateStage) && <button className="add-task" onClick={() => setAdding(action.id)}><Icon name="plus" size={14} />Adicionar etapa<span className="sr-only"> em {action.title}</span></button>}
-              {canManageRisk && <button className="add-risk" onClick={() => onAddRisk(action)}><Icon name="info" size={14} />Adicionar risco<span className="sr-only"> em {action.title}</span></button>}
-            </div>}
           </div>}
         </article>;
       })}
@@ -397,7 +516,14 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
   return <section className="indicator" aria-label="Indicador e metas" style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
     <div className="section-heading indicator-heading">
       <div><h3>{item.metric.name}</h3><p>{description}</p></div>
-      <Field label={item.metric.periodicity === 'final' ? 'Período' : 'Ano de referência'} className="year-field"><select value={period} onChange={(event) => setPeriod(Number(event.target.value))}>{list.map((value) => <option key={value} value={value}>{periodLabel(plan, item, value)}</option>)}</select></Field>
+      <Field label={item.metric.periodicity === 'final' ? 'Período' : 'Ano de referência'} className="year-field"><Select
+        value={period}
+        onChange={(event) => setPeriod(Number(event.target.value))}
+        options={list.map((value) => ({
+          value,
+          label: periodLabel(plan, item, value),
+        }))}
+      /></Field>
     </div>
     <div className={`indicator-summary ${status === 'Meta atingida' ? 'green' : status === 'Meta não atingida' ? 'critical' : status === 'Em acompanhamento' ? 'blue' : 'neutral'} ${descriptive ? 'descriptive' : ''}`}>
       <div className="current-result"><span>Resultado</span><strong>{metricValue(result)}</strong><Badge tone={metricTone(item, period)}>{status}</Badge></div>
@@ -409,7 +535,7 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
       <h3>{item.metric.periodicity === 'final' ? 'Meta e resultado do ciclo' : 'Metas e resultados por ano'}</h3>
       <div className="annual-tools">
         {hasEvolution && <div className="view-switch" role="group" aria-label="Visualização dos resultados"><button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>Tabela</button><button type="button" aria-pressed={view === 'evolution'} onClick={() => setView('evolution')}>Evolução</button></div>}
-        {can(PERMISSIONS.EDIT_TARGET, resource) && <Button variant="ghost" onClick={onTargets}>Editar metas</Button>}
+        {can(PERMISSIONS.EDIT_TARGET, resource) && <Button variant="tertiary" onClick={onTargets}>Editar metas</Button>}
       </div>
     </div>
     {view === 'table' || !hasEvolution ? <div className="table-scroll"><table className={`annual-table ${descriptive ? 'descriptive' : ''}`}>
@@ -444,10 +570,10 @@ function IndicatorEvolution({ item, plan, period, setPeriod }) {
   </div>;
 }
 
-function Risks({ item, canEdit, onEdit }) {
+function Risks({ item, action, stage, canEdit, onAdd, onEdit }) {
   const [selected, setSelected] = useState(null);
   const [details, setDetails] = useState(null);
-  const risks = item.risks || [];
+  const risks = (item.risks || []).filter((entry) => (!action || entry.actionId === action.id) && (!stage || entry.stage === stage.title));
   const probabilities = [5, 4, 3, 2, 1];
   const impacts = [1, 2, 3, 4, 5];
   const selectedRisks = selected?.mode === 'cell'
@@ -459,11 +585,8 @@ function Risks({ item, canEdit, onEdit }) {
   return (
     <div className="risk-panel">
       <div className="section-heading">
-        <div>
-          <h3>Riscos associados à execução</h3>
-          <p className="hint">Riscos vinculados às ações e etapas deste item.</p>
-        </div>
-        <Badge>{risks.length} registros</Badge>
+        <div className="risk-panel-context" aria-hidden="true" />
+        <div className="flex items-center gap-3"><Badge>{risks.length} registros</Badge>{canEdit && <Button icon="plus" onClick={onAdd}>Adicionar risco</Button>}</div>
       </div>
       <div className="risk-legend">
         {['low', 'moderate', 'high', 'critical'].map((level) => <button key={level} className="risk-filter-button" aria-pressed={selected?.mode === 'level' && selected.level === level} onClick={() => selectLevel(level)}><i className={`risk-dot ${level}`} />{riskLevelLabel(level)} <small>{risks.filter((entry) => riskLevel(entry.probability, entry.impact) === level).length}</small></button>)}

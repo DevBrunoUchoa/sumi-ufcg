@@ -30,7 +30,6 @@ Docker
 ## Instalação
 
 ```bash
-corepack enable
 pnpm install --frozen-lockfile
 ```
 
@@ -59,8 +58,25 @@ pnpm build
 ## Docker
 
 ```bash
-docker compose build
+docker compose up -d --build
 ```
+
+A aplicação fica em `http://localhost:3000`. O Compose lê as credenciais
+de `backend/.env` (ignorado pelo Git). Para parar: `docker compose down`.
+O contêiner usa o Supabase configurado nesse arquivo; ele não cria um banco
+Postgres local.
+
+## Execução nesta instalação Windows
+
+O Node 24 e o pnpm 11 portáteis ficam em `.tools/`, na mesma unidade do projeto.
+Para reinstalar dependências aqui, execute
+`.tools\pnpm.cmd install --frozen-lockfile --store-dir .tools/pnpm-store`.
+Com `backend/.env` preenchido, execute `iniciar-local.cmd` para compilar e
+iniciar frontend e API em `http://localhost:3000`. A variável
+`SESSION_COOKIE_SECURE=false` é necessária nesse arquivo para login via
+`http://localhost`; em um ambiente HTTPS de produção, deixe-a vazia.
+
+O Docker Desktop desta máquina guarda os discos WSL em `E:\Docker\wsl`.
 
 ## Documentação
 

@@ -1,42 +1,238 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { BrSelect, BrSelectOption, BrInput, BrButton, BrTextarea } from '@govbr-ds/webcomponents-react';
+import { defineCustomElement as defineBrDatetimePicker } from '@govbr-ds/webcomponents/dist/components/br-datetime-picker.js';
+defineBrDatetimePicker();
 
-const paths = {
-  grid: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
-  layers: 'm12 3 9 5-9 5-9-5 9-5z M3 12l9 5 9-5 M3 16l9 5 9-5',
-  plus: 'M12 5v14 M5 12h14',
-  arrow: 'M5 12h14 m-6-6 6 6-6 6',
-  chevron: 'm9 5 7 7-7 7',
-  search: 'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
-  check: 'm5 12 4 4L19 6',
-  close: 'm6 6 12 12 M6 18 18 6',
-  edit: 'm15 4 5 5 M4 20l5-1L21 7l-5-5L4 14v6z',
-  history: 'M3 11a9 9 0 1 1 2 7 M3 4v7h7 M12 7v5l3 2',
-  chart: 'M4 3v17h17 M8 15v-4 M13 15V7 M18 15v-7',
-  list: 'M9 6h12 M9 12h12 M9 18h12 M3 6h1 M3 12h1 M3 18h1',
-  book: 'M4 3h13a3 3 0 0 1 3 3v15H6a3 3 0 0 1-3-3V5a2 2 0 0 1 2-2 M3 17h17 M8 7h8 M8 11h5',
-  leaf: 'M4 20c0-9 5-15 16-16 0 12-6 17-13 13 M4 20l10-10',
-  info: 'M12 11v6 M12 7h.01 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
-  user: 'M20 21v-2a6 6 0 0 0-6-6h-4a6 6 0 0 0-6 6v2 M16 5a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
-  calendar: 'M4 5h16v16H4z M4 10h16 M8 2v6 M16 2v6',
-  link: 'm10 13 4-4 M8 16l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0 M16 8l2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0',
-  download: 'M12 3v12 M7 10l5 5 5-5 M4 20h16',
-  upload: 'M12 21V9 M7 14l5-5 5 5 M4 20h16',
-  contrast: 'M12 2a10 10 0 1 0 0 20V2z M12 2a10 10 0 0 1 0 20',
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTableCellsLarge, faLayerGroup, faPlus, faArrowRight, faChevronRight, faMagnifyingGlass, faCheck, faXmark, faPen, faRotateLeft,
+faChartColumn, faListUl, faBook, faLeaf, faCircleInfo, faUser, faCalendar, faLink, faDownload, faUpload, faExclamation, faEye, faCircleHalfStroke } from '@fortawesome/free-solid-svg-icons';
+
+const iconMap = {
+  grid: faTableCellsLarge,
+  layers: faLayerGroup,
+  plus: faPlus,
+  arrow: faArrowRight,
+  chevron: faChevronRight,
+  search: faMagnifyingGlass,
+  check: faCheck,
+  close: faXmark,
+  edit: faPen,
+  history: faRotateLeft,
+  chart: faChartColumn,
+  list: faListUl,
+  book: faBook,
+  leaf: faLeaf,
+  info: faCircleInfo,
+  user: faUser,
+  calendar: faCalendar,
+  link: faLink,
+  download: faDownload,
+  upload: faUpload,
+  danger: faExclamation,
+  eye: faEye,
+  contrast: faCircleHalfStroke,
 };
+
 export function Icon({ name, size = 18, ...props }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name] || paths.book} /></svg>;
+  const selectedIcon = iconMap[name] || faBook;
+
+  return (
+    <FontAwesomeIcon
+      icon={selectedIcon}
+      style={{ fontSize: `${size}px` }}
+      {...props}
+    />
+  );
 }
-export function Button({ children, icon, variant = 'secondary', className = '', ...props }) {
-  return <button type="button" className={`button ${variant} ${className}`} {...props}>{icon && <Icon name={icon} size={16} />}{children}</button>;
+
+export function Button({
+  children,
+  icon,
+  variant = 'secondary',
+  className = '',
+  type = 'button',
+  ...props
+}) {
+
+  return (
+    <BrButton
+      emphasis={variant}
+      type={type}
+      className={className}
+      {...props}
+    >
+      {icon && <Icon name={icon} size={16} />}
+      {children}
+    </BrButton>
+  )
 }
+
+const DENSITIES = ['small', 'medium', 'large'];
+const toDensity = (density, size) => density || (DENSITIES.includes(size) ? size : undefined);
+
+function textProps({ maxLength, minLength, ...rest }) {
+  return {
+    ...rest,
+    maxlength: maxLength ?? rest.maxlength,
+    minlength: minLength ?? rest.minlength,
+  };
+}
+
+export function Input({ label, id, size, className = '', density, button, onChange, value, defaultValue, ...props }) {
+  const [inner, setInner] = useState(defaultValue ?? '');
+  const current = value !== undefined ? value : inner;
+  const handleInput = (event) => {
+    if (value === undefined) setInner(event.target.value);
+    onChange?.(event);
+  };
+  return (
+    <BrInput
+      customId={id}
+      label={label}
+      density={toDensity(density, size)}
+      className={className}
+      value={current}
+      onInput={handleInput}
+      {...textProps(props)}
+    >
+      {button && React.cloneElement(button, { slot: 'action' })}
+    </BrInput>
+  );
+}
+
+export function Textarea({ label, id, size, className = '', density, rows, onChange, value, defaultValue, ...props }) {
+  const [inner, setInner] = useState(defaultValue ?? '');
+  const current = value !== undefined ? value : inner;
+  const handleInput = (event) => {
+    if (value === undefined) setInner(event.target.value);
+    onChange?.(event);
+  };
+  return (
+    <BrTextarea
+      customId={id}
+      label={label}
+      density={toDensity(density, size)}
+      rows={rows != null ? Number(rows) : undefined}
+      className={className}
+      value={current}
+      onInput={handleInput}
+      {...textProps(props)}
+    />
+  );
+}
+
+export function Select({
+  label,
+  id,
+  placeholder,
+  value,
+  defaultValue,
+  onChange,
+  name,
+  options = [],
+  className = '',
+  ...props
+}) {
+  // Valor interno para o modo não controlado (defaultValue) e para o FormData.
+  const [inner, setInner] = useState(defaultValue == null ? '' : String(defaultValue));
+  const current = value !== undefined ? String(value ?? '') : inner;
+
+  const normalized = options.map((option) =>
+    typeof option === 'object' && option !== null
+      ? { label: String(option.label), value: String(option.value) }
+      : { label: String(option), value: String(option) }
+  );
+
+  // A opção vazia ({ value: '', label: 'Selecione' }) vira o placeholder do DS.
+  // Se o rótulo dela for "Selecione", ela sai da lista; se for outro texto
+  // (ex.: "Sem meta definida"), continua selecionável.
+  const empty = normalized.find((option) => option.value === '');
+  const list = empty?.label === 'Selecione' ? normalized.filter((option) => option !== empty) : normalized;
+  const placeholderText = placeholder || empty?.label || 'Selecione';
+
+  function handleChange(event) {
+    const next = String(event.detail ?? '');
+    if (!next && current && !list.some((option) => option.value === '')) return;
+    setInner(next);
+    onChange?.({ target: { value: next }, currentTarget: { value: next } });
+  }
+
+  const selectRef = useRef(null);
+
+  useEffect(() => {
+    if (selectRef.current && selectRef.current.value !== current) selectRef.current.value = current;
+  }, [current, normalized.length]);
+
+  useEffect(() => {
+    const el = selectRef.current;
+    if (!el) return;
+
+    const findOption = (event) =>
+      event.composedPath().find((node) => node.tagName === 'BR-SELECT-OPTION');
+
+    const handleOver = (event) => {
+      const option = findOption(event);
+      if (option) option.style.setProperty('--background', 'var(--surface-hover)');
+    };
+    const handleOut = (event) => {
+      const option = findOption(event);
+      if (option) option.style.removeProperty('--background');
+    };
+
+    el.addEventListener('mouseover', handleOver);
+    el.addEventListener('mouseout', handleOut);
+    return () => {
+      el.removeEventListener('mouseover', handleOver);
+      el.removeEventListener('mouseout', handleOut);
+    };
+  }, [list]);
+
+  return (
+    <>
+      <BrSelect
+        ref={selectRef}
+        customId={id}
+        label={label}
+        placeholder={placeholderText}
+        value={current}
+        onValueChange={handleChange}
+        className={className}
+        {...props}
+      >
+        {list.map((opt) => (
+          <BrSelectOption key={opt.value} label={opt.label} value={opt.value} selected={opt.value === current} />
+        ))}
+      </BrSelect>
+      {name && <input type="hidden" name={name} value={current} />}
+    </>
+  );
+}
+
+export function DatePicker({ value = '', onChange, name, ...props }) {
+  const pickerRef = useRef(null);
+  useEffect(() => {
+    const picker = pickerRef.current;
+    if (!picker) return;
+    const handleValueChange = () => onChange?.(picker.serializedValue || '');
+    picker.addEventListener('valueChange', handleValueChange);
+    return () => picker.removeEventListener('valueChange', handleValueChange);
+  }, [onChange]);
+  useEffect(() => {
+    if (pickerRef.current && pickerRef.current.serializedValue !== value) pickerRef.current.serializedValue = value;
+  }, [value]);
+  return <>
+    <br-datetime-picker ref={pickerRef} mode="date" locale="pt-BR" serializedValue={value} {...props} />
+    {name && <input type="hidden" name={name} value={value} />}
+  </>;
+}
+
 export function Badge({ children, tone = 'neutral' }) { return <span className={`badge ${tone}`}>{children}</span>; }
 export function Field({ label, help, children, className = '' }) {
   const id = useId();
-  // data-initial-focus (não autoFocus) é o que o Modal usa pra decidir qual campo
-  // focar ao abrir — o atributo HTML autoFocus nativo dispara antes do React
-  // terminar de montar o <dialog>, o que o jsx-a11y/no-autofocus sinaliza com
-  // razão (contexto muda sem o leitor de tela ter chance de anunciar o diálogo).
-  return <div className={`field ${className}`}><label htmlFor={id}>{label}</label>{React.cloneElement(children, { id, 'data-initial-focus': children.props['data-initial-focus'] ?? (children.props.autoFocus ? 'true' : undefined), 'aria-describedby': help ? `${id}-help` : undefined })}{help && <small id={`${id}-help`}>{help}</small>}</div>;
+  // Componentes do DS já renderizam o próprio label; só os demais usam o <label> do Field.
+  const isGov = [Input, Textarea, Select].includes(children.type);
+  const extra = { id, 'data-initial-focus': children.props['data-initial-focus'] ?? (children.props.autoFocus ? 'true' : undefined), 'aria-describedby': help ? `${id}-help` : undefined };
+  return <div className={`field ${className}`}>{!isGov && <label htmlFor={id}>{label}</label>}{React.cloneElement(children, isGov ? { ...extra, label } : extra)}{help && <small id={`${id}-help`}>{help}</small>}</div>;
 }
 export function Empty({ title, children, action }) {
   return <div className="empty"><span className="empty-icon"><Icon name="layers" size={25} /></span><h3>{title}</h3>{children && <p>{children}</p>}{action}</div>;
@@ -45,7 +241,7 @@ export function Modal({ title, subtitle, children, onClose, wide = false }) {
   const ref = useRef(null);
   function containFocus(event) {
     if (event.key !== 'Tab') return;
-    const controls = [...ref.current.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]')].filter((element) => element.getClientRects().length);
+    const controls = [...ref.current.querySelectorAll('button:not([disabled]), br-input:not([disabled]), br-select:not([disabled]), br-textarea:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), a[href]')].filter((element) => element.getClientRects().length);
     const first = controls[0];
     const last = controls.at(-1);
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
@@ -54,7 +250,7 @@ export function Modal({ title, subtitle, children, onClose, wide = false }) {
   useEffect(() => {
     const previous = document.activeElement;
     ref.current.showModal();
-    const firstField = ref.current.querySelector('[data-initial-focus]') || ref.current.querySelector('input, select, textarea');
+    const firstField = ref.current.querySelector('[data-initial-focus]') || ref.current.querySelector('br-input, br-select, br-textarea, input:not([type="hidden"]), select, textarea');
     firstField?.focus();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';

@@ -46,11 +46,15 @@ async function logout() {
 
 const planningClient = createPlanningClient();
 const ALTO_CONTRASTE_KEY = 'sumi.ui.alto-contraste';
+const VLIBRAS_KEY = 'sumi.ui.vlibras';
 const planUrl = (id, item, view = 'indicadores', period, actionId, stageId) => `/plano/${id}${item ? `?item=${item}&view=${view}${actionId ? `&action=${actionId}` : ''}${stageId ? `&stage=${stageId}` : ''}${period ? `&period=${period}` : ''}` : ''}`;
 const navigate = (path) => { window.location.hash = path; };
 const readRoute = () => { const [path, query] = (window.location.hash.slice(1) || '/inicio').split('?'); return { path, query: new URLSearchParams(query) }; };
 const statusTone = (status) => status === 'Concluída' || status === 'Meta atingida' || status === 'Validado' ? 'green' : status === 'Em andamento' || status === 'Aguardando validação' ? 'blue' : status === 'Correção solicitada' ? 'attention' : 'neutral';
 const readAltoContrastePreference = () => { try { return localStorage.getItem(ALTO_CONTRASTE_KEY) === 'true'; } catch { return false; } };
+// VLibras vem sempre ligado no HTML (index.html) — a preferência só existe
+// pra permitir desligar; sem valor salvo, assume ligado (comportamento atual).
+const readVlibrasPreference = () => { try { return localStorage.getItem(VLIBRAS_KEY) !== 'false'; } catch { return true; } };
 
 function Progress({ done, total, percent, label = 'etapas', compact = false }) {
   const value = percent ?? (total ? done / total * 100 : 0);
@@ -83,11 +87,18 @@ function App({ auth, initialData }) {
   const [readyToSave, setReadyToSave] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [altoContraste, setAltoContraste] = useState(readAltoContrastePreference);
+  const [vlibrasAtivo, setVlibrasAtivo] = useState(readVlibrasPreference);
   useEffect(() => { const changed = () => { setRoute(readRoute()); setModal(null); }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange', changed); }, []);
   useEffect(() => {
     if (altoContraste) document.documentElement.setAttribute('data-alto-contraste', 'true');
     else document.documentElement.removeAttribute('data-alto-contraste');
   }, [altoContraste]);
+  useEffect(() => {
+    // O widget é injetado pelo script do index.html (fora da árvore React) —
+    // desligar aqui só esconde o container, sem reinicializar o plugin.
+    const container = document.querySelector('div[vw]');
+    if (container) container.style.display = vlibrasAtivo ? '' : 'none';
+  }, [vlibrasAtivo]);
   useEffect(() => { if (!readyToSave) return setReadyToSave(true); const timer = setTimeout(() => planningClient.save(data).then(() => setSaveError('')).catch(() => setSaveError('Não foi possível salvar as alterações.')), 150); return () => clearTimeout(timer); }, [data]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   const update = (mutate, message) => { setData((current) => { const next = structuredClone(current); mutate(next); return next; }); if (message) setToast(message); };
@@ -113,6 +124,7 @@ function App({ auth, initialData }) {
   const close = () => setModal(null);
   const toggleSidebar = () => setSidebarCollapsed((current) => !current);
   const toggleAltoContraste = () => setAltoContraste((current) => { const next = !current; try { localStorage.setItem(ALTO_CONTRASTE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
+  const toggleVlibras = () => setVlibrasAtivo((current) => { const next = !current; try { localStorage.setItem(VLIBRAS_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
   const planId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
   const visiblePlans = data.plans.filter((plan) => can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan)) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, resourceFor(plan))));
   const plan = visiblePlans.find((candidate) => candidate.id === planId);
@@ -154,6 +166,7 @@ function App({ auth, initialData }) {
         <div className="breadcrumb"><a href="#/inicio">SUMI</a>{plan && <><Icon name="chevron" size={13} /><a href="#/planejamentos">Planejamentos</a><Icon name="chevron" size={13} /><strong>{plan.shortName}</strong></>}</div>
         <div className="topbar-actions">
           <button type="button" className="text-button accessibility-toggle" aria-pressed={altoContraste} onClick={toggleAltoContraste} title={altoContraste ? 'Desativar alto contraste' : 'Ativar alto contraste'}><Icon name="contrast" size={16} />{altoContraste ? 'Contraste padrão' : 'Alto contraste'}</button>
+          <button type="button" className="text-button accessibility-toggle" aria-pressed={vlibrasAtivo} onClick={toggleVlibras} title={vlibrasAtivo ? 'Desativar tradução em Libras (VLibras)' : 'Ativar tradução em Libras (VLibras)'}><Icon name="libras" size={16} />{vlibrasAtivo ? 'Desativar Libras' : 'Ativar Libras'}</button>
           <div className="account-summary">
             <span className="account-avatar" aria-hidden="true"><Icon name="user" size={16} /></span>
             <div className="account-identity"><strong title={session.user?.name || 'Comunidade UFCG'}>{session.user?.name || 'Comunidade UFCG'}</strong><small title={roles}>{roles}</small></div>

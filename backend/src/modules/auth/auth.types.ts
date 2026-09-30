@@ -25,5 +25,5 @@ export interface Usuario {
 export interface EixoParaConcessoes {
   id: string;
   noPaiId: string | null;
-  dados: { managerIds?: unknown; reviewerIds?: unknown };
+  dados: { managerIds?: unknown; reviewerIds?: unknown; customGrants?: unknown };
 }

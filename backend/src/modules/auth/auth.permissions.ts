@@ -49,3 +49,24 @@ export const PERMISSOES_RESPONSAVEL_EIXO = Object.freeze([
   PERMISSOES.COMMENT_HISTORY,
   PERMISSOES.REVIEW_ITEM,
 ]);
+
+/**
+ * Vocabulário concedível avulsamente por eixo via `axis.customGrants` (tela
+ * de Estrutura → "Permissões específicas de usuários") — complemento
+ * granular aos pacotes fixos de Gestor/Responsável acima: em vez de um
+ * pacote todo-ou-nada, cada usuário marca só as permissões que precisa
+ * naquele eixo, sem virar Gestor/Responsável inteiro. Escolhido a dedo:
+ * exclui plan.manage/model.manage (concessões globais, não fazem sentido
+ * por eixo) e as .read (implícitas a quem já vê o plano internamente).
+ */
+export const PERMISSOES_CONCEDIVEIS_POR_EIXO = Object.freeze([
+  PERMISSOES.EDIT_ITEM,
+  PERMISSOES.MANAGE_ACTION,
+  PERMISSOES.UPDATE_STAGE,
+  PERMISSOES.EDIT_TARGET,
+  PERMISSOES.RECORD_RESULT,
+  PERMISSOES.MANAGE_RISK,
+  PERMISSOES.COMMENT_HISTORY,
+  PERMISSOES.SUBMIT_ITEM,
+  PERMISSOES.REVIEW_ITEM,
+]);

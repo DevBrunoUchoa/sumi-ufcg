@@ -26,6 +26,11 @@ export interface Template {
   fields: CampoExtraDef[];
 }
 
+export interface AxisCustomGrant {
+  userId: string;
+  permissions: string[];
+}
+
 export interface Axis {
   id: string;
   code: string;
@@ -34,6 +39,8 @@ export interface Axis {
   ownerUnit: string;
   managerIds: string[];
   reviewerIds: string[];
+  /** Permissões avulsas por usuário neste eixo — ver PERMISSOES_CONCEDIVEIS_POR_EIXO. */
+  customGrants: AxisCustomGrant[];
 }
 
 export interface Objective {

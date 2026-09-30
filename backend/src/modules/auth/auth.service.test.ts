@@ -56,4 +56,40 @@ describe("montarSessao", () => {
     expect(pode(sessao, "item.submit", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
     expect(pode(sessao, "review_queue.read")).toBe(true);
   });
+
+  it("customGrants concede só as permissões marcadas, só no eixo marcado, sem virar Gestor/Responsável", () => {
+    const eixos: EixoParaConcessoes[] = [
+      {
+        id: "eixo-1",
+        noPaiId: "plano-1",
+        dados: { managerIds: [], reviewerIds: [], customGrants: [{ userId: "user-1", permissions: ["item.edit", "risk.manage"] }] },
+      },
+      { id: "eixo-2", noPaiId: "plano-1", dados: { managerIds: [], reviewerIds: [] } },
+    ];
+    const sessao = montarSessao(usuario(), eixos);
+    expect(sessao.roles).toEqual([]);
+    expect(pode(sessao, "item.edit", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
+    expect(pode(sessao, "risk.manage", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
+    // Não marcado pra esse usuário:
+    expect(pode(sessao, "stage.update", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
+    // Fora do eixo concedido, nada:
+    expect(pode(sessao, "item.edit", { planId: "plano-1", axisId: "eixo-2" })).toBe(false);
+  });
+
+  it("customGrants ignora código de permissão fora do vocabulário concedível por eixo", () => {
+    const eixos: EixoParaConcessoes[] = [
+      { id: "eixo-1", noPaiId: "plano-1", dados: { managerIds: [], reviewerIds: [], customGrants: [{ userId: "user-1", permissions: ["plan.manage", "item.edit"] }] } },
+    ];
+    const sessao = montarSessao(usuario(), eixos);
+    expect(pode(sessao, "plan.manage", { planId: "plano-1" })).toBe(false);
+    expect(pode(sessao, "item.edit", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
+  });
+
+  it("customGrants de outro usuário não vaza pra sessão atual", () => {
+    const eixos: EixoParaConcessoes[] = [
+      { id: "eixo-1", noPaiId: "plano-1", dados: { managerIds: [], reviewerIds: [], customGrants: [{ userId: "outro-user", permissions: ["item.edit"] }] } },
+    ];
+    const sessao = montarSessao(usuario(), eixos);
+    expect(pode(sessao, "item.edit", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
+  });
 });

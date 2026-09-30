@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { HttpError } from "../../lib/http-error.js";
+import { PERMISSOES_CONCEDIVEIS_POR_EIXO } from "../auth/auth.permissions.js";
 
 // Espelha as validações de src/domain.js (validateWorkspace e afins) no
 // frontend aprovado, mais checagens referenciais (axisId/objectiveId/
@@ -28,6 +29,11 @@ export const templateSchema = z.object({
   fields: z.array(campoExtraDefSchema),
 });
 
+const axisCustomGrantSchema = z.object({
+  userId: presente,
+  permissions: z.array(z.enum(PERMISSOES_CONCEDIVEIS_POR_EIXO)),
+});
+
 const axisSchema = z.object({
   id: presente,
   code: presente,
@@ -36,6 +42,9 @@ const axisSchema = z.object({
   ownerUnit: z.string(),
   managerIds: z.array(z.string()),
   reviewerIds: z.array(z.string()),
+  // default([]) em vez de obrigatório: clientes com cache antigo (sem esse
+  // campo ainda) durante o rollout do deploy não devem ter o PUT rejeitado.
+  customGrants: z.array(axisCustomGrantSchema).default([]),
 });
 
 const objectiveSchema = z.object({

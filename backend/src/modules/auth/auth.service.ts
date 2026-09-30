@@ -1,7 +1,7 @@
 import { gerarHashSenha, verificarSenha } from "../../lib/password.js";
 import { HttpError } from "../../lib/http-error.js";
-import { authenticatedSessionSchema } from "./auth.contract.js";
-import { PERMISSOES, PERMISSOES_GESTOR_EIXO, PERMISSOES_RESPONSAVEL_EIXO, TODAS_PERMISSOES_ADMIN } from "./auth.permissions.js";
+import { authenticatedSessionSchema, type PermissionCode } from "./auth.contract.js";
+import { PERMISSOES_CONCEDIVEIS_POR_EIXO, PERMISSOES, PERMISSOES_GESTOR_EIXO, PERMISSOES_RESPONSAVEL_EIXO, TODAS_PERMISSOES_ADMIN } from "./auth.permissions.js";
 import { eixoRepository, sessaoRepository, usuarioRepository } from "./auth.repository.js";
 import type { Concessao, EixoParaConcessoes, Papel, SessaoUsuario, Usuario } from "./auth.types.js";
 
@@ -10,6 +10,27 @@ export const NOME_COOKIE_SESSAO = "sumi_session";
 
 function idsDaLista(valor: unknown): string[] {
   return Array.isArray(valor) ? valor.filter((item): item is string => typeof item === "string") : [];
+}
+
+const PERMISSOES_CONCEDIVEIS_POR_EIXO_SET = new Set<PermissionCode>(PERMISSOES_CONCEDIVEIS_POR_EIXO);
+
+/**
+ * Extrai, de `axis.customGrants` (array `{ userId, permissions }[]`), as
+ * permissões concedidas avulsamente a um usuário específico naquele eixo —
+ * filtradas contra o vocabulário concedível por eixo (defesa em profundidade:
+ * o schema do PUT do workspace já impede gravar código fora dessa lista,
+ * mas uma gravação antiga ou direta no banco não passa por ele).
+ */
+function permissoesCustomizadas(valor: unknown, usuarioId: string): PermissionCode[] {
+  if (!Array.isArray(valor)) return [];
+  const entrada = valor.find(
+    (item): item is { userId: string; permissions?: unknown } =>
+      Boolean(item) && typeof item === "object" && (item as { userId?: unknown }).userId === usuarioId,
+  );
+  if (!entrada || !Array.isArray(entrada.permissions)) return [];
+  return entrada.permissions.filter((permissao): permissao is PermissionCode =>
+    typeof permissao === "string" && PERMISSOES_CONCEDIVEIS_POR_EIXO_SET.has(permissao as PermissionCode),
+  );
 }
 
 /**
@@ -57,6 +78,16 @@ export function montarSessao(usuario: Usuario | null, eixos: EixoParaConcessoes[
   for (const eixo of comoResponsavel) {
     if (!eixo.noPaiId) continue;
     for (const permissao of PERMISSOES_RESPONSAVEL_EIXO) {
+      concessoes.push({ permission: permissao, scope: { type: "axis", planId: eixo.noPaiId, axisId: eixo.id } });
+    }
+  }
+
+  // Permissões avulsas por eixo (tela de Estrutura → "Permissões
+  // específicas"), independentes de ser Gestor/Responsável — cada usuário
+  // marca só o que precisa, em qualquer eixo, sem virar dono do eixo inteiro.
+  for (const eixo of eixos) {
+    if (!eixo.noPaiId) continue;
+    for (const permissao of permissoesCustomizadas(eixo.dados.customGrants, usuario.id)) {
       concessoes.push({ permission: permissao, scope: { type: "axis", planId: eixo.noPaiId, axisId: eixo.id } });
     }
   }

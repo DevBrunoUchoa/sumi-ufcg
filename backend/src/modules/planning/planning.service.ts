@@ -104,6 +104,12 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
         ownerUnit: String(d.ownerUnit ?? ""),
         managerIds: Array.isArray(d.managerIds) ? d.managerIds : [],
         reviewerIds: Array.isArray(d.reviewerIds) ? d.reviewerIds : [],
+        customGrants: Array.isArray(d.customGrants)
+          ? d.customGrants.filter(
+              (g): g is { userId: string; permissions: string[] } =>
+                Boolean(g) && typeof g === "object" && typeof (g as { userId?: unknown }).userId === "string" && Array.isArray((g as { permissions?: unknown }).permissions),
+            )
+          : [],
       };
     });
 
@@ -333,7 +339,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     eixosAtuais.length !== plano.axes.length ||
     plano.axes.some((axis, index) => {
       const atual = eixosAtuaisPorId.get(axis.id);
-      const dadosNovos = { code: axis.code, name: axis.name, color: axis.color, ownerUnit: axis.ownerUnit, managerIds: axis.managerIds, reviewerIds: axis.reviewerIds };
+      const dadosNovos = { code: axis.code, name: axis.name, color: axis.color, ownerUnit: axis.ownerUnit, managerIds: axis.managerIds, reviewerIds: axis.reviewerIds, customGrants: axis.customGrants };
       return !atual || atual.ordem !== index || diferente(atual.dados, dadosNovos);
     });
   if (eixoMudou) {
@@ -345,7 +351,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
         noPaiId: plano.id,
         nivel: 0,
         ordem: index,
-        dados: { code: axis.code, name: axis.name, color: axis.color, ownerUnit: axis.ownerUnit, managerIds: axis.managerIds, reviewerIds: axis.reviewerIds },
+        dados: { code: axis.code, name: axis.name, color: axis.color, ownerUnit: axis.ownerUnit, managerIds: axis.managerIds, reviewerIds: axis.reviewerIds, customGrants: axis.customGrants },
       })),
     );
     const idsNovos = new Set(plano.axes.map((axis) => axis.id));

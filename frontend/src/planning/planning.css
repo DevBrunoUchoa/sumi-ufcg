@@ -1,0 +1,82 @@
+/* PDI uses the application shell, GOV.BR components and shared theme tokens.
+   Scope summaries and content sections can grow independently of navigation. */
+.pdi-workspace { max-width: 1440px; }
+.planning-breadcrumb { margin: 0 0 var(--spacing-scale-3x); }
+.planning-breadcrumb .crumb-list { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-base) var(--spacing-scale-baseh); white-space: normal; }
+.planning-breadcrumb .crumb { display: flex; align-items: center; gap: var(--spacing-scale-baseh); max-width: 100%; }
+.planning-breadcrumb .crumb :is(a, span) { max-width: none; overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
+.planning-breadcrumb [aria-current] { font-weight: var(--font-weight-semi-bold); color: var(--text-body); }
+.pdi-heading { flex-wrap: wrap; align-items: flex-start; gap: var(--spacing-scale-2x); }
+.pdi-identity { display: flex; align-items: center; gap: var(--spacing-scale-2x); min-width: 0; flex: 1 1 440px; }
+.pdi-identity > div { min-width: 0; }
+.pdi-identity h1 { overflow-wrap: anywhere; }
+.pdi-identity .eyebrow { margin: var(--spacing-scale-base) 0; }
+.pdi-heading .heading-actions { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; max-width: 100%; }
+.pdi-identity > .axis-icon { width: 56px; height: 56px; flex-basis: 56px; }
+.pdi-identity > .axis-icon::before { width: 44px; height: 44px; }
+.planning-summary { display: flex; align-items: stretch; flex-wrap: wrap; gap: var(--spacing-scale-3x); padding: var(--spacing-scale-3x) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: var(--spacing-scale-4x); }
+.planning-facts { display: flex; flex: 1 1 400px; flex-wrap: wrap; gap: var(--spacing-scale-3x); margin: 0; }
+.planning-facts > div { flex: 1 1 88px; }
+.planning-facts dt { font-size: var(--font-size-scale-base); color: var(--text-muted); margin-bottom: var(--spacing-scale-base); }
+.planning-facts dd { margin: 0; font-size: var(--font-size-scale-up-04); font-weight: var(--font-weight-semi-bold); color: var(--text-strong); }
+.scope-execution { display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-scale-base); min-width: 240px; flex: 0 1 320px; align-content: center; padding-left: var(--spacing-scale-3x); border-left: 1px solid var(--border); }
+.scope-execution > span { font-size: var(--font-size-scale-base); color: var(--text-body); }
+.scope-execution > strong { color: var(--text-strong); }
+.scope-execution :is(.progress-track, small, p) { grid-column: 1 / -1; }
+.scope-execution small, .scope-execution p { font-size: var(--font-size-scale-base); color: var(--text-muted); margin: 0; }
+.pdi-section-heading { gap: var(--spacing-scale-3x); align-items: flex-end; flex-wrap: wrap; margin-bottom: var(--spacing-scale-3x); }
+.pdi-section-heading br-input { flex: 0 1 360px; min-width: 240px; }
+.pdi-axis-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--spacing-scale-3x); }
+.pdi-axis-card.br-card { display: flex; flex-direction: column; margin: 0; border-top: 4px solid var(--axis-color); box-shadow: var(--elevation-layer-1); }
+.pdi-axis-card .card-content { flex: 1; padding: var(--spacing-scale-3x); }
+.pdi-axis-card-identity { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-base); margin-bottom: var(--spacing-scale-3x); }
+.pdi-axis-card-identity > span:last-child { font-size: var(--font-size-scale-base); color: var(--text-muted); font-weight: var(--font-weight-semi-bold); }
+.pdi-axis-card .axis-icon { width: 48px; height: 48px; flex-basis: 48px; }
+.pdi-axis-card .axis-icon::before { width: 38px; height: 38px; }
+.pdi-axis-card h3 { font-size: var(--font-size-scale-up-01); line-height: var(--font-line-height-medium); font-weight: var(--font-weight-semi-bold); min-height: 72px; overflow-wrap: anywhere; margin-bottom: var(--spacing-scale-base); }
+.pdi-axis-counts { display: flex; gap: var(--spacing-scale-3x); margin: var(--spacing-scale-2x) 0 0; }
+.pdi-axis-counts dt { color: var(--text-muted); font-size: var(--font-size-scale-base); }
+.pdi-axis-counts dd { margin: var(--spacing-scale-half) 0 0; font-size: var(--font-size-scale-up-01); font-weight: var(--font-weight-semi-bold); }
+.pdi-axis-card .card-footer { padding: var(--spacing-scale-base); border-top: 1px solid var(--border-soft); }
+.pdi-axis-link.br-button { display: flex; justify-content: space-between; width: 100%; gap: var(--spacing-scale-base); text-decoration: none; }
+.pdi-axis-card:hover { box-shadow: var(--elevation-layer-2); }
+.pdi-axis-filters { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--spacing-scale-2x); align-items: end; margin: var(--spacing-scale-3x) 0; }
+.pdi-axis-filters > * { min-width: 0; }
+.pdi-filter-summary { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--spacing-scale-base); font-size: var(--font-size-scale-base); color: var(--text-muted); margin-bottom: var(--spacing-scale-2x); }
+.pdi-objective { margin-bottom: var(--spacing-scale-3x); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--surface); }
+.pdi-objective-heading { padding: var(--spacing-scale-3x); border-left: 4px solid var(--axis-color); border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.pdi-objective-heading .eyebrow { margin-bottom: var(--spacing-scale-base); }
+.pdi-objective-heading h3 { font-size: var(--font-size-scale-up-01); font-weight: var(--font-weight-semi-bold); }
+.pdi-initiative-link.br-item { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding: var(--spacing-scale-3x); text-decoration: none; border-bottom: 1px solid var(--border); }
+.pdi-initiative-link:last-child { border-bottom: 0; }
+.pdi-initiative-link > span:first-child { display: grid; flex: 1; gap: var(--spacing-scale-base); min-width: 0; }
+.pdi-initiative-link small { color: var(--primary-strong); font-size: var(--font-size-scale-base); font-weight: var(--font-weight-semi-bold); }
+.pdi-initiative-link strong { color: var(--primary-strong); font-size: var(--font-size-scale-up-01); line-height: var(--font-line-height-medium); font-weight: var(--font-weight-semi-bold); overflow-wrap: anywhere; }
+.pdi-initiative-link:hover { background: var(--surface-hover); }
+.pdi-initiative-end { display: flex; align-items: center; gap: var(--spacing-scale-3x); flex-shrink: 0; margin-left: auto; }
+.pdi-objective-empty { padding: var(--spacing-scale-3x); color: var(--text-muted); font-size: var(--font-size-scale-base); }
+.planning-context { padding: var(--spacing-scale-2x) var(--spacing-scale-3x); border-left: 3px solid var(--primary); background: var(--primary-pale); margin-bottom: var(--spacing-scale-3x); }
+.planning-context p { font-size: var(--font-size-scale-base); line-height: var(--font-line-height-medium); margin: var(--spacing-scale-half) 0; overflow-wrap: anywhere; }
+.planning-context a { color: var(--primary-strong); }
+.pdi-detail.detail { padding: 0; max-width: 100%; }
+.pdi-detail .item-heading h2 { max-width: 1000px; }
+html[data-alto-contraste="true"] :is(.pdi-axis-card, .pdi-objective, .planning-summary, .planning-context) { border-color: #000; }
+@media (max-width: 1180px) { .pdi-axis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pdi-axis-card h3 { min-height: 48px; } }
+@media (max-width: 900px) { .pdi-axis-filters { grid-template-columns: 1fr 1fr; } .pdi-axis-filters > br-input { grid-column: 1 / -1; } .pdi-initiative-link { flex-wrap: wrap; } .pdi-initiative-end { flex: 1 1 100%; justify-content: space-between; } }
+@media (max-width: 640px) {
+  .planning-breadcrumb { font-size: var(--font-size-scale-base); }
+  .pdi-identity { flex-basis: 100%; align-items: flex-start; gap: var(--spacing-scale-baseh); }
+  .pdi-identity > .axis-icon { margin-top: var(--spacing-scale-4x); width: 40px; height: 40px; flex-basis: 40px; }
+  .pdi-identity > .axis-icon::before { width: 32px; height: 32px; }
+  .pdi-heading .heading-actions { justify-content: flex-start; }
+  .planning-summary { gap: var(--spacing-scale-2x); margin-bottom: var(--spacing-scale-3x); }
+  .planning-facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-scale-2x); flex-basis: 100%; }
+  .scope-execution { flex-basis: 100%; border-left: 0; border-top: 1px solid var(--border); padding: var(--spacing-scale-2x) 0 0; min-width: 0; }
+  .pdi-axis-grid { grid-template-columns: 1fr; gap: var(--spacing-scale-2x); }
+  .pdi-axis-card h3 { min-height: 0; }
+  .pdi-section-heading br-input { flex-basis: 100%; }
+  .pdi-axis-filters { grid-template-columns: 1fr; }
+  .pdi-objective-heading, .pdi-initiative-link.br-item { padding: var(--spacing-scale-2x); }
+  .pdi-initiative-link.br-item { gap: var(--spacing-scale-2x); }
+  .planning-context { padding: var(--spacing-scale-baseh) var(--spacing-scale-2x); }
+}

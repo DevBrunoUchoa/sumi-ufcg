@@ -53,7 +53,7 @@ test('modelos permitem terminologia e campos adicionais sem alterar planos exist
   await dialog.getByRole('button', { name: 'Salvar modelo' }).click();
   await expect(pdiCard).toContainText('Versão 3');
   await expect(pdiCard).toContainText('Entrega');
-  await page.goto('/#/plano/pdi');
+  await page.goto('/#/plano/pdi?item=riscos');
   await expect(page.locator('.item-code').first()).toContainText('Iniciativa');
 });
 

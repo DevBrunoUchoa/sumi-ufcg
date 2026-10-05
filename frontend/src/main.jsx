@@ -12,8 +12,11 @@ import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
 import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
 import { AxisIcon } from './AxisIcon.jsx';
+import { PdiWorkspace } from './planning/PdiWorkspace.jsx';
+import { itemUrl, planUrl, resolvePlanRoute } from './planning/navigation.js';
 import '@govbr-ds/core/dist/core.css';
 import './styles.css';
+import './planning/planning.css';
 
 const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login'];
 const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
@@ -47,7 +50,6 @@ async function logout() {
 const planningClient = createPlanningClient();
 const ALTO_CONTRASTE_KEY = 'sumi.ui.alto-contraste';
 const VLIBRAS_KEY = 'sumi.ui.vlibras';
-const planUrl = (id, item, view = 'indicadores', period, actionId, stageId) => `/plano/${id}${item ? `?item=${item}&view=${view}${actionId ? `&action=${actionId}` : ''}${stageId ? `&stage=${stageId}` : ''}${period ? `&period=${period}` : ''}` : ''}`;
 const navigate = (path) => { window.location.hash = path; };
 const readRoute = () => { const [path, query] = (window.location.hash.slice(1) || '/inicio').split('?'); return { path, query: new URLSearchParams(query) }; };
 const statusTone = (status) => status === 'Concluída' || status === 'Meta atingida' || status === 'Validado' ? 'green' : status === 'Em andamento' || status === 'Aguardando validação' ? 'blue' : status === 'Correção solicitada' ? 'attention' : 'neutral';
@@ -125,20 +127,23 @@ function App({ auth, initialData }) {
   const toggleSidebar = () => setSidebarCollapsed((current) => !current);
   const toggleAltoContraste = () => setAltoContraste((current) => { const next = !current; try { localStorage.setItem(ALTO_CONTRASTE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
   const toggleVlibras = () => setVlibrasAtivo((current) => { const next = !current; try { localStorage.setItem(VLIBRAS_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
-  const planId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
+  const encodedPlanId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
+  let planId;
+  try { planId = encodedPlanId ? decodeURIComponent(encodedPlanId) : null; } catch { planId = null; }
   const visiblePlans = data.plans.filter((plan) => can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan)) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, resourceFor(plan))));
   const plan = visiblePlans.find((candidate) => candidate.id === planId);
+  const planningContext = plan?.type === 'PDI' ? resolvePlanRoute(plan, route) : null;
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
   const roles = session.roles?.map((role) => role.name).join(' · ') || 'Consulta pública';
   useEffect(() => {
-    const label = plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar' })[route.path] || 'SUMI';
+    const label = planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar' })[route.path] || 'SUMI';
     document.title = `SUMI · ${label}`;
     setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
-  }, [plan?.shortName, plan?.name, route.path]);
+  }, [plan?.shortName, plan?.name, planningContext?.axis?.name, route.path]);
 
   function saveItem(nextItem, id) {
     update((draft) => { const currentPlan = draft.plans.find((candidate) => candidate.id === id); const index = currentPlan.items.findIndex((item) => item.id === nextItem.id); if (index < 0) currentPlan.items.push(nextItem); else currentPlan.items[index] = { ...nextItem, reviewStatus: ['submitted', 'validated'].includes(currentPlan.items[index].reviewStatus) ? 'draft' : nextItem.reviewStatus }; }, 'Informações salvas.');
-    close(); navigate(planUrl(id, nextItem.id));
+    close(); navigate(itemUrl(data.plans.find((candidate) => candidate.id === id), nextItem));
   }
 
   function navigationLink(path, icon, text) {
@@ -184,7 +189,7 @@ function App({ auth, initialData }) {
               : route.path === '/validacoes' && can(PERMISSIONS.VIEW_REVIEW_QUEUE) ? <ReviewQueue plans={visiblePlans} can={can} />
                 : route.path === '/modelos' && can(PERMISSIONS.MANAGE_MODEL) ? <Models templates={data.templates} onEdit={(template) => setModal({ type: 'template', template })} onUse={(template) => setModal({ type: 'plan', templateId: template.id })} />
                   : route.path === '/usuarios' && can(PERMISSIONS.MANAGE_MODEL) ? <UsersAdmin currentUserId={session.user?.id} />
-                    : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} route={route} onModal={setModal} changeItem={changeItem} onImportPlanilha={importPlanilha} />
+                    : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} authenticated={session.authenticated} route={route} onModal={setModal} changeItem={changeItem} onImportPlanilha={importPlanilha} />
                     // /plano/:id sem correspondência não distingue "não existe" de "existe mas sem acesso" —
                     // o backend já nem devolve planos sem acesso, então tratar como 404 evita confirmar a
                     // existência de um plano para quem não pode vê-lo. Itens de navegação conhecidos
@@ -198,11 +203,11 @@ function App({ auth, initialData }) {
     {modal?.type === 'plan' && <PlanForm templates={data.templates} initialTemplate={modal.templateId} onClose={close} onSave={(newPlan) => { update((draft) => draft.plans.push(newPlan), 'Planejamento criado.'); close(); navigate(planUrl(newPlan.id)); }} />}
     {modal?.type === 'template' && <TemplateForm template={modal.template} onClose={close} onSave={(template) => { update((draft) => { draft.templates = draft.templates.map((current) => current.id === template.id ? template : current); }, 'Modelo salvo.'); close(); }} />}
     {modal?.type === 'structure' && <StructureForm plan={plan} onClose={close} onSave={(structure) => { update((draft) => { const current = draft.plans.find((candidate) => candidate.id === plan.id); current.axes = structure.axes; current.objectives = structure.objectives; }, 'Estrutura atualizada.'); close(); }} />}
-    {modal?.type === 'item' && plan && <ItemForm plan={plan} item={modal.item} actor={actor} onClose={close} onSave={(item) => saveItem(item, plan.id)} />}
+    {modal?.type === 'item' && plan && <ItemForm plan={plan} item={modal.item} initialAxisId={modal.axisId} initialObjectiveId={modal.objectiveId} actor={actor} onClose={close} onSave={(item) => saveItem(item, plan.id)} />}
     {modal?.type === 'action' && plan && <ActionForm plan={plan} item={modal.item} onClose={close} onSave={(action) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, actions: [...item.actions, action], history: [...item.history, historyEntry(`Ação adicionada: ${action.title}.`, actor)] }), 'Ação adicionada.'); close(); }} />}
     {modal?.type === 'stage' && plan && <StageForm plan={plan} onClose={close} onSave={(stage) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, actions: item.actions.map((action) => action.id === modal.action.id ? { ...action, tasks: [...action.tasks, { id: uid(), ...stage, status: 'not_started', justification: '' }] } : action), history: [...item.history, historyEntry(`Etapa adicionada: ${stage.title}.`, actor)] }), 'Etapa adicionada.'); close(); }} />}
     {modal?.type === 'risk' && plan && <RiskForm item={modal.item} action={modal.action} stage={modal.stage} risk={modal.risk} onClose={close} onSave={(nextRisk) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, risks: modal.risk ? item.risks.map((current) => current.id === nextRisk.id ? nextRisk : current) : [...(item.risks || []), nextRisk], history: [...item.history, historyEntry(`${modal.risk ? 'Risco atualizado' : 'Risco adicionado'}: ${nextRisk.title}.`, actor)] }), modal.risk ? 'Risco atualizado.' : 'Risco adicionado.'); close(); }} />}
-    {modal?.type === 'measurement' && plan && <MeasurementForm plan={plan} item={modal.item} year={modal.period} onClose={close} onSave={(entry) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', measurements: [...item.measurements, entry], history: [...item.history, historyEntry(`Resultado registrado para ${periodLabel(plan, item, entry.year)}: ${formatMetricValue(item, entry.value)}${item.metric.unit ? ` ${item.metric.unit}` : ''}. ${entry.note}`, actor)] }), 'Resultado registrado.'); close(); navigate(planUrl(plan.id, modal.item.id, 'indicadores', entry.year)); }} />}
+    {modal?.type === 'measurement' && plan && <MeasurementForm plan={plan} item={modal.item} year={modal.period} onClose={close} onSave={(entry) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', measurements: [...item.measurements, entry], history: [...item.history, historyEntry(`Resultado registrado para ${periodLabel(plan, item, entry.year)}: ${formatMetricValue(item, entry.value)}${item.metric.unit ? ` ${item.metric.unit}` : ''}. ${entry.note}`, actor)] }), 'Resultado registrado.'); close(); navigate(itemUrl(plan, modal.item.id, 'indicadores', entry.year)); }} />}
     {modal?.type === 'targets' && plan && <TargetsForm plan={plan} item={modal.item} onClose={close} onSave={(targets) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', metric: { ...item.metric, targets }, history: [...item.history, historyEntry('Metas atualizadas.', actor)] }), 'Metas salvas.'); close(); }} />}
     {modal?.type === 'review' && plan && <ReviewForm item={modal.item} decision={modal.decision} onClose={close} onSave={({ status, note }) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: status, reviewNote: note, history: [...item.history, historyEntry(status === 'validated' ? 'Informações validadas.' : `Correção solicitada: ${note}`, actor)] }), status === 'validated' ? 'Informações validadas.' : 'Correção solicitada.'); close(); }} />}
   </div>;
@@ -230,7 +235,7 @@ function ReviewQueue({ plans, can }) {
 }
 
 function QueuePage({ eyebrow, title, description, rows, empty }) {
-  return <div className="page"><div className="page-heading"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{description}</p></div></div>{rows.length ? <div className="queue-list">{rows.map(({ plan, item }) => <a key={`${plan.id}-${item.id}`} href={`#${planUrl(plan.id, item.id)}`}><span><Badge tone={plan.type === 'PDI' ? 'blue' : 'green'}>{plan.shortName}</Badge><strong>{item.code} · {item.title}</strong><small>{item.owner}</small></span><span><Badge tone={statusTone(reviewStatusLabel(item.reviewStatus))}>{reviewStatusLabel(item.reviewStatus)}</Badge><Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title={empty}>Quando houver novos itens, eles aparecerão aqui.</Empty>}</div>;
+  return <div className="page"><div className="page-heading"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{description}</p></div></div>{rows.length ? <div className="queue-list">{rows.map(({ plan, item }) => <a key={`${plan.id}-${item.id}`} href={`#${itemUrl(plan, item.id)}`}><span><Badge tone={plan.type === 'PDI' ? 'blue' : 'green'}>{plan.shortName}</Badge><strong>{item.code} · {item.title}</strong><small>{item.owner}</small></span><span><Badge tone={statusTone(reviewStatusLabel(item.reviewStatus))}>{reviewStatusLabel(item.reviewStatus)}</Badge><Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title={empty}>Quando houver novos itens, eles aparecerão aqui.</Empty>}</div>;
 }
 
 function PlanList({ data, can, onCreate }) {
@@ -274,7 +279,20 @@ function ImportacaoPlanilha({ planId, onImport }) {
   </div>;
 }
 
-function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanilha }) {
+function PlanPage(props) {
+  const { plan, can, onModal, onImportPlanilha } = props;
+  if (plan.type !== 'PDI') return <PlanExplorer {...props} />;
+  return <PdiWorkspace {...props} actions={({ axis, objective }) => can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>} renderDetail={(context) => <PlanItemDetail {...props} {...context} />} />;
+}
+
+function PlanItemDetail({ plan, item, action, stage, view, route, actor, can, onModal, changeItem }) {
+  const selectedPeriod = Number(route.query.get('period'));
+  const period = periods(plan, item).includes(selectedPeriod) ? selectedPeriod : currentPeriod(plan, item);
+  const setPeriod = (next) => navigate(itemUrl(plan, item, 'indicadores', next));
+  return <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan, item))}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider>;
+}
+
+function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPlanilha }) {
   const [search, setSearch] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState('');
@@ -288,7 +306,7 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
   const resource = resourceFor(plan, item);
   const legacyView = route.query.get('view') || route.query.get('tab');
   const view = action && legacyView === 'riscos' && can(PERMISSIONS.VIEW_RISK, resource) ? 'riscos' : action ? 'acao' : legacyView === 'historico' && can(PERMISSIONS.VIEW_HISTORY, resource) ? 'historico' : 'indicadores';
-  const setPeriod = (next) => navigate(planUrl(plan.id, item.id, 'indicadores', next));
+  const setPeriod = (next) => navigate(itemUrl(plan, item.id, 'indicadores', next));
   const groups = search || owner || status
     ? plan.axes.filter((axis) => filtered.some((candidate) => candidate.axisId === axis.id))
     : plan.axes;
@@ -321,7 +339,7 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
         'Cancelada'
       ]}
     /></div>
-    <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={expanded.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={expanded.includes(axis.id) ? 'rotated' : ''} /><AxisIcon planType={plan.type} axis={axis} /><span>{plan.template.labels.axis} {axisLabel(axis)}</span></button>{expanded.includes(axis.id) && !filtered.some((candidate) => candidate.axisId === axis.id) && <p className="axis-empty">Nenhuma iniciativa cadastrada neste eixo.</p>}{expanded.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={expanded.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={expanded.includes(objective.id) ? 'rotated' : ''} /><span>{plan.template.labels.objective} {objective.code} · {objective.title}</span></button>{expanded.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <div className="initiative-group" key={candidate.id}><div className="tree-item-row"><button className="tree-expand" aria-label={`${expanded.includes(candidate.id) ? 'Recolher' : 'Expandir'} ações de ${candidate.code}`} aria-expanded={expanded.includes(candidate.id)} onClick={() => toggle(candidate.id)}><Icon name="chevron" size={12} className={expanded.includes(candidate.id) ? 'rotated' : ''} /></button><a href={`#${planUrl(plan.id, candidate.id)}`} className={`tree-item ${item?.id === candidate.id && view === 'indicadores' ? 'selected' : ''}`} aria-current={item?.id === candidate.id && view === 'indicadores' ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a></div>{expanded.includes(candidate.id) && <div className="action-tree">{candidate.actions.map((candidateAction) => <a key={candidateAction.id} href={`#${planUrl(plan.id, candidate.id, 'acao', undefined, candidateAction.id)}`} className={`tree-action ${item?.id === candidate.id && action?.id === candidateAction.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id && action?.id === candidateAction.id ? 'page' : undefined}><span><small>Ação {candidateAction.code}</small>{candidateAction.title}</span></a>)}</div>}</div>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
+    <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={expanded.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={expanded.includes(axis.id) ? 'rotated' : ''} /><AxisIcon planType={plan.type} axis={axis} /><span>{plan.template.labels.axis} {axisLabel(axis)}</span></button>{expanded.includes(axis.id) && !filtered.some((candidate) => candidate.axisId === axis.id) && <p className="axis-empty">Nenhuma iniciativa cadastrada neste eixo.</p>}{expanded.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={expanded.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={expanded.includes(objective.id) ? 'rotated' : ''} /><span>{plan.template.labels.objective} {objective.code} · {objective.title}</span></button>{expanded.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <div className="initiative-group" key={candidate.id}><div className="tree-item-row"><button className="tree-expand" aria-label={`${expanded.includes(candidate.id) ? 'Recolher' : 'Expandir'} ações de ${candidate.code}`} aria-expanded={expanded.includes(candidate.id)} onClick={() => toggle(candidate.id)}><Icon name="chevron" size={12} className={expanded.includes(candidate.id) ? 'rotated' : ''} /></button><a href={`#${itemUrl(plan, candidate.id)}`} className={`tree-item ${item?.id === candidate.id && view === 'indicadores' ? 'selected' : ''}`} aria-current={item?.id === candidate.id && view === 'indicadores' ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a></div>{expanded.includes(candidate.id) && <div className="action-tree">{candidate.actions.map((candidateAction) => <a key={candidateAction.id} href={`#${itemUrl(plan, candidate.id, 'acao', undefined, candidateAction.id)}`} className={`tree-action ${item?.id === candidate.id && action?.id === candidateAction.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id && action?.id === candidateAction.id ? 'page' : undefined}><span><small>Ação {candidateAction.code}</small>{candidateAction.title}</span></a>)}</div>}</div>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
     <section className="detail" aria-label="Detalhe do item">{item ? <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resource)}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
 }
 
@@ -341,11 +359,11 @@ function PlanPage({ plan, actor, can, route, onModal, changeItem, onImportPlanil
 function ItemDetail({ plan, item, actor, can, view, period, setPeriod, onModal, changeItem }) {
   const resource = resourceFor(plan, item);
   return <ItemHeader plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem}>
-    {can(PERMISSIONS.VIEW_HISTORY, resource) && <div className="detail-actions"><a className={view === 'historico' ? 'active' : ''} href={`#${planUrl(plan.id, item.id, 'historico')}`}>Histórico</a></div>}
+    {can(PERMISSIONS.VIEW_HISTORY, resource) && <div className="detail-actions"><a className={view === 'historico' ? 'active' : ''} href={`#${itemUrl(plan, item.id, 'historico')}`}>Histórico</a></div>}
     {view === 'historico' ? <History item={item} canComment={can(PERMISSIONS.COMMENT_HISTORY, resource)} onComment={(text) => changeItem(plan.id, item.id, (current) => ({ ...current, history: [...current.history, historyEntry(text, actor)] }), 'Observação adicionada.')} /> : <>
       <Indicators key={item.id} item={item} can={can} plan={plan} period={period} setPeriod={setPeriod} onRecord={() => onModal({ type: 'measurement', item, period })} onTargets={() => onModal({ type: 'targets', item })} />
       <div className="section-heading actions-heading"><h3>Ações estratégicas <span>{item.actions.length}</span></h3>{can(PERMISSIONS.MANAGE_ACTION, resource) && <Button icon="plus" onClick={() => onModal({ type: 'action', item })}>Adicionar ação</Button>}</div>
-      {item.actions.length ? <div className="actions-list">{item.actions.map((action) => <a key={action.id} className="action-overview-link" href={`#${planUrl(plan.id, item.id, 'acao', undefined, action.id)}`}><span><small>Ação {action.code}</small><strong>{action.title}</strong></span><span>{actionProgress(action).percent}% <Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title="Nenhuma ação cadastrada">As ações desta iniciativa aparecerão aqui.</Empty>}
+      {item.actions.length ? <div className="actions-list">{item.actions.map((action) => <a key={action.id} className="action-overview-link" href={`#${itemUrl(plan, item.id, 'acao', undefined, action.id)}`}><span><small>Ação {action.code}</small><strong>{action.title}</strong></span><span>{actionProgress(action).percent}% <Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title="Nenhuma ação cadastrada">As ações desta iniciativa aparecerão aqui.</Empty>}
     </>}
     <footer className="source-note"><Icon name="info" size={13} />{item.source}</footer>
   </ItemHeader>;
@@ -360,7 +378,7 @@ function ActionDetail({ plan, item, action, actor, can, onModal, changeItem }) {
         <div className="item-meta"><span>Responsável: <strong>{action.owner}</strong></span><span>Prazo: <strong>{formatDate(action.deadline)}</strong></span></div>
       </div>
       <div className="action-detail-cta">
-        {can(PERMISSIONS.VIEW_RISK, resourceFor(plan, item)) && <Button variant="tertiary" icon="danger" onClick={() => navigate(planUrl(plan.id, item.id, 'riscos', undefined, action.id))}>Riscos da ação ({item.risks.filter((risk) => risk.actionId === action.id).length})</Button>}
+        {can(PERMISSIONS.VIEW_RISK, resourceFor(plan, item)) && <Button variant="tertiary" icon="danger" onClick={() => navigate(itemUrl(plan, item.id, 'riscos', undefined, action.id))}>Riscos da ação ({item.risks.filter((risk) => risk.actionId === action.id).length})</Button>}
         {(can(PERMISSIONS.MANAGE_ACTION, resourceFor(plan, item)) || can(PERMISSIONS.UPDATE_STAGE, resourceFor(plan, item))) && <Button variant="tertiary" icon="plus" onClick={() => onModal({ type: 'stage', item, action })}>Adicionar etapa</Button>}
       </div>
     </div>
@@ -380,7 +398,7 @@ function ActionRiskDetail({ plan, item, action, stage, actor, can, onModal, chan
       </div>
       {stage && <div className="risk-detail-deadline">Prazo: <strong>{formatDate(stage.deadline)}</strong></div>}
     </div>
-    <a className="back-link" href={`#${planUrl(plan.id, item.id, 'acao', undefined, action.id)}`}>← Voltar à ação</a>
+    <a className="back-link" href={`#${itemUrl(plan, item.id, 'acao', undefined, action.id)}`}>← Voltar à ação</a>
     <Risks key={`${action.id}:${stage?.id || 'all'}`} item={item} action={action} stage={stage} canEdit={can(PERMISSIONS.MANAGE_RISK, resource)} onAdd={() => onModal({ type: 'risk', item, action, stage })} onEdit={(risk) => onModal({ type: 'risk', item, action, stage, risk })} />
     <footer className="source-note"><Icon name="info" size={13} />{item.source}</footer>
   </ItemHeader>;
@@ -515,7 +533,7 @@ function Actions({ item, action: selectedAction, actor, can, plan, onAdd, onModa
             <Icon name="chevron" size={14} className={!closed ? 'rotated' : ''} />
           </div>}
           {(selectedAction || !closed) && <div className="action-body">
-            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} canManageAction={canManageAction} canViewRisk={canViewRisk} riskCount={(item.risks || []).filter((risk) => risk.actionId === action.id && risk.stage === task.title).length} onViewRisks={() => navigate(planUrl(plan.id, item.id, 'riscos', undefined, action.id, task.id))} onChange={onChange} itemId={item.id} />)}
+            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} canManageAction={canManageAction} canViewRisk={canViewRisk} riskCount={(item.risks || []).filter((risk) => risk.actionId === action.id && risk.stage === task.title).length} onViewRisks={() => navigate(itemUrl(plan, item.id, 'riscos', undefined, action.id, task.id))} onChange={onChange} itemId={item.id} />)}
             {!action.tasks.length && <p className="hint px-5 pt-3">Esta ação ainda não possui etapas.</p>}
           </div>}
         </article>;

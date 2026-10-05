@@ -33,7 +33,7 @@ export default defineConfig([
   },
   {
     // Configuração de build (Node, não navegador).
-    files: ['vite.config.js', 'playwright.config.js'],
+    files: ['vite.config.js', 'playwright*.config.js'],
     languageOptions: { globals: globals.node },
   },
   {

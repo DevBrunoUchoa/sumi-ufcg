@@ -15,3 +15,7 @@ Thumbs.db
 .tools/
 frontend/test-results/
 frontend/playwright-report/
+
+# Documentos e imagens de análise mantidos apenas nesta máquina.
+/docs_locais/
+/.analysis-pdi/

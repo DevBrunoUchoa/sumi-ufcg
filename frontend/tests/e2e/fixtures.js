@@ -23,7 +23,11 @@ export async function openPlan(page, shortName) {
   await expect(page.getByRole('heading', { name: new RegExp(`^${shortName}`) })).toBeVisible();
 }
 
-export const openPdi = (page) => openPlan(page, 'PDI');
+export async function openPdi(page) {
+  await openPlan(page, 'PDI');
+  await page.getByRole('link', { name: 'Explorar eixo 8: Governança e Gestão Institucional' }).click();
+  await page.locator('.pdi-initiative-link').filter({ hasText: 'Iniciativa 8.1.3' }).click();
+}
 export const openPls = (page) => openPlan(page, 'PLS');
 export const detail = (page) => page.getByRole('region', { name: 'Detalhe do item' });
 
@@ -50,6 +54,11 @@ export async function chooseOption(scope, field, label) {
 }
 
 export async function selectItem(page, code) {
+  if (await page.locator('.pdi-workspace').count()) {
+    await page.getByRole('navigation', { name: 'Hierarquia do planejamento' }).getByRole('link', { name: /^Eixo / }).click();
+    await page.locator('.pdi-initiative-link').filter({ hasText: `Iniciativa ${code}` }).click();
+    return;
+  }
   await expandTree(page);
   await page.getByRole('navigation', { name: 'Itens do planejamento' }).getByRole('link', { name: new RegExp(code.replaceAll('.', '\\.')) }).click();
 }

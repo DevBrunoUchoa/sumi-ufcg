@@ -1,4 +1,4 @@
-import { test, expect, chooseOption, openPdi, openPls, detail, recordNumber, selectItem, expandFirstAction, expandTree } from './fixtures.js';
+import { test, expect, chooseOption, openPdi, openPls, recordNumber, selectItem, expandFirstAction } from './fixtures.js';
 
 test('visão geral e lista permitem localizar e abrir os planos', async ({ page }) => {
   await page.goto('/');
@@ -22,7 +22,7 @@ test('menus e ações iniciam recolhidos em cada entrada', async ({ page }) => {
   await page.reload();
   await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
   await openPdi(page);
-  await expect(page.locator('.tree-group.axis').first()).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.plan-tree')).toHaveCount(0);
   await expect(page.locator('.task-row')).toHaveCount(0);
   await expect(page.locator('.action-overview-link').first()).toBeVisible();
 });
@@ -66,17 +66,14 @@ test('PLS acompanha entregas por situação descritiva', async ({ page }) => {
 });
 
 test('busca e filtros atuam sobre eixo, objetivo, item e responsável', async ({ page }) => {
-  await openPdi(page);
-  const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
-  await page.getByRole('searchbox', { name: 'Buscar no plano' }).fill('rankings');
-  await expandTree(page);
-  await expect(tree.getByRole('link')).toHaveCount(1);
-  await expect(detail(page).getByRole('heading', { level: 2 })).toContainText('rankings');
+  await page.goto('/#/plano/pdi/eixo/pdi-axis-8');
+  await page.getByRole('searchbox', { name: 'Buscar neste eixo' }).fill('rankings');
+  await expect(page.locator('.pdi-initiative-link')).toHaveCount(1);
+  await expect(page.locator('.pdi-initiative-link')).toContainText('rankings');
   await chooseOption(page, 'Filtrar situação', 'Concluída');
-  await expect(page.getByRole('heading', { name: 'Nenhum item encontrado' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nenhuma iniciativa encontrada' })).toBeVisible();
   await page.getByRole('button', { name: 'Limpar filtros' }).click();
-  await expandTree(page);
-  await expect(tree.getByRole('link')).toHaveCount(3);
+  await expect(page.locator('.pdi-initiative-link')).toHaveCount(3);
 });
 
 test('ações aceitam novas etapas com prazo e parceiros', async ({ page }) => {

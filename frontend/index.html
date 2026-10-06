@@ -4,7 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#133f61" />
-    <meta name="description" content="Sistema Unificado de Monitoramento Institucional da UFCG." />
+    <meta name="description" content="Sistema Unificado de Monitoramento Institucional. Consulta pública aos planos, ações e resultados." />
+    <script>
+      // Restore appearance before rendering; storage can be unavailable.
+      try {
+        const contrast = localStorage.getItem('sumi.ui.alto-contraste') === 'true';
+        document.documentElement.dataset.theme = !contrast && localStorage.getItem('sumi.ui.dark-mode') === 'true' ? 'dark' : 'light';
+        if (document.documentElement.dataset.theme === 'dark') {
+          document.documentElement.style.backgroundColor = '#1c1d1f';
+          document.documentElement.style.colorScheme = 'dark';
+        }
+        if (contrast) document.documentElement.dataset.altoContraste = 'true';
+      } catch { document.documentElement.dataset.theme = 'light'; }
+    </script>
     <link rel="stylesheet" href="/fonts/rawline/rawline.css" />
     <title>SUMI · Planejamentos</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%23133f61'/%3E%3Ctext x='20' y='28' text-anchor='middle' font-size='26' fill='white' font-family='sans-serif'%3Es%3C/text%3E%3C/svg%3E" />
@@ -22,7 +34,7 @@
     </div>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
     <script>
-      new window.VLibras.Widget('https://vlibras.gov.br/app');
+      if (window.VLibras) new window.VLibras.Widget('https://vlibras.gov.br/app');
     </script>
   </body>
 </html>

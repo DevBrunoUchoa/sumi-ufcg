@@ -5,7 +5,7 @@ import base from './playwright.config.js';
 // development workspace/session middleware or a database dependency.
 export default defineConfig({
   ...base,
-  testMatch: /pdi-http\.spec\.js/,
+  testMatch: /-http\.spec\.js/,
   testIgnore: [],
   use: { ...base.use, baseURL: 'http://127.0.0.1:4322' },
   projects: [{ name: 'http' }],

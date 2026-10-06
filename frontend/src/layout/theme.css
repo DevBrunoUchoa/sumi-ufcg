@@ -1,0 +1,89 @@
+/* Opt-in dark appearance for the existing GOV.BR 3.x components. Palette values
+   stay intact: semantic tokens change, while axis symbols keep their identity. */
+html { color-scheme: light; }
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: var(--gray-cool-90);
+  --surface-soft: var(--gray-cool-80);
+  --surface-raised: var(--gray-cool-80);
+  --surface-hover: var(--gray-cool-70);
+  --text-strong: var(--gray-5);
+  --text-body: var(--gray-5);
+  --text-subtle: var(--gray-10);
+  --text-muted: var(--gray-30);
+  /* Neutral reading/navigation avoids a blue cast. Solid primary actions keep
+     the existing GOV.BR blue and use neutral text on their colored surface. */
+  --primary: var(--gray-20);
+  --primary-strong: var(--gray-5);
+  --primary-hover: var(--gray-10);
+  --primary-soft: var(--gray-cool-80);
+  --primary-pale: var(--gray-cool-80);
+  --sumi-action-background: var(--blue-warm-vivid-70);
+  --text-on-primary: var(--gray-2);
+  --border: var(--gray-cool-50);
+  --border-soft: var(--gray-cool-60);
+  --border-strong: var(--gray-40);
+  --backdrop: rgba(0, 0, 0, .7);
+  --surface-shadow-color: rgba(0, 0, 0, .4);
+  --success: var(--mint-20);
+  --success-surface: var(--mint-80);
+  --warning: var(--yellow-20);
+  --warning-surface: var(--yellow-80);
+  --danger: var(--red-20);
+  --danger-hover: var(--red-10);
+  --risk-low-surface: var(--green-80);
+  --risk-low-text: var(--green-20);
+  --risk-moderate-surface: var(--yellow-80);
+  --risk-moderate-text: var(--yellow-20);
+  --risk-high-surface: var(--orange-warm-80);
+  --risk-high-text: var(--orange-warm-20);
+  --risk-critical-surface: var(--red-cool-80);
+  --risk-critical-text: var(--red-cool-20);
+
+  /* Core and Web Components share these semantic variables, including inputs
+     inside shadow roots. Do not invert pure-0 or the underlying palette. */
+  --background: var(--surface);
+  --background-rgb: 28, 29, 31;
+  --background-light: var(--surface);
+  --background-alternative: var(--surface-soft);
+  --color: var(--text-body);
+  --color-rgb: 240, 240, 240;
+  --color-light: var(--text-body);
+  --color-light-rgb: 240, 240, 240;
+  --text-color: var(--text-body);
+  --interactive: var(--primary);
+  --interactive-rgb: 204, 204, 204;
+  --interactive-light: var(--primary);
+  --interactive-light-rgb: 204, 204, 204;
+  --border-color: var(--border);
+  --border-color-alternative: var(--border-strong);
+  --focus: var(--yellow-vivid-20);
+  --focus-color: var(--yellow-vivid-20);
+  --focus-color-light: var(--yellow-vivid-20);
+  --visited: var(--gray-30);
+  --visited-light: var(--gray-30);
+  --table-background: var(--surface);
+  --table-th-background: var(--surface-soft);
+  --table-color: var(--text-body);
+  --table-border-color: var(--border-soft);
+  color: var(--text-body);
+  background: var(--surface);
+}
+html[data-theme="dark"] body { color: var(--text-body); background: var(--surface); }
+html[data-theme="dark"] #main-content h1:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+html[data-theme="dark"] :is(h1, h2, h3, h4, h5, h6, .field > label, .custom-select-label, input, select, textarea) { color: var(--text-body); }
+html[data-theme="dark"] :is(input, textarea)::placeholder { color: var(--text-muted); }
+html[data-theme="dark"] :is(br-input, br-textarea)::part(label) { color: var(--text-body); }
+html[data-theme="dark"] :is(br-input, br-textarea)::part(input) { color: var(--text-body); background: var(--surface); }
+html[data-theme="dark"] .br-button.primary,
+html[data-theme="dark"] br-button[emphasis="primary"]::part(button) { background: var(--sumi-action-background); color: var(--text-on-primary); --interactive-rgb: 248, 248, 248; }
+html[data-theme="dark"] .br-button.secondary,
+html[data-theme="dark"] br-button[emphasis="secondary"]::part(button) { background: var(--surface); border-color: var(--primary); color: var(--primary); }
+html[data-theme="dark"] br-button[emphasis="tertiary"]::part(button) { color: var(--primary); }
+html[data-theme="dark"] .sumi-header .br-sign-in { background: var(--surface-soft); color: var(--primary); }
+html[data-theme="dark"] .sumi-menu .menu-item.active { background: var(--primary-soft); border-left-color: var(--primary); }
+html[data-theme="dark"] .sumi-skiplinks a { background: var(--primary-soft); color: var(--text-body); }
+html[data-theme="dark"] .br-message { background: var(--surface-soft); color: var(--text-body); }
+html[data-theme="dark"] .attachment-dropzone.dragging { background: var(--primary-soft); }
+html[data-theme="dark"] br-select::part(option):hover { --br-select-option-bg-color: var(--surface-hover) !important; }
+html[data-theme="dark"] .sumi-footer.br-footer { background: var(--blue-warm-vivid-90); }

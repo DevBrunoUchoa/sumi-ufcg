@@ -3,7 +3,7 @@ import { test, expect, chooseOption, openPdi, openPls, recordNumber, selectItem,
 test('visão geral e lista permitem localizar e abrir os planos', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Olá, Usuário/ })).toBeVisible();
-  await page.getByRole('link', { name: 'Planejamentos', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Planos', exact: true }).click();
   await expect(page.locator('.plan-card')).toHaveCount(2);
   await page.getByRole('button', { name: 'PLS', exact: true }).click();
   await expect(page.locator('.plan-card')).toHaveCount(1);
@@ -12,15 +12,16 @@ test('visão geral e lista permitem localizar e abrir os planos', async ({ page 
   await expect(page.getByRole('heading', { name: /^PLS/ })).toBeVisible();
 });
 
-test('menus e ações iniciam recolhidos em cada entrada', async ({ page }) => {
+test('menu de trabalho usa rótulos e pode ser recolhido; ações abrem por contexto', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
-  await expect(page.locator('.sidebar')).toHaveCSS('width', '72px');
-  await expect(page.getByRole('link', { name: 'Planejamentos', exact: true })).toBeVisible();
+  await expect(page.locator('.sumi-shell')).toHaveClass(/sumi-work/);
+  await expect(page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Planos', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Recolher menu lateral' }).click();
+  await expect(page.locator('.sumi-menu')).toHaveCount(0);
   await page.getByRole('button', { name: 'Expandir menu lateral' }).click();
-  await expect(page.locator('.sidebar')).toHaveCSS('width', '224px');
+  await expect(page.locator('.sumi-menu')).toBeVisible();
   await page.reload();
-  await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
+  await expect(page.locator('.sumi-menu')).toBeVisible();
   await openPdi(page);
   await expect(page.locator('.plan-tree')).toHaveCount(0);
   await expect(page.locator('.task-row')).toHaveCount(0);
@@ -143,11 +144,13 @@ test('cancelar a edição da justificativa preserva a situação da etapa', asyn
 
 test('alto contraste responde ao teclado e persiste ao recarregar', async ({ page }) => {
   await openPdi(page);
+  await page.locator('.sumi-accessibility summary').click();
   await page.getByRole('button', { name: 'Alto contraste' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-alto-contraste', 'true');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-alto-contraste', 'true');
+  await page.locator('.sumi-accessibility summary').click();
   await page.getByRole('button', { name: 'Contraste padrão' }).click();
   await expect(page.locator('html')).not.toHaveAttribute('data-alto-contraste');
 });

@@ -6,7 +6,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'playwright-report', 'test-results']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -33,7 +33,7 @@ export default defineConfig([
   },
   {
     // Configuração de build (Node, não navegador).
-    files: ['vite.config.js', 'playwright*.config.js'],
+    files: ['vite.config.js', 'playwright*.config.js', 'dev/**/*.js'],
     languageOptions: { globals: globals.node },
   },
   {

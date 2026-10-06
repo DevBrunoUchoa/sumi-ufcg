@@ -1,4 +1,6 @@
 import { validateWorkspace, WORKSPACE_VERSION } from './domain.js';
+import { initialState } from './data.js';
+import { mergeLocalPreview } from './planning/local-preview.js';
 
 const env = import.meta.env || {};
 const API_BASE_URL = (env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -35,8 +37,10 @@ function createDevelopmentClient() {
         if (!raw) return fallback;
         const parsed = JSON.parse(raw);
         if (!validateWorkspace(parsed)) return fallback;
-        if (localStorage.getItem(LOCAL_PDI_AXES_MIGRATION_KEY)) return parsed;
-        const migrated = migrateLocalPdiAxes(parsed, fallback);
+        const axesMigrated = localStorage.getItem(LOCAL_PDI_AXES_MIGRATION_KEY) ? parsed : migrateLocalPdiAxes(parsed, fallback);
+        const migrated = mergeLocalPreview(axesMigrated, fallback, initialState());
+        const backupKey = `${MOCK_STORAGE_KEY}.backup.before-local-preview`;
+        if (migrated !== axesMigrated && !localStorage.getItem(backupKey)) localStorage.setItem(backupKey, raw);
         localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(migrated));
         localStorage.setItem(LOCAL_PDI_AXES_MIGRATION_KEY, 'done');
         return migrated;

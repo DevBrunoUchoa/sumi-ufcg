@@ -19,3 +19,4 @@ frontend/playwright-report/
 # Documentos e imagens de análise mantidos apenas nesta máquina.
 /docs_locais/
 /.analysis-pdi/
+/.local-preview/

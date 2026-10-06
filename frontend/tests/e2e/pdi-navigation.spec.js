@@ -29,7 +29,7 @@ test('busca da entrada encontra o eixo pelo conteúdo e retorna aos oito eixos',
   await page.getByRole('searchbox', { name: 'Buscar no PDI' }).fill('rankings');
   await expect(page.locator('.pdi-axis-card')).toHaveCount(1);
   await page.getByRole('link', { name: /Explorar eixo 8/ }).click();
-  await page.getByRole('link', { name: '← Todos os eixos' }).click();
+  await page.getByRole('navigation', { name: 'Hierarquia do planejamento' }).getByRole('link', { name: 'PDI 2026–2030', exact: true }).click();
   await expect(page.locator('.pdi-axis-card')).toHaveCount(8);
 });
 
@@ -95,7 +95,8 @@ test('identificadores UUID e mudança de eixo conservam o contexto após salvar'
   await expect(page.getByRole('navigation', { name: 'Hierarquia do planejamento' })).toContainText('Objetivo 1.1');
   await page.waitForTimeout(250);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Ensino', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Hierarquia do planejamento' })).toContainText('Eixo 1 · Ensino');
+  await expect(page.locator('h1')).toContainText(workspace.plans[0].items.find((item) => item.id === 'rankings').title);
 });
 
 test('entrada, eixo e riscos permanecem utilizáveis por teclado e em tela estreita', async ({ page }) => {
@@ -107,6 +108,8 @@ test('entrada, eixo e riscos permanecem utilizáveis por teclado e em tela estre
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('.pdi-initiative-link').first().click();
   await page.locator('.action-overview-link').first().click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole('button', { name: /Riscos da ação/ })).toBeVisible();
   await page.getByRole('button', { name: /Riscos da ação/ }).click();
   await expect(page.locator('.risk-cell')).toHaveCount(25);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

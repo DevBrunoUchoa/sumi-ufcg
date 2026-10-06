@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed": "tsx scripts/seed.ts",
+    "previa-local": "tsx scripts/preparar-previa-local.ts",
     "importar-eixo8": "tsx scripts/importar-eixo8.ts",
     "criar-bucket": "tsx scripts/criar-bucket-anexos.ts"
   },

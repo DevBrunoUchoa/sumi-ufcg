@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { actionProgress, axisFor, axisLabel, controlFactor, currentPeriod, executionProgress, executionStatus, formatDate, formatMetricValue, formatNumber, historyEntry, latestMeasurement, metricAchievement, metricResult, metricStatus, metricTone, normalize, objectiveFor, periodLabel, periods, residualRisk, reviewStatusLabel, riskLevel, riskLevelLabel, riskScore, stageStatusLabel, stageStatusLabels, taskOverdue, uid } from './domain.js';
 import { Badge, Button, Empty, Field, Icon, Input, Modal, Select } from './ui.jsx';
@@ -17,20 +17,30 @@ import { itemUrl, planUrl, resolvePlanRoute } from './planning/navigation.js';
 import '@govbr-ds/core/dist/core.css';
 import './styles.css';
 import './planning/planning.css';
+import { AppShell } from './layout/AppShell.jsx';
+import { PublicHome, InformationPage } from './layout/PublicPages.jsx';
+import { loginUrl, safeReturnPath } from './auth/navigation.js';
+import './layout/layout.css';
+import './layout/theme.css';
 
-const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login'];
+const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login', '/sobre', '/ajuda', '/privacidade'];
+const EMPTY_WORKSPACE = { version: 2, templates: [], plans: [] };
+const PUBLIC_SESSION = { authenticated: false, user: null, roles: [], grants: [] };
 const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
 
 const PAGE_DESCRIPTIONS = {
-  '/inicio': 'Visão geral dos planejamentos institucionais da UFCG: planos publicados, pendências e validações.',
-  '/planejamentos': 'Planos institucionais da UFCG (PDI, PLS e outros) com estrutura, execução e indicadores.',
-  '/pendencias': 'Itens sob sua responsabilidade de atualização nos planejamentos institucionais da UFCG.',
-  '/validacoes': 'Fila de informações enviadas para validação nos planejamentos institucionais da UFCG.',
-  '/modelos': 'Modelos de plano institucional configuráveis pela SEPLAN — estrutura e campos adicionais.',
-  '/usuarios': 'Gerenciamento de usuários e permissões do SUMI, o Sistema Unificado de Monitoramento Institucional da UFCG.',
-  '/login': 'Acesso à sessão institucional do SUMI, o Sistema Unificado de Monitoramento Institucional da UFCG.',
+  '/inicio': 'Consulta aos planos publicados e acompanhamento dos resultados institucionais.',
+  '/planejamentos': 'Planos institucionais com estrutura, execução e indicadores.',
+  '/pendencias': 'Itens sob sua responsabilidade de atualização nos planos institucionais.',
+  '/validacoes': 'Fila de informações enviadas para validação nos planos institucionais.',
+  '/modelos': 'Modelos de plano institucional — estrutura e campos adicionais.',
+  '/usuarios': 'Gerenciamento de usuários e permissões do SUMI.',
+  '/login': 'Acesso à área de trabalho do Sistema Unificado de Monitoramento Institucional.',
+  '/sobre': 'Conheça o SUMI e a consulta pública aos planos institucionais.',
+  '/ajuda': 'Orientações de navegação, acesso e acessibilidade do SUMI.',
+  '/privacidade': 'Informações sobre sessão e preferências armazenadas pelo SUMI.',
 };
-const DEFAULT_DESCRIPTION = 'SUMI — Sistema Unificado de Monitoramento Institucional da UFCG.';
+const DEFAULT_DESCRIPTION = 'SUMI — Sistema Unificado de Monitoramento Institucional.';
 
 function setMetaDescription(text) {
   let tag = document.querySelector('meta[name="description"]');
@@ -44,16 +54,19 @@ function setMetaDescription(text) {
 
 const authApiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 async function logout() {
-  await fetch(`${authApiBase}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' });
+  const response = await fetch(`${authApiBase}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' });
+  if (!response.ok) throw new Error('Não foi possível encerrar a sessão.');
 }
 
 const planningClient = createPlanningClient();
 const ALTO_CONTRASTE_KEY = 'sumi.ui.alto-contraste';
+const DARK_MODE_KEY = 'sumi.ui.dark-mode';
 const VLIBRAS_KEY = 'sumi.ui.vlibras';
 const navigate = (path) => { window.location.hash = path; };
 const readRoute = () => { const [path, query] = (window.location.hash.slice(1) || '/inicio').split('?'); return { path, query: new URLSearchParams(query) }; };
 const statusTone = (status) => status === 'Concluída' || status === 'Meta atingida' || status === 'Validado' ? 'green' : status === 'Em andamento' || status === 'Aguardando validação' ? 'blue' : status === 'Correção solicitada' ? 'attention' : 'neutral';
 const readAltoContrastePreference = () => { try { return localStorage.getItem(ALTO_CONTRASTE_KEY) === 'true'; } catch { return false; } };
+const readDarkModePreference = () => { try { return !readAltoContrastePreference() && localStorage.getItem(DARK_MODE_KEY) === 'true'; } catch { return false; } };
 // VLibras vem sempre ligado no HTML (index.html) — a preferência só existe
 // pra permitir desligar; sem valor salvo, assume ligado (comportamento atual).
 const readVlibrasPreference = () => { try { return localStorage.getItem(VLIBRAS_KEY) !== 'false'; } catch { return true; } };
@@ -65,30 +78,43 @@ function Progress({ done, total, percent, label = 'etapas', compact = false }) {
 
 function AppGate() {
   const auth = useSession();
-  const [workspace, setWorkspace] = useState({ status: 'loading', data: null, error: null });
-  const load = () => {
-    const controller = new AbortController();
-    setWorkspace({ status: 'loading', data: null, error: null });
-    planningClient.load({ signal: controller.signal }).then((data) => setWorkspace({ status: 'ready', data, error: null })).catch((error) => { if (error.name !== 'AbortError') setWorkspace({ status: 'error', data: null, error }); });
-    return () => controller.abort();
-  };
-  useEffect(load, []);
-  if (auth.status === 'loading' || workspace.status === 'loading') return <main className="session-state" aria-busy="true"><p>Carregando…</p></main>;
-  if (auth.status === 'error') return <main className="session-state">{isOfflineError(auth.error) ? <OfflinePage onRetry={auth.reload} /> : <ServerErrorPage onRetry={auth.reload} />}</main>;
-  if (workspace.status === 'error') return <main className="session-state">{isOfflineError(workspace.error) ? <OfflinePage onRetry={load} /> : <ServerErrorPage onRetry={load} />}</main>;
-  return <App auth={auth} initialData={workspace.data} />;
+  return <App auth={auth} />;
 }
 
-function App({ auth, initialData }) {
-  const { session, can } = auth;
-  const [data, setData] = useState(initialData);
+function App({ auth }) {
+  const session = auth.session || PUBLIC_SESSION;
+  const { can } = auth;
+  const [data, setData] = useState(EMPTY_WORKSPACE);
+  const savedData = useRef(EMPTY_WORKSPACE);
+  const saveTimer = useRef(null);
+  const activeSave = useRef(Promise.resolve());
+  const workspaceRequest = useRef(null);
+  const [workspaceState, setWorkspaceState] = useState({ status: 'loading', error: null });
   const [route, setRoute] = useState(readRoute);
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
-  const [readyToSave, setReadyToSave] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const needsWorkspace = !['/login', '/sobre', '/ajuda', '/privacidade'].includes(route.path);
+  const sessionKey = session.authenticated ? session.user.id : 'public';
+  const replaceData = (next) => { savedData.current = next; setData(next); };
+  const loadWorkspace = () => {
+    workspaceRequest.current?.abort();
+    const controller = new AbortController();
+    workspaceRequest.current = controller;
+    setWorkspaceState({ status: 'loading', error: null, sessionKey });
+    planningClient.load({ signal: controller.signal }).then((next) => {
+      if (controller.signal.aborted) return;
+      savedData.current = next; setData(next); setWorkspaceState({ status: 'ready', error: null, sessionKey });
+    }).catch((error) => { if (!controller.signal.aborted) setWorkspaceState({ status: 'error', error, sessionKey }); });
+    return () => controller.abort();
+  };
+  useEffect(() => {
+    if (!needsWorkspace || auth.status !== 'ready') return;
+    loadWorkspace();
+    return () => workspaceRequest.current?.abort();
+  }, [sessionKey, needsWorkspace, auth.status]);
   const [altoContraste, setAltoContraste] = useState(readAltoContrastePreference);
+  const [darkMode, setDarkMode] = useState(readDarkModePreference);
   const [vlibrasAtivo, setVlibrasAtivo] = useState(readVlibrasPreference);
   useEffect(() => { const changed = () => { setRoute(readRoute()); setModal(null); }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange', changed); }, []);
   useEffect(() => {
@@ -96,19 +122,42 @@ function App({ auth, initialData }) {
     else document.documentElement.removeAttribute('data-alto-contraste');
   }, [altoContraste]);
   useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
+    document.documentElement.style.removeProperty('background-color');
+    document.documentElement.style.removeProperty('color-scheme');
+  }, [darkMode]);
+  useEffect(() => {
     // O widget é injetado pelo script do index.html (fora da árvore React) —
     // desligar aqui só esconde o container, sem reinicializar o plugin.
     const container = document.querySelector('div[vw]');
     if (container) container.style.display = vlibrasAtivo ? '' : 'none';
   }, [vlibrasAtivo]);
-  useEffect(() => { if (!readyToSave) return setReadyToSave(true); const timer = setTimeout(() => planningClient.save(data).then(() => setSaveError('')).catch(() => setSaveError('Não foi possível salvar as alterações.')), 150); return () => clearTimeout(timer); }, [data]);
+  useEffect(() => {
+    if (data === savedData.current) return;
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      activeSave.current = planningClient.save(data).then(() => { savedData.current = data; setSaveError(''); }).catch((error) => { setSaveError('Não foi possível salvar as alterações.'); throw error; });
+      activeSave.current.catch(() => {});
+    }, 150);
+    return () => clearTimeout(saveTimer.current);
+  }, [data]);
+  const leaveSession = async () => {
+    clearTimeout(saveTimer.current);
+    await activeSave.current.catch(() => {});
+    if (data !== savedData.current) { await planningClient.save(data); savedData.current = data; }
+    await logout();
+    replaceData(EMPTY_WORKSPACE);
+    setWorkspaceState({ status: 'loading', error: null });
+    await auth.reload();
+    navigate('/inicio');
+  };
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   const update = (mutate, message) => { setData((current) => { const next = structuredClone(current); mutate(next); return next; }); if (message) setToast(message); };
   const importPlanilha = async (planId, arquivo) => {
     try {
       const resumo = await importarPlanilha(planId, arquivo);
       const fresh = await planningClient.load();
-      setData(fresh);
+      replaceData(fresh);
       setToast(`Planilha importada: ${resumo.itensCriados} iniciativa${resumo.itensCriados === 1 ? '' : 's'} nova${resumo.itensCriados === 1 ? '' : 's'}, ${resumo.itensAtualizados} atualizada${resumo.itensAtualizados === 1 ? '' : 's'}, ${resumo.riscosImportados} risco${resumo.riscosImportados === 1 ? '' : 's'}.`);
       return resumo;
     } catch (err) {
@@ -118,14 +167,24 @@ function App({ auth, initialData }) {
       // repassar o erro, para não deixar a árvore desatualizada nem convidar um reenvio
       // duplicado enquanto a importação anterior ainda pode estar concluindo.
       const fresh = await planningClient.load().catch(() => null);
-      if (fresh) setData(fresh);
+      if (fresh) replaceData(fresh);
       throw err;
     }
   };
   const changeItem = (planId, itemId, change, message) => update((draft) => { const plan = draft.plans.find((candidate) => candidate.id === planId); const index = plan.items.findIndex((item) => item.id === itemId); plan.items[index] = change(plan.items[index]); }, message);
   const close = () => setModal(null);
-  const toggleSidebar = () => setSidebarCollapsed((current) => !current);
-  const toggleAltoContraste = () => setAltoContraste((current) => { const next = !current; try { localStorage.setItem(ALTO_CONTRASTE_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
+  const toggleAltoContraste = () => {
+    const next = !altoContraste;
+    setAltoContraste(next);
+    if (next) setDarkMode(false);
+    try { localStorage.setItem(ALTO_CONTRASTE_KEY, String(next)); if (next) localStorage.setItem(DARK_MODE_KEY, 'false'); } catch { /* armazenamento indisponível */ }
+  };
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    if (next) setAltoContraste(false);
+    try { localStorage.setItem(DARK_MODE_KEY, String(next)); if (next) localStorage.setItem(ALTO_CONTRASTE_KEY, 'false'); } catch { /* armazenamento indisponível */ }
+  };
   const toggleVlibras = () => setVlibrasAtivo((current) => { const next = !current; try { localStorage.setItem(VLIBRAS_KEY, String(next)); } catch { /* armazenamento indisponível */ } return next; });
   const encodedPlanId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
   let planId;
@@ -134,55 +193,29 @@ function App({ auth, initialData }) {
   const plan = visiblePlans.find((candidate) => candidate.id === planId);
   const planningContext = plan?.type === 'PDI' ? resolvePlanRoute(plan, route) : null;
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
-  const roles = session.roles?.map((role) => role.name).join(' · ') || 'Consulta pública';
   useEffect(() => {
-    const label = planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar' })[route.path] || 'SUMI';
+    const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade' })[route.path] || 'SUMI';
     document.title = `SUMI · ${label}`;
     setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
-  }, [plan?.shortName, plan?.name, planningContext?.axis?.name, route.path]);
+  }, [plan?.shortName, plan?.name, planningContext?.axis?.name, planningContext?.item?.title, planningContext?.action?.title, planningContext?.stage?.title, route.path]);
 
   function saveItem(nextItem, id) {
     update((draft) => { const currentPlan = draft.plans.find((candidate) => candidate.id === id); const index = currentPlan.items.findIndex((item) => item.id === nextItem.id); if (index < 0) currentPlan.items.push(nextItem); else currentPlan.items[index] = { ...nextItem, reviewStatus: ['submitted', 'validated'].includes(currentPlan.items[index].reviewStatus) ? 'draft' : nextItem.reviewStatus }; }, 'Informações salvas.');
     close(); navigate(itemUrl(data.plans.find((candidate) => candidate.id === id), nextItem));
   }
 
-  function navigationLink(path, icon, text) {
-    return <a className={route.path === path ? 'active' : ''} href={`#${path}`} aria-label={text} title={sidebarCollapsed ? text : undefined}><Icon name={icon} /><span>{text}</span></a>;
-  }
-
-  return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-    <a href="#main-content" className="skip-link" onClick={(event) => { event.preventDefault(); document.getElementById('main-content').focus(); }}>Pular para o conteúdo</a>
-    <aside className="sidebar" id="main-sidebar">
-      <a className="brand" href="#/inicio" aria-label="SUMI início"><span className="brand-mark"><i /><i /><i /></span><span>sumi<span className="brand-dot">.</span><small>UFCG</small></span></a>
-      <button type="button" className="sidebar-toggle" aria-label={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'} aria-expanded={!sidebarCollapsed} aria-controls="main-sidebar" title={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'} onClick={toggleSidebar}><Icon name="chevron" size={15} /></button>
-      <div className="workspace-label">PLANEJAMENTO INSTITUCIONAL</div>
-      <nav aria-label="Navegação principal">
-        {navigationLink('/inicio', 'grid', 'Visão geral')}
-        {navigationLink('/planejamentos', 'book', 'Planejamentos')}
-        {can(PERMISSIONS.VIEW_WORK_QUEUE) && navigationLink('/pendencias', 'list', 'Minhas pendências')}
-        {can(PERMISSIONS.VIEW_REVIEW_QUEUE) && navigationLink('/validacoes', 'check', 'Validações')}
-        {can(PERMISSIONS.MANAGE_MODEL) && navigationLink('/modelos', 'layers', 'Modelos de plano')}
-        {can(PERMISSIONS.MANAGE_MODEL) && navigationLink('/usuarios', 'user', 'Usuários')}
-      </nav>
-      <div className="sidebar-bottom"><div className="institution">Universidade Federal<br />de Campina Grande</div></div>
-    </aside>
-    <div className="workspace">
-      <header className="topbar">
-        <div className="breadcrumb"><a href="#/inicio">SUMI</a>{plan && <><Icon name="chevron" size={13} /><a href="#/planejamentos">Planejamentos</a><Icon name="chevron" size={13} /><strong>{plan.shortName}</strong></>}</div>
-        <div className="topbar-actions">
-          <button type="button" className="text-button accessibility-toggle" aria-pressed={altoContraste} onClick={toggleAltoContraste} title={altoContraste ? 'Desativar alto contraste' : 'Ativar alto contraste'}><Icon name="contrast" size={16} />{altoContraste ? 'Contraste padrão' : 'Alto contraste'}</button>
-          <button type="button" className="text-button accessibility-toggle" aria-pressed={vlibrasAtivo} onClick={toggleVlibras} title={vlibrasAtivo ? 'Desativar tradução em Libras (VLibras)' : 'Ativar tradução em Libras (VLibras)'}><Icon name="libras" size={16} />{vlibrasAtivo ? 'Desativar Libras' : 'Ativar Libras'}</button>
-          <div className="account-summary">
-            <span className="account-avatar" aria-hidden="true"><Icon name="user" size={16} /></span>
-            <div className="account-identity"><strong title={session.user?.name || 'Comunidade UFCG'}>{session.user?.name || 'Comunidade UFCG'}</strong><small title={roles}>{roles}</small></div>
-            {session.authenticated ? <button type="button" className="text-button account-session-action" onClick={() => logout().then(auth.reload)}>Sair</button> : <a className="text-button account-session-action" href="#/login">Entrar</a>}
-          </div>
-        </div>
-      </header>
+  const links = [{ path: '/inicio', icon: 'grid', text: 'Visão geral' }, { path: '/planejamentos', icon: 'book', text: 'Planos' }];
+  if (can(PERMISSIONS.VIEW_WORK_QUEUE)) links.push({ path: '/pendencias', icon: 'list', text: 'Minhas pendências' });
+  if (can(PERMISSIONS.VIEW_REVIEW_QUEUE)) links.push({ path: '/validacoes', icon: 'check', text: 'Validações' });
+  if (can(PERMISSIONS.MANAGE_MODEL)) links.push({ path: '/modelos', icon: 'layers', text: 'Modelos de plano' }, { path: '/usuarios', icon: 'user', text: 'Usuários' });
+  const loading = needsWorkspace && auth.status !== 'error' && (auth.status === 'loading' || workspaceState.status === 'loading' || workspaceState.sessionKey !== sessionKey);
+  return <AppShell route={route} plan={plan} session={session} mode={route.path === '/login' ? 'access' : session.authenticated ? 'work' : 'public'} links={links} altoContraste={altoContraste} darkMode={darkMode} vlibrasAtivo={vlibrasAtivo} toggleAltoContraste={toggleAltoContraste} toggleDarkMode={toggleDarkMode} toggleVlibras={toggleVlibras} onLogout={leaveSession} loading={loading}>
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
-      <main id="main-content" tabIndex={-1}>
-        {/* workspace foi buscado uma vez no mount, antes do login — sem recarregar aqui, planos internos/rascunho ficam invisíveis até um refresh manual da página */}
-        {route.path === '/login' ? <LoginPage onSuccess={async () => { auth.reload(); setData(await planningClient.load()); navigate('/inicio'); }} />
+        {route.path === '/login' ? <LoginPage authenticated={session.authenticated} returnTo={safeReturnPath(route.query.get('returnTo'))} onSuccess={async () => { await auth.reload(); navigate(safeReturnPath(route.query.get('returnTo'))); }} />
+          : ['/sobre', '/ajuda', '/privacidade'].includes(route.path) ? <InformationPage path={route.path} />
+          : loading ? <div className="sumi-loading" role="status"><div className="br-loading medium" aria-hidden="true" /><p>Carregando os planos…</p></div>
+          : auth.status === 'error' ? (isOfflineError(auth.error) ? <OfflinePage onRetry={() => auth.reload().catch(() => {})} /> : <ServerErrorPage onRetry={() => auth.reload().catch(() => {})} />)
+          : workspaceState.status === 'error' ? (isOfflineError(workspaceState.error) ? <OfflinePage onRetry={loadWorkspace} /> : <ServerErrorPage onRetry={loadWorkspace} />)
           : route.path === '/inicio' ? <Home data={{ ...data, plans: visiblePlans }} session={session} can={can} />
           : route.path === '/planejamentos' ? <PlanList data={{ ...data, plans: visiblePlans }} can={can} onCreate={() => setModal({ type: 'plan' })} />
             : route.path === '/pendencias' && can(PERMISSIONS.VIEW_WORK_QUEUE) ? <WorkQueue plans={visiblePlans} can={can} />
@@ -195,10 +228,8 @@ function App({ auth, initialData }) {
                     // existência de um plano para quem não pode vê-lo. Itens de navegação conhecidos
                     // (pendências/validações/modelos) têm a existência pública; só o acesso é negado, daí 401/403.
                     : KNOWN_TOP_LEVEL_PATHS.includes(route.path)
-                      ? (session.authenticated ? <ForbiddenPage onGoHome={() => navigate('/inicio')} /> : <UnauthorizedPage onLogin={() => navigate('/login')} />)
+                      ? (session.authenticated ? <ForbiddenPage onGoHome={() => navigate('/inicio')} /> : <UnauthorizedPage onLogin={() => navigate(loginUrl(route))} />)
                       : <NotFoundPage onGoHome={() => navigate('/inicio')} />}
-      </main>
-    </div>
     {toast && <div role="status" className="toast"><Icon name="check" size={17} />{toast}</div>}
     {modal?.type === 'plan' && <PlanForm templates={data.templates} initialTemplate={modal.templateId} onClose={close} onSave={(newPlan) => { update((draft) => draft.plans.push(newPlan), 'Planejamento criado.'); close(); navigate(planUrl(newPlan.id)); }} />}
     {modal?.type === 'template' && <TemplateForm template={modal.template} onClose={close} onSave={(template) => { update((draft) => { draft.templates = draft.templates.map((current) => current.id === template.id ? template : current); }, 'Modelo salvo.'); close(); }} />}
@@ -210,17 +241,18 @@ function App({ auth, initialData }) {
     {modal?.type === 'measurement' && plan && <MeasurementForm plan={plan} item={modal.item} year={modal.period} onClose={close} onSave={(entry) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', measurements: [...item.measurements, entry], history: [...item.history, historyEntry(`Resultado registrado para ${periodLabel(plan, item, entry.year)}: ${formatMetricValue(item, entry.value)}${item.metric.unit ? ` ${item.metric.unit}` : ''}. ${entry.note}`, actor)] }), 'Resultado registrado.'); close(); navigate(itemUrl(plan, modal.item.id, 'indicadores', entry.year)); }} />}
     {modal?.type === 'targets' && plan && <TargetsForm plan={plan} item={modal.item} onClose={close} onSave={(targets) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', metric: { ...item.metric, targets }, history: [...item.history, historyEntry('Metas atualizadas.', actor)] }), 'Metas salvas.'); close(); }} />}
     {modal?.type === 'review' && plan && <ReviewForm item={modal.item} decision={modal.decision} onClose={close} onSave={({ status, note }) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: status, reviewNote: note, history: [...item.history, historyEntry(status === 'validated' ? 'Informações validadas.' : `Correção solicitada: ${note}`, actor)] }), status === 'validated' ? 'Informações validadas.' : 'Correção solicitada.'); close(); }} />}
-  </div>;
+  </AppShell>;
 }
 
 function Home({ data, session, can }) {
+  if (!session.authenticated) return <PublicHome plans={data.plans} />;
   const items = data.plans.flatMap((plan) => plan.items.map((item) => ({ plan, item })));
   const internalItems = items.filter(({ plan, item }) => can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan, item)));
   const overdue = internalItems.reduce((total, { item }) => total + item.actions.flatMap((action) => action.tasks).filter((task) => taskOverdue(task)).length, 0);
   const awaiting = items.filter(({ plan, item }) => item.reviewStatus === 'submitted' && can(PERMISSIONS.REVIEW_ITEM, resourceFor(plan, item))).length;
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">VISÃO GERAL</p><h1>{session.authenticated ? `Olá, ${session.user?.name?.split(' ')[0] || 'usuário'}` : 'Planejamento institucional'}</h1><p>{session.authenticated ? 'Acompanhe suas responsabilidades e os resultados dos planos institucionais.' : 'Consulte os planos e resultados publicados pela UFCG.'}</p></div></div>
     <div className="overview-grid"><article><span>Planejamentos disponíveis</span><strong>{data.plans.length}</strong><a href="#/planejamentos">Consultar planos <Icon name="arrow" size={14} /></a></article><article><span>Itens acompanhados</span><strong>{items.length}</strong><small>Iniciativas e metas</small></article>{session.authenticated && internalItems.length > 0 ? <article className={overdue ? 'has-overdue' : undefined}><span>Etapas atrasadas</span><strong>{overdue}</strong><small>Nos seus escopos de acesso</small></article> : <article><span>Planos publicados</span><strong>{data.plans.filter((plan) => plan.status === 'published').length}</strong><small>Consulta disponível</small></article>}{can(PERMISSIONS.VIEW_REVIEW_QUEUE) && <article><span>Aguardando validação</span><strong>{awaiting}</strong><a href="#/validacoes">Abrir fila <Icon name="arrow" size={14} /></a></article>}</div>
-    <section className="home-section"><div className="section-heading"><div><h2>Planejamentos em acompanhamento</h2><p className="hint">Visão consolidada dos ciclos institucionais.</p></div><a className="text-button" href="#/planejamentos">Ver todos</a></div><div className="compact-plan-list">{data.plans.map((plan) => <a key={plan.id} href={`#${planUrl(plan.id)}`}><span className={`plan-icon ${plan.type.toLowerCase()}`}><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={18} /></span><span><strong>{plan.shortName}</strong><small>{plan.name}</small></span><span>{executionProgress({ actions: plan.items.flatMap((item) => item.actions) }).percent}%</span><Icon name="chevron" size={14} /></a>)}</div></section>
+    <section className="home-section"><div className="section-heading"><div><h2>Planejamentos em acompanhamento</h2><p className="hint">Visão consolidada dos ciclos institucionais.</p></div><a className="text-button" href="#/planejamentos">Ver todos</a></div><div className="compact-plan-list">{data.plans.map((plan) => <a key={plan.id} href={`#${planUrl(plan.id)}`}><span className={`plan-icon ${plan.type.toLowerCase()}`}><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={18} /></span><span><strong>{plan.shortName}</strong><small>{plan.name}</small></span><span>Etapas concluídas: {executionProgress({ actions: plan.items.flatMap((item) => item.actions) }).percent}%</span><Icon name="chevron" size={14} /></a>)}</div></section>
   </div>;
 }
 
@@ -244,7 +276,7 @@ function PlanList({ data, can, onCreate }) {
   const filtered = data.plans.filter((plan) => (filter === 'Todos' || plan.type === filter) && normalize(`${plan.shortName} ${plan.name}`).includes(normalize(search)));
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">PLANEJAMENTOS</p><h1>Planos institucionais</h1><p>Acompanhe estrutura, execução e resultados em um único lugar.</p></div>{can(PERMISSIONS.MANAGE_PLAN) && <Button icon="plus" variant="primary" onClick={onCreate}>Novo planejamento</Button>}</div>
     <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className='searchbar'><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>
-    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress"><Progress {...progress} /></div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title="Nenhum planejamento encontrado" action={<Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button>}>Tente outro nome ou tipo.</Empty>}
+    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress">{progress.total ? <><p className="hint">Execução das etapas</p><Progress {...progress} /><small>{progress.done} de {progress.total} etapas ativas concluídas</small></> : <p className="hint">Sem etapas ativas</p>}</div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title={data.plans.length ? "Nenhum planejamento encontrado" : "Nenhum plano disponível no momento"} action={data.plans.length ? <Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button> : undefined}>{data.plans.length ? 'Tente outro nome ou tipo.' : 'Os planos aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty>}
   </div>;
 }
 
@@ -282,7 +314,7 @@ function ImportacaoPlanilha({ planId, onImport }) {
 function PlanPage(props) {
   const { plan, can, onModal, onImportPlanilha } = props;
   if (plan.type !== 'PDI') return <PlanExplorer {...props} />;
-  return <PdiWorkspace {...props} actions={({ axis, objective }) => can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>} renderDetail={(context) => <PlanItemDetail {...props} {...context} />} />;
+  return <PdiWorkspace {...props} actions={({ axis, objective, item }) => !item && can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>} renderDetail={(context) => <PlanItemDetail {...props} {...context} />} />;
 }
 
 function PlanItemDetail({ plan, item, action, stage, view, route, actor, can, onModal, changeItem }) {
@@ -343,7 +375,7 @@ function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPl
     <section className="detail" aria-label="Detalhe do item">{item ? <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resource)}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
 }
 
-  function ItemHeader({ plan, item, actor, can, onModal, changeItem, hideDetails = false, children }) {
+  function ItemHeader({ plan, item, actor, can, onModal, changeItem, hideDetails = false, scoped = false, children }) {
   const axis = axisFor(plan, item);
   const objective = objectiveFor(plan, item);
   const resource = resourceFor(plan, item);
@@ -351,14 +383,14 @@ function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPl
   const presentExtra = (field, value) => field.type === 'date' ? formatDate(value) : field.type === 'number' ? formatNumber(value) : value;
   const extraFields = plan.template.fields.filter((field) => item.extras?.[field.id] !== '' && item.extras?.[field.id] != null);
   const submit = () => changeItem(plan.id, item.id, (current) => ({ ...current, reviewStatus: 'submitted', reviewNote: '', history: [...current.history, historyEntry('Informações enviadas para validação.', actor)] }), 'Enviado para validação.');
-  return <>{!hideDetails && <div className="item-heading" style={{ '--axis-color': axis?.color || '#2f78a5' }}><div className="section-heading"><div className="flex items-center gap-3"><span className="item-code">{plan.template.labels.item} {item.code}</span><Badge tone={statusTone(executionStatus(item))}>{executionStatus(item)}</Badge></div>{can(PERMISSIONS.EDIT_ITEM, resource) && <Button icon="edit" variant="tertiary" onClick={() => onModal({ type: 'item', item })}>Editar informações</Button>}</div><h2>{item.title}</h2><p>{item.description}</p><div className="item-meta"><span><Icon name="layers" size={15} /><strong>{objective?.code} · {objective?.title}</strong></span><span><Icon name="user" size={15} /><strong>{item.owner}</strong></span>{item.partners && <span>Parceiros: {item.partners}</span>}</div>{extraFields.length > 0 && <div className="extra-values">{extraFields.map((field) => <span key={field.id}><b>{field.label}:</b> {presentExtra(field, item.extras[field.id])}</span>)}</div>}</div>}
+  return <>{!hideDetails && <div className="item-heading" style={{ '--axis-color': axis?.color || '#2f78a5' }}><div className="section-heading"><div className="flex items-center gap-3"><span className="item-code">{plan.template.labels.item} {item.code}</span><Badge tone={statusTone(executionStatus(item))}>{executionStatus(item)}</Badge></div>{can(PERMISSIONS.EDIT_ITEM, resource) && <Button icon="edit" variant="tertiary" onClick={() => onModal({ type: 'item', item })}>Editar informações</Button>}</div>{!scoped && <h2>{item.title}</h2>}<p>{item.description}</p><div className="item-meta"><span><Icon name="layers" size={15} /><strong>{objective?.code} · {objective?.title}</strong></span><span><Icon name="user" size={15} /><strong>{item.owner}</strong></span>{item.partners && <span>Parceiros: {item.partners}</span>}</div>{extraFields.length > 0 && <div className="extra-values">{extraFields.map((field) => <span key={field.id}><b>{field.label}:</b> {presentExtra(field, item.extras[field.id])}</span>)}</div>}</div>}
     {canSeeWorkflow && <div className={`workflow-banner ${item.reviewStatus}`}><div><span>Validação</span><strong>{reviewStatusLabel(item.reviewStatus)}</strong>{item.reviewNote && <p>{item.reviewNote}</p>}</div><div>{can(PERMISSIONS.SUBMIT_ITEM, resource) && ['draft', 'changes_requested'].includes(item.reviewStatus) && <Button variant="primary" onClick={submit}>Enviar para validação</Button>}{can(PERMISSIONS.REVIEW_ITEM, resource) && item.reviewStatus === 'submitted' && <><Button onClick={() => onModal({ type: 'review', item, decision: 'changes_requested' })}>Solicitar correção</Button><Button variant="primary" onClick={() => onModal({ type: 'review', item, decision: 'validated' })}>Validar</Button></>}</div></div>}
     {item.linkedPlan && <a className="linked-plan" href={`#${planUrl(item.linkedPlan)}`}><Icon name="link" size={16} /><span>Relacionado ao Plano Diretor de Logística Sustentável</span><Icon name="arrow" size={14} /></a>}{children}</>;
 }
 
 function ItemDetail({ plan, item, actor, can, view, period, setPeriod, onModal, changeItem }) {
   const resource = resourceFor(plan, item);
-  return <ItemHeader plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem}>
+  return <ItemHeader scoped={plan.type === 'PDI'} plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem}>
     {can(PERMISSIONS.VIEW_HISTORY, resource) && <div className="detail-actions"><a className={view === 'historico' ? 'active' : ''} href={`#${itemUrl(plan, item.id, 'historico')}`}>Histórico</a></div>}
     {view === 'historico' ? <History item={item} canComment={can(PERMISSIONS.COMMENT_HISTORY, resource)} onComment={(text) => changeItem(plan.id, item.id, (current) => ({ ...current, history: [...current.history, historyEntry(text, actor)] }), 'Observação adicionada.')} /> : <>
       <Indicators key={item.id} item={item} can={can} plan={plan} period={period} setPeriod={setPeriod} onRecord={() => onModal({ type: 'measurement', item, period })} onTargets={() => onModal({ type: 'targets', item })} />
@@ -370,11 +402,11 @@ function ItemDetail({ plan, item, actor, can, view, period, setPeriod, onModal, 
 }
 
 function ActionDetail({ plan, item, action, actor, can, onModal, changeItem }) {
-  return <ItemHeader plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem} hideDetails>
+  return <ItemHeader scoped={plan.type === 'PDI'} plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem} hideDetails>
     <div className="action-detail-heading">
       <div className="action-detail-info">
         <span className="item-code">Ação {action.code}</span>
-        <h2>{action.title}</h2>
+        {plan.type !== 'PDI' && <h2>{action.title}</h2>}
         <div className="item-meta"><span>Responsável: <strong>{action.owner}</strong></span><span>Prazo: <strong>{formatDate(action.deadline)}</strong></span></div>
       </div>
       <div className="action-detail-cta">
@@ -389,11 +421,11 @@ function ActionDetail({ plan, item, action, actor, can, onModal, changeItem }) {
 
 function ActionRiskDetail({ plan, item, action, stage, actor, can, onModal, changeItem }) {
   const resource = resourceFor(plan, item);
-  return <ItemHeader plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem} hideDetails>
+  return <ItemHeader scoped={plan.type === 'PDI'} plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem} hideDetails>
     <div className="risk-detail-header">
       <div>
         <h3>{stage ? 'Riscos da etapa' : 'Riscos da ação'}</h3>
-        <h2>{stage?.title || action.title}</h2>
+        {plan.type !== 'PDI' && <h2>{stage?.title || action.title}</h2>}
         {stage && <p>Ação {action.code} · {action.title}</p>}
       </div>
       {stage && <div className="risk-detail-deadline">Prazo: <strong>{formatDate(stage.deadline)}</strong></div>}

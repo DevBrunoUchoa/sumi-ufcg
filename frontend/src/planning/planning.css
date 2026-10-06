@@ -44,7 +44,12 @@
 .pdi-axis-filters > * { min-width: 0; }
 .pdi-filter-summary { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--spacing-scale-base); font-size: var(--font-size-scale-base); color: var(--text-muted); margin-bottom: var(--spacing-scale-2x); }
 .pdi-objective { margin-bottom: var(--spacing-scale-3x); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--surface); }
-.pdi-objective-heading { padding: var(--spacing-scale-3x); border-left: 4px solid var(--axis-color); border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.pdi-objective-heading { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-scale-2x); padding: var(--spacing-scale-3x); border-left: 4px solid var(--axis-color); background: var(--surface-soft); }
+.pdi-objective-heading > div { flex: 1 1 240px; min-width: 0; }
+.pdi-objective-toggle.br-button { flex: 0 0 auto; gap: var(--spacing-scale-base); margin-left: auto; }
+.pdi-objective-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.pdi-objective-content { border-top: 1px solid var(--border); }
+.pdi-objective-content[hidden] { display: none; }
 .pdi-objective-heading .eyebrow { margin-bottom: var(--spacing-scale-base); }
 .pdi-objective-heading h3 { font-size: var(--font-size-scale-up-01); font-weight: var(--font-weight-semi-bold); }
 .pdi-initiative-link.br-item { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding: var(--spacing-scale-3x); text-decoration: none; border-bottom: 1px solid var(--border); }

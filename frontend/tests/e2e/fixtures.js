@@ -1,10 +1,15 @@
 import { test as base, expect } from '@playwright/test';
+import { initialState } from '../../src/data.js';
 
 export const test = base.extend({
   page: async ({ page }, use) => {
+    // Cada regressão define seu perfil, independente da sessão inicial pública.
+    await page.context().addCookies([{ name: 'sumi_dev_session', value: 'administrator', url: 'http://127.0.0.1:4317' }]);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+    // Regressões usam a base pública estável, independente dos documentos privados.
+    await page.route('**/__dev/planning/workspace', (route) => route.fulfill({ json: initialState() }));
     await use(page);
     expect(errors, 'Erros JavaScript no navegador').toEqual([]);
   },

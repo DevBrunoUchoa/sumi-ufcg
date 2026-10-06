@@ -10,7 +10,7 @@ const globalGrants = (values) => values.map((permission) => ({ permission, scope
 export const developmentSessions = Object.freeze({
   administrator: {
     authenticated: true,
-    user: { id: 'dev-admin', name: 'Usuário SEPLAN', email: 'usuario@ufcg.edu.br' },
+    user: { id: 'dev-admin', name: 'Usuário SEPLAN', email: 'admin@sumi.local' },
     roles: [{ code: 'STRATEGIC_ADMIN', name: 'Administrador Estratégico' }],
     grants: globalGrants(permissions),
   },
@@ -22,7 +22,7 @@ export const developmentSessions = Object.freeze({
   },
   axis_contributor: {
     authenticated: true,
-    user: { id: 'dev-contributor', name: 'Usuário do Eixo', email: 'gestor@ufcg.edu.br' },
+    user: { id: 'dev-contributor', name: 'Usuário do Eixo', email: 'gestor@sumi.local' },
     roles: [{ code: 'AXIS_CONTRIBUTOR', name: 'Gestor do Eixo' }],
     grants: [
       ...globalGrants(['plan.read_published', 'work_queue.read']),
@@ -31,7 +31,7 @@ export const developmentSessions = Object.freeze({
   },
   axis_reviewer: {
     authenticated: true,
-    user: { id: 'dev-reviewer', name: 'Responsável do Eixo', email: 'responsavel@ufcg.edu.br' },
+    user: { id: 'dev-reviewer', name: 'Responsável do Eixo', email: 'responsavel@sumi.local' },
     roles: [{ code: 'AXIS_REVIEWER', name: 'Responsável pelo Eixo' }],
     grants: [
       ...globalGrants(['plan.read_published', 'review_queue.read']),

@@ -1,4 +1,4 @@
-import { axisUrl, itemUrl, planUrl, resolvePlanRoute } from '../planning/navigation.js';
+import { axisUrl, itemUrl, objectiveCode, objectiveUrl, planUrl, resolvePlanRoute } from '../planning/navigation.js';
 
 export function breadcrumbsFor(route, plan) {
   if (route.path === '/inicio' || route.path === '/login') return [];
@@ -10,7 +10,7 @@ export function breadcrumbsFor(route, plan) {
     const { axis, objective, item, action, stage, view } = context;
     const labels = plan.template.labels;
     if (axis) entries.push({ label: `${labels.axis} ${axis.code} · ${axis.name}`, url: plan.type === 'PDI' ? axisUrl(plan, axis) : undefined });
-    if (objective) entries.push({ label: `${labels.objective} ${objective.code}`, url: plan.type === 'PDI' ? axisUrl(plan, axis, objective.id) : undefined });
+    if (objective) entries.push({ label: `${labels.objective} ${objectiveCode(objective) || objective.title}`, url: plan.type === 'PDI' ? objectiveUrl(plan, objective) : undefined });
     if (item) entries.push({ label: `${labels.item} ${item.code}`, url: itemUrl(plan, item) });
     if (action) entries.push({ label: `Ação ${action.code}`, url: itemUrl(plan, item, 'acao', undefined, action.id) });
     if (view === 'historico') entries.push({ label: 'Histórico' });

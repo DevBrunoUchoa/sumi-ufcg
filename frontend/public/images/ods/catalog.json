@@ -1,0 +1,160 @@
+{
+  "source": "https://brasil.un.org/pt-br/sdgs",
+  "retrievedAt": "2026-10-12",
+  "language": "pt-BR",
+  "icons": [
+    {
+      "id": 1,
+      "title": "Erradicação da pobreza",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-1.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/1",
+      "path": "/images/ods/ods-01.svg",
+      "bytes": 6929,
+      "sha256": "9e4bfef9a0619895971cacebc63ea9d0e4bfd13c8fbbc783a780ce9110a5c86e"
+    },
+    {
+      "id": 2,
+      "title": "Fome zero e agricultura sustentável",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-2.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/2",
+      "path": "/images/ods/ods-02.svg",
+      "bytes": 5599,
+      "sha256": "fa79df231de5f4cc4d7e5798df5371d3917b0f85490f4c3101cc13897452fcef"
+    },
+    {
+      "id": 3,
+      "title": "Saúde e Bem-Estar",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-3.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/3",
+      "path": "/images/ods/ods-03.svg",
+      "bytes": 3675,
+      "sha256": "1c67a37460af1e81c1072611ee712457cd886a720e81c090b63ec1bafaa4fc84"
+    },
+    {
+      "id": 4,
+      "title": "Educação de qualidade",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-4.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/4",
+      "path": "/images/ods/ods-04.svg",
+      "bytes": 3879,
+      "sha256": "aa46e172bc79df72664492af1365d227c2e7805d6e574bb7710571b0076cbd8d"
+    },
+    {
+      "id": 5,
+      "title": "Igualdade de gênero",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-5.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/5",
+      "path": "/images/ods/ods-05.svg",
+      "bytes": 3796,
+      "sha256": "1c366cf43b1ab25f3d7aa723e813168f017ebe783c1f70c05af3313b403defaa"
+    },
+    {
+      "id": 6,
+      "title": "Água potável e saneamento",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-6.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/6",
+      "path": "/images/ods/ods-06.svg",
+      "bytes": 4127,
+      "sha256": "9f51ef4046758e035077be1b9e1ac746360919362395561a63bbf68b019a7640"
+    },
+    {
+      "id": 7,
+      "title": "Energia limpa e acessível",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-7.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/7",
+      "path": "/images/ods/ods-07.svg",
+      "bytes": 5168,
+      "sha256": "02ed7a2261d6157dccb3877a385df38f65dcdf1570c8660fc00fcd5c2c23a599"
+    },
+    {
+      "id": 8,
+      "title": "Trabalho decente e crescimento econômico",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-8.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/8",
+      "path": "/images/ods/ods-08.svg",
+      "bytes": 6969,
+      "sha256": "e89c3ad37f7e84c739bbe17e73f849077877d2b1bd29225e680e6680a1285a66"
+    },
+    {
+      "id": 9,
+      "title": "Indústria, inovação e infraestrutura",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-9.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/9",
+      "path": "/images/ods/ods-09.svg",
+      "bytes": 5995,
+      "sha256": "1e000ec7e821ef74198cc9d2afe2a677e4aae73606a1db4c47a632c9e3ff00f8"
+    },
+    {
+      "id": 10,
+      "title": "Redução das desigualdades",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-10.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/10",
+      "path": "/images/ods/ods-10.svg",
+      "bytes": 5713,
+      "sha256": "b4db576225753fb650c53e092e5d017e4aea5d279a5092fc3d12fd0f27f69cfb"
+    },
+    {
+      "id": 11,
+      "title": "Cidades e comunidades sustentáveis",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-11.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/11",
+      "path": "/images/ods/ods-11.svg",
+      "bytes": 9430,
+      "sha256": "030305dd4a5bcad20be1ced5950f38792df5595231ed6af61998e9003ffe05bd"
+    },
+    {
+      "id": 12,
+      "title": "Consumo e produção responsáveis",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-12.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/12",
+      "path": "/images/ods/ods-12.svg",
+      "bytes": 7506,
+      "sha256": "c84a582adcb58f279da4335572f8f5f12f28d288aa2414d2b0d158293aa4cc8a"
+    },
+    {
+      "id": 13,
+      "title": "Ação contra a mudança global do clima",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-13.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/13",
+      "path": "/images/ods/ods-13.svg",
+      "bytes": 9143,
+      "sha256": "9041f4f56167d70949782f1f711e9e271a2680d3db7c68c9fc8e893358ae112f"
+    },
+    {
+      "id": 14,
+      "title": "Vida na água",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-14.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/14",
+      "path": "/images/ods/ods-14.svg",
+      "bytes": 4053,
+      "sha256": "d5d7c57308ac045565de31117fadb7b48362d311812d05b345e7ad69f92f00bb"
+    },
+    {
+      "id": 15,
+      "title": "Vida terrestre",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-15.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/15",
+      "path": "/images/ods/ods-15.svg",
+      "bytes": 4643,
+      "sha256": "3df3403698bdf546f861e2441098789f238cde611e2edf7f81ac7b42e1f22cbf"
+    },
+    {
+      "id": 16,
+      "title": "Paz, Justiça e Instituições Eficazes",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-16.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/16",
+      "path": "/images/ods/ods-16.svg",
+      "bytes": 7580,
+      "sha256": "7e645c33f240d269db314a4cc4f8ef6f7a17ff7ac005a24cfbadc88e88a99034"
+    },
+    {
+      "id": 17,
+      "title": "Parcerias e meios de implementação",
+      "source": "https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-17.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/17",
+      "path": "/images/ods/ods-17.svg",
+      "bytes": 6102,
+      "sha256": "545655e8831181bbfeb15b389eec7a0db135a554198c9b58a195d72b581b75d0"
+    }
+  ]
+}

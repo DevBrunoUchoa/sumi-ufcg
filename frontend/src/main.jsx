@@ -13,10 +13,12 @@ import { createPlanningClient } from './planning-client.js';
 import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
 import { AxisIcon } from './AxisIcon.jsx';
 import { PdiWorkspace } from './planning/PdiWorkspace.jsx';
+import { MetricTrend } from './planning/Charts.jsx';
 import { itemUrl, planUrl, resolvePlanRoute } from './planning/navigation.js';
 import '@govbr-ds/core/dist/core.css';
 import './styles.css';
 import './planning/planning.css';
+import './planning/charts.css';
 import { AppShell } from './layout/AppShell.jsx';
 import { PublicHome, InformationPage } from './layout/PublicPages.jsx';
 import { loginUrl, safeReturnPath } from './auth/navigation.js';
@@ -194,10 +196,10 @@ function App({ auth }) {
   const planningContext = plan?.type === 'PDI' ? resolvePlanRoute(plan, route) : null;
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
   useEffect(() => {
-    const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade' })[route.path] || 'SUMI';
+    const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.objective ? `${planningContext.objective.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade' })[route.path] || 'SUMI';
     document.title = `SUMI · ${label}`;
     setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
-  }, [plan?.shortName, plan?.name, planningContext?.axis?.name, planningContext?.item?.title, planningContext?.action?.title, planningContext?.stage?.title, route.path]);
+  }, [plan?.shortName, plan?.name, planningContext?.axis?.name, planningContext?.objective?.title, planningContext?.item?.title, planningContext?.action?.title, planningContext?.stage?.title, route.path]);
 
   function saveItem(nextItem, id) {
     update((draft) => { const currentPlan = draft.plans.find((candidate) => candidate.id === id); const index = currentPlan.items.findIndex((item) => item.id === nextItem.id); if (index < 0) currentPlan.items.push(nextItem); else currentPlan.items[index] = { ...nextItem, reviewStatus: ['submitted', 'validated'].includes(currentPlan.items[index].reviewStatus) ? 'draft' : nextItem.reviewStatus }; }, 'Informações salvas.');
@@ -394,6 +396,7 @@ function ItemDetail({ plan, item, actor, can, view, period, setPeriod, onModal, 
     {can(PERMISSIONS.VIEW_HISTORY, resource) && <div className="detail-actions"><a className={view === 'historico' ? 'active' : ''} href={`#${itemUrl(plan, item.id, 'historico')}`}>Histórico</a></div>}
     {view === 'historico' ? <History item={item} canComment={can(PERMISSIONS.COMMENT_HISTORY, resource)} onComment={(text) => changeItem(plan.id, item.id, (current) => ({ ...current, history: [...current.history, historyEntry(text, actor)] }), 'Observação adicionada.')} /> : <>
       <Indicators key={item.id} item={item} can={can} plan={plan} period={period} setPeriod={setPeriod} onRecord={() => onModal({ type: 'measurement', item, period })} onTargets={() => onModal({ type: 'targets', item })} />
+      {plan.type === 'PDI' && <MetricTrend plan={plan} item={item} period={period} />}
       <div className="section-heading actions-heading"><h3>Ações estratégicas <span>{item.actions.length}</span></h3>{can(PERMISSIONS.MANAGE_ACTION, resource) && <Button icon="plus" onClick={() => onModal({ type: 'action', item })}>Adicionar ação</Button>}</div>
       {item.actions.length ? <div className="actions-list">{item.actions.map((action) => <a key={action.id} className="action-overview-link" href={`#${itemUrl(plan, item.id, 'acao', undefined, action.id)}`}><span><small>Ação {action.code}</small><strong>{action.title}</strong></span><span>{actionProgress(action).percent}% <Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title="Nenhuma ação cadastrada">As ações desta iniciativa aparecerão aqui.</Empty>}
     </>}

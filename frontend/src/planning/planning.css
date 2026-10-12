@@ -14,16 +14,6 @@
 .pdi-heading .heading-actions { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; max-width: 100%; }
 .pdi-identity > .axis-icon { width: 56px; height: 56px; flex-basis: 56px; }
 .pdi-identity > .axis-icon::before { width: 44px; height: 44px; }
-.planning-summary { display: flex; align-items: stretch; flex-wrap: wrap; gap: var(--spacing-scale-3x); padding: var(--spacing-scale-3x) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: var(--spacing-scale-4x); }
-.planning-facts { display: flex; flex: 1 1 400px; flex-wrap: wrap; gap: var(--spacing-scale-3x); margin: 0; }
-.planning-facts > div { flex: 1 1 88px; }
-.planning-facts dt { font-size: var(--font-size-scale-base); color: var(--text-muted); margin-bottom: var(--spacing-scale-base); }
-.planning-facts dd { margin: 0; font-size: var(--font-size-scale-up-04); font-weight: var(--font-weight-semi-bold); color: var(--text-strong); }
-.scope-execution { display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-scale-base); min-width: 240px; flex: 0 1 320px; align-content: center; padding-left: var(--spacing-scale-3x); border-left: 1px solid var(--border); }
-.scope-execution > span { font-size: var(--font-size-scale-base); color: var(--text-body); }
-.scope-execution > strong { color: var(--text-strong); }
-.scope-execution :is(.progress-track, small, p) { grid-column: 1 / -1; }
-.scope-execution small, .scope-execution p { font-size: var(--font-size-scale-base); color: var(--text-muted); margin: 0; }
 .pdi-section-heading { gap: var(--spacing-scale-3x); align-items: flex-end; flex-wrap: wrap; margin-bottom: var(--spacing-scale-3x); }
 .pdi-section-heading br-input { flex: 0 1 360px; min-width: 240px; }
 .pdi-axis-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--spacing-scale-3x); }
@@ -65,7 +55,7 @@
 .planning-context a { color: var(--primary-strong); }
 .pdi-detail.detail { padding: 0; max-width: 100%; }
 .pdi-detail .item-heading h2 { max-width: 1000px; }
-html[data-alto-contraste="true"] :is(.pdi-axis-card, .pdi-objective, .planning-summary, .planning-context) { border-color: #000; }
+html[data-alto-contraste="true"] :is(.pdi-axis-card, .pdi-objective, .planning-context) { border-color: #000; }
 @media (max-width: 1180px) { .pdi-axis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pdi-axis-card h3 { min-height: 48px; } }
 @media (max-width: 900px) { .pdi-axis-filters { grid-template-columns: 1fr 1fr; } .pdi-axis-filters > br-input { grid-column: 1 / -1; } .pdi-initiative-link { flex-wrap: wrap; } .pdi-initiative-end { flex: 1 1 100%; justify-content: space-between; } }
 @media (max-width: 640px) {
@@ -74,9 +64,6 @@ html[data-alto-contraste="true"] :is(.pdi-axis-card, .pdi-objective, .planning-s
   .pdi-identity > .axis-icon { margin-top: var(--spacing-scale-4x); width: 40px; height: 40px; flex-basis: 40px; }
   .pdi-identity > .axis-icon::before { width: 32px; height: 32px; }
   .pdi-heading .heading-actions { justify-content: flex-start; }
-  .planning-summary { gap: var(--spacing-scale-2x); margin-bottom: var(--spacing-scale-3x); }
-  .planning-facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-scale-2x); flex-basis: 100%; }
-  .scope-execution { flex-basis: 100%; border-left: 0; border-top: 1px solid var(--border); padding: var(--spacing-scale-2x) 0 0; min-width: 0; }
   .pdi-axis-grid { grid-template-columns: 1fr; gap: var(--spacing-scale-2x); }
   .pdi-axis-card h3 { min-height: 0; }
   .pdi-section-heading br-input { flex-basis: 100%; }

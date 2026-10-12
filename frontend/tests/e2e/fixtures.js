@@ -37,6 +37,7 @@ export const openPls = (page) => openPlan(page, 'PLS');
 export const detail = (page) => page.getByRole('region', { name: 'Detalhe do item' });
 
 export async function expandFirstAction(page) {
+  await expect(detail(page)).toBeVisible();
   const overview = page.locator('.action-overview-link').first();
   if (await overview.count()) await overview.click();
   const heading = page.locator('.action-card').first().locator('.action-heading');

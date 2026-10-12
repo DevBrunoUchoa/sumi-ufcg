@@ -73,3 +73,25 @@ test('importação continua usando o plano e atualiza o conteúdo da página do 
   await expect(page.locator('.pdi-workspace')).toContainText('Iniciativa importada');
   expect(importedPlan).toBe(plan.id);
 });
+
+test('objetivo e gráficos usam UUIDs e a API HTTP sem gravações de navegação', async ({ page }) => {
+  const workspace = serverWorkspace();
+  const plan = workspace.plans[0];
+  const objective = plan.objectives[0];
+  let writes = 0;
+  let developmentRequests = 0;
+  page.on('request', (request) => { if (request.url().includes('/__dev/')) developmentRequests += 1; });
+  await page.route('**/api/v1/auth/session', (route) => route.fulfill({ json: developmentSessions.administrator }));
+  await page.route('**/api/v1/planning/workspace', (route) => {
+    if (route.request().method() !== 'GET') writes += 1;
+    return route.fulfill({ json: workspace });
+  });
+  await page.goto(`/#/plano/${plan.id}/eixo/${objective.axisId}/objetivo/${objective.id}?period=2027`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(objective.title);
+  await expect(page.locator('.objective-indicators tbody tr')).toHaveCount(2);
+  await expect(page.getByRole('heading', { name: 'Situação das metas · 2027' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Situação das metas · 2027' })).toBeVisible();
+  expect(writes).toBe(0);
+  expect(developmentRequests).toBe(0);
+});

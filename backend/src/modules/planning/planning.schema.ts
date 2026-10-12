@@ -52,6 +52,10 @@ const objectiveSchema = z.object({
   axisId: presente,
   code: presente,
   title: presente,
+  // default([]) pelo mesmo motivo de axis.customGrants: clientes com cache
+  // antigo (sem esse campo ainda) durante o rollout não devem ter o PUT
+  // rejeitado.
+  ods: z.array(z.number().int().min(1).max(17)).default([]),
 });
 
 const metricSchema = z.object({

@@ -4,6 +4,7 @@ import { controlFactor, createPlan, deliveryStatusLabels, historyEntry, normaliz
 import { listarUsuarios } from './admin-client.js';
 import { axisColorFor } from './axis-colors.js';
 import { AxisIcon } from './AxisIcon.jsx';
+import { ODS_GOALS } from './ods.js';
 
 
 export function PlanForm({ templates, initialTemplate, onClose, onSave }) {
@@ -176,6 +177,11 @@ export function StructureForm({ plan, onClose, onSave }) {
     return { ...axis, customGrants: nextGrants };
   }));
   const updateObjective = (id, field, value) => setObjectives((current) => current.map((objective) => objective.id === id ? { ...objective, [field]: value } : objective));
+  const toggleObjectiveOds = (id, number) => setObjectives((current) => current.map((objective) => {
+    if (objective.id !== id) return objective;
+    const current_ = objective.ods || [];
+    return { ...objective, ods: current_.includes(number) ? current_.filter((n) => n !== number) : [...current_, number].sort((a, b) => a - b) };
+  }));
   function submit(event) {
     event.preventDefault();
     if (axes.some((axis) => !axis.code.trim() || !axis.name.trim() || !axis.ownerUnit.trim())) return setError('Preencha código, nome e unidade responsável de todos os eixos.');
@@ -197,7 +203,9 @@ export function StructureForm({ plan, onClose, onSave }) {
     <AxisUserPicker label="Gestor do eixo" help="Pode cadastrar/atualizar etapas, registrar resultados e enviar para validação." usuarios={usuarios} selectedIds={axis.managerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} />
     <AxisUserPicker label="Responsável pelo eixo" help="Valida ou solicita correção nos itens enviados deste eixo." usuarios={usuarios} selectedIds={axis.reviewerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} />
     <AxisPermissionPicker usuarios={usuarios} customGrants={axis.customGrants || []} onTogglePermission={(userId, permissionCode) => toggleAxisPermission(axis.id, userId, permissionCode)} />
-  </div>)}</div><div className="section-divider" /><div className="section-heading"><div><h3>Objetivos</h3><p className="hint">Cada objetivo pertence a um eixo.</p></div><Button icon="plus" disabled={!axes.length} onClick={() => setObjectives((current) => [...current, { id: uid(), axisId: axes[0]?.id || '', code: '', title: '' }])}>Adicionar objetivo</Button></div><div className="structure-list">{objectives.map((objective) => <div className="structure-row objective-structure" key={objective.id}><Select aria-label="Eixo do objetivo" value={objective.axisId} onChange={(event) => updateObjective(objective.id, 'axisId', event.target.value)} options={[{ value: '', label: 'Selecione' }, ...axes.map((axis) => ({ value: axis.id, label: `${axis.code} · ${axis.name}` }))]} /><Input aria-label="Código do objetivo" value={objective.code} onChange={(event) => updateObjective(objective.id, 'code', event.target.value)} placeholder="1.1" /><Input aria-label="Nome do objetivo" value={objective.title} onChange={(event) => updateObjective(objective.id, 'title', event.target.value)} placeholder="Descrição do objetivo" /><button type="button" className="text-button danger" onClick={() => removeObjective(objective.id)}>Remover</button></div>)}</div></div><FormEnd onClose={onClose} submit="Salvar estrutura" error={error} /></form></Modal>;
+  </div>)}</div><div className="section-divider" /><div className="section-heading"><div><h3>Objetivos</h3><p className="hint">Cada objetivo pertence a um eixo.</p></div><Button icon="plus" disabled={!axes.length} onClick={() => setObjectives((current) => [...current, { id: uid(), axisId: axes[0]?.id || '', code: '', title: '', ods: [] }])}>Adicionar objetivo</Button></div><div className="structure-list">{objectives.map((objective) => <div className="structure-row objective-structure" key={objective.id}><Select aria-label="Eixo do objetivo" value={objective.axisId} onChange={(event) => updateObjective(objective.id, 'axisId', event.target.value)} options={[{ value: '', label: 'Selecione' }, ...axes.map((axis) => ({ value: axis.id, label: `${axis.code} · ${axis.name}` }))]} /><Input aria-label="Código do objetivo" value={objective.code} onChange={(event) => updateObjective(objective.id, 'code', event.target.value)} placeholder="1.1" /><Input aria-label="Nome do objetivo" value={objective.title} onChange={(event) => updateObjective(objective.id, 'title', event.target.value)} placeholder="Descrição do objetivo" /><button type="button" className="text-button danger" onClick={() => removeObjective(objective.id)}>Remover</button>
+    <OdsPicker selected={objective.ods || []} onToggle={(number) => toggleObjectiveOds(objective.id, number)} />
+  </div>)}</div></div><FormEnd onClose={onClose} submit="Salvar estrutura" error={error} /></form></Modal>;
 }
 
 function AxisUserPicker({ label, help, usuarios, selectedIds, onToggle }) {
@@ -223,6 +231,16 @@ function AxisPermissionPicker({ usuarios, customGrants, onTogglePermission }) {
         <ul className="permission-checklist">{PERMISSOES_POR_EIXO.map((permissao) => <li key={permissao.code}><label><input type="checkbox" checked={permissoes.includes(permissao.code)} onChange={() => onTogglePermission(usuario.id, permissao.code)} /> {permissao.label}</label></li>)}</ul>
       </details></li>;
     })}</ul>}
+  </details>;
+}
+
+// ODS (Objetivos de Desenvolvimento Sustentável, Agenda 2030) vinculados a
+// este objetivo do PDI — ver frontend/src/ods.js.
+function OdsPicker({ selected, onToggle }) {
+  return <details className="axis-user-picker">
+    <summary>ODS vinculados {selected.length > 0 && <span className="picker-count">({selected.length})</span>}</summary>
+    <p className="hint">Selecione os Objetivos de Desenvolvimento Sustentável (ONU) atendidos por este objetivo.</p>
+    <ul className="ods-checklist">{ODS_GOALS.map((goal) => <li key={goal.number}><label><input type="checkbox" checked={selected.includes(goal.number)} onChange={() => onToggle(goal.number)} /> <span className="ods-swatch" style={{ '--ods-color': goal.color }} aria-hidden="true">{goal.number}</span> {goal.title}</label></li>)}</ul>
   </details>;
 }
 

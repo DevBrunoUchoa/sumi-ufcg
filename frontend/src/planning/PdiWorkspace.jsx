@@ -8,6 +8,7 @@ import { axisUrl, itemUrl, objectiveCode, objectiveUrl, planUrl, resolvePlanRout
 import { loginUrl } from '../auth/navigation.js';
 import { filterAxes, filterAxisItems, itemsForAxis, ordered, summarizeScope, targetState, targetStates } from './selectors.js';
 import { ScopeDashboard } from './ScopeDashboard.jsx';
+import { OdsBadges } from '../OdsBadges.jsx';
 
 const go = (path) => { window.location.hash = path; };
 
@@ -23,7 +24,7 @@ export function PdiWorkspace({ plan, route, can, authenticated, actions, renderD
   const eyebrow = view === 'riscos' ? stage ? 'RISCOS DA ETAPA' : `RISCOS DA AÇÃO ${action.code}` : action ? `AÇÃO ${action.code}` : item ? `${plan.template.labels.item.toUpperCase()} ${item.code}` : objective ? `${plan.shortName} · ${plan.template.labels.objective.toUpperCase()} ${objectiveCode(objective)}` : axis ? `${plan.shortName} ${plan.start}–${plan.end} · EIXO ${axis.code}` : 'PLANEJAMENTO INSTITUCIONAL';
   const editable = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
   return <div className="plan-page pdi-workspace" style={{ '--axis-color': axis?.color }}>
-    <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}</div></div>{actions(context)}</div>
+    <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}{objective && !item && <OdsBadges ods={objective.ods} />}</div></div>{actions(context)}</div>
     {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} /> : <>
       <section className="planning-context" aria-label="Contexto do planejamento"><p><a href={`#${objectiveUrl(plan, objective)}`}><strong>{plan.template.labels.objective} {objectiveCode(objective)}</strong> · {objective.title}</a></p>{action && <p><a href={`#${itemUrl(plan, item)}`}><strong>{plan.template.labels.item} {item.code}</strong> · {item.title}</a></p>}</section>
       <section className="detail pdi-detail" aria-label="Detalhe do item">{renderDetail(context)}</section>
@@ -84,7 +85,7 @@ function ObjectiveGroup({ plan, objective, items, standalone = false }) {
   const contentId = `objective-content-${objective.id}`;
   return <section className="pdi-objective" aria-label={standalone ? 'Iniciativas vinculadas' : undefined} aria-labelledby={standalone ? undefined : `objective-${objective.id}`}>
     {!standalone && <div className="pdi-objective-heading">
-      <div><p className="eyebrow">{plan.template.labels.objective.toUpperCase()} {objectiveCode(objective)}</p><h3 id={`objective-${objective.id}`}>{objective.title}</h3><a className="objective-open" href={`#${objectiveUrl(plan, objective)}`} aria-label={`Acompanhar objetivo ${objectiveCode(objective) || objective.title}`}>Acompanhar objetivo <Icon name="arrow" size={14} /></a></div>
+      <div><p className="eyebrow">{plan.template.labels.objective.toUpperCase()} {objectiveCode(objective)}</p><h3 id={`objective-${objective.id}`}>{objective.title}</h3><OdsBadges ods={objective.ods} size="small" /><a className="objective-open" href={`#${objectiveUrl(plan, objective)}`} aria-label={`Acompanhar objetivo ${objectiveCode(objective) || objective.title}`}>Acompanhar objetivo <Icon name="arrow" size={14} /></a></div>
       <button type="button" className="br-button tertiary small pdi-objective-toggle" aria-expanded={expanded} aria-controls={contentId} aria-label={`${expanded ? 'Recolher' : 'Expandir'} ${plan.template.labels.objective.toLowerCase()} ${objectiveCode(objective) || objective.title}`} onClick={() => setExpanded((current) => !current)}>
         {expanded ? 'Recolher' : 'Expandir'}<Icon name="chevron" size={14} aria-hidden="true" />
       </button>

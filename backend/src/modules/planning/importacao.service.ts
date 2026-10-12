@@ -129,7 +129,7 @@ export async function importarPlanilha(sessao: SessaoUsuario, planId: string, bu
   for (const importado of eixoImportado.itens.values()) {
     let objetivo = objetivosDoEixo.find((o) => o.code === importado.objetivoCodigo);
     if (!objetivo && importado.objetivoCodigo) {
-      const novo: Objective = { id: randomUUID(), axisId: eixo.id, code: importado.objetivoCodigo, title: importado.objetivoTitulo || importado.objetivoCodigo };
+      const novo: Objective = { id: randomUUID(), axisId: eixo.id, code: importado.objetivoCodigo, title: importado.objetivoTitulo || importado.objetivoCodigo, ods: [] };
       plano.objectives.push(novo);
       objetivosDoEixo.push(novo);
       objetivo = novo;

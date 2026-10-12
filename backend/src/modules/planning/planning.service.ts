@@ -120,7 +120,8 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
       const objetivosRows = nosPorPai.get(eixo.id) ?? [];
       for (const objetivo of objetivosRows) {
         const od = objetivo.dados as Partial<Objective>;
-        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? "") });
+        const ods = Array.isArray(od.ods) ? od.ods.filter((n): n is number => typeof n === "number" && n >= 1 && n <= 17) : [];
+        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? ""), ods });
 
         const itensRows = nosPorPai.get(objetivo.id) ?? [];
         for (const itemRow of itensRows) {
@@ -364,7 +365,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     objetivosAtuais.length !== plano.objectives.length ||
     plano.objectives.some((objective) => {
       const atual = objetivosAtuaisPorId.get(objective.id);
-      const dadosNovos = { code: objective.code, title: objective.title };
+      const dadosNovos = { code: objective.code, title: objective.title, ods: objective.ods };
       return !atual || atual.no_pai_id !== objective.axisId || diferente(atual.dados, dadosNovos);
     });
   if (objetivoMudou) {
@@ -380,7 +381,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
           noPaiId: objective.axisId,
           nivel: 1,
           ordem,
-          dados: { code: objective.code, title: objective.title },
+          dados: { code: objective.code, title: objective.title, ods: objective.ods },
         };
       }),
     );

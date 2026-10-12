@@ -67,13 +67,14 @@ function ExtraFields({ fields, item }) {
   return fields.map((f) => <Field key={f.id} label={f.label}>{f.type === 'select' ? <Select name={`extra-${f.id}`} defaultValue={item?.extras?.[f.id] || ''} options={[{ value: '', label: 'Selecione' }, ...f.options.split(',').map((o) => o.trim())]} /> : <Input name={`extra-${f.id}`} type={f.type} step={f.type === 'number' ? 'any' : undefined} maxLength={f.type === 'text' ? 200 : undefined} defaultValue={item?.extras?.[f.id] ?? ''} />}</Field>);
 }
 
-export function ItemForm({ plan, item, actor, onClose, onSave }) {
+export function ItemForm({ plan, item, initialAxisId, initialObjectiveId, actor, onClose, onSave }) {
   const [error, setError] = useState('');
   const [measurementMode, setMeasurementMode] = useState(item?.metric.measurementMode || 'manual');
   const [valueType, setValueType] = useState(item?.metric.valueType || 'number');
   const [periodicity, setPeriodicity] = useState(item?.metric.periodicity || plan.template.defaultPeriodicity || 'annual');
-  const [axisId, setAxisId] = useState(item?.axisId || plan.axes[0]?.id || '');
-  const [objectiveId, setObjectiveId] = useState(item?.objectiveId || plan.objectives.find((objective) => objective.axisId === (item?.axisId || plan.axes[0]?.id))?.id || '');
+  const defaultAxisId = item?.axisId || (plan.axes.some((axis) => axis.id === initialAxisId) ? initialAxisId : plan.axes[0]?.id) || '';
+  const [axisId, setAxisId] = useState(defaultAxisId);
+  const [objectiveId, setObjectiveId] = useState(item?.objectiveId || plan.objectives.find((objective) => objective.axisId === defaultAxisId && objective.id === initialObjectiveId)?.id || plan.objectives.find((objective) => objective.axisId === defaultAxisId)?.id || '');
   const label = plan.template.labels;
   function submit(event) {
     event.preventDefault();

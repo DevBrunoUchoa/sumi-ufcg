@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { developmentSessions } from './dev/session-fixtures.js';
-import { initialState } from './src/data.js';
+import { handleDevelopmentLogin } from './dev/local-login.js';
+import { localDevelopmentWorkspace } from './dev/local-workspace.js';
 
 // Middleware exclusivo do servidor de desenvolvimento (apply: 'serve') —
-// simula GET /api/v1/auth/session e GET /__dev/planning/workspace para que a
+// simula entrada/consulta/saída de sessão e GET /__dev/planning/workspace para que a
 // interface funcione sem o backend real enquanto se desenvolve só o
 // frontend. Nunca entra no build de produção (dist/frontend), que fala
 // exclusivamente com a API HTTP real (ver src/auth/session-client.js e
@@ -15,11 +16,28 @@ function developmentSession() {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
+        if (request.method === 'POST' && request.url?.split('?')[0] === '/api/v1/auth/login') {
+          handleDevelopmentLogin(request, response);
+          return;
+        }
+        if (request.method === 'POST' && request.url?.split('?')[0] === '/api/v1/auth/logout') {
+          // Mantém a consulta pública após encerrar a sessão local.
+          response.statusCode = 204;
+          response.setHeader('Cache-Control', 'no-store');
+          response.setHeader('Set-Cookie', 'sumi_dev_session=public; Path=/; HttpOnly; SameSite=Lax');
+          response.end();
+          return;
+        }
         if (request.method === 'GET' && request.url?.split('?')[0] === '/__dev/planning/workspace') {
           response.statusCode = 200;
           response.setHeader('Content-Type', 'application/json; charset=utf-8');
           response.setHeader('Cache-Control', 'no-store');
-          response.end(JSON.stringify(initialState()));
+          try {
+            response.end(JSON.stringify(localDevelopmentWorkspace()));
+          } catch (error) {
+            response.statusCode = 500;
+            response.end(JSON.stringify({ error: error.message }));
+          }
           return;
         }
         if (request.method === 'GET' && request.url?.split('?')[0] === '/api/v1/admin/usuarios') {
@@ -35,18 +53,19 @@ function developmentSession() {
         const profileMatch = request.url?.match(/^\/__dev\/session\/(administrator|public|axis_contributor|axis_reviewer)$/);
         if (request.method === 'GET' && profileMatch) {
           response.statusCode = 302;
-          response.setHeader('Set-Cookie', `sumi_dev_session=${profileMatch[1]}; Path=/; SameSite=Lax`);
+          response.setHeader('Set-Cookie', `sumi_dev_session=${profileMatch[1]}; Path=/; HttpOnly; SameSite=Lax`);
           response.setHeader('Location', '/');
           response.end();
           return;
         }
         if (request.method !== 'GET' || request.url?.split('?')[0] !== '/api/v1/auth/session') return next();
         const cookie = request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith('sumi_dev_session='));
-        const selected = cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : 'administrator';
+        let selected = 'public';
+        try { if (cookie) selected = decodeURIComponent(cookie.split('=').slice(1).join('=')); } catch { /* Cookie inválido permanece público. */ }
         response.statusCode = 200;
         response.setHeader('Content-Type', 'application/json; charset=utf-8');
         response.setHeader('Cache-Control', 'no-store');
-        response.end(JSON.stringify(developmentSessions[selected] || developmentSessions.administrator));
+        response.end(JSON.stringify(Object.hasOwn(developmentSessions, selected) ? developmentSessions[selected] : developmentSessions.public));
       });
     },
   };

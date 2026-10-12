@@ -1,9 +1,9 @@
-import { test, expect, chooseOption, openPdi, openPls, detail, recordNumber, selectItem, expandFirstAction, expandTree } from './fixtures.js';
+import { test, expect, chooseOption, openPdi, openPls, recordNumber, selectItem, expandFirstAction } from './fixtures.js';
 
 test('visão geral e lista permitem localizar e abrir os planos', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Olá, Usuário/ })).toBeVisible();
-  await page.getByRole('link', { name: 'Planejamentos', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Planos', exact: true }).click();
   await expect(page.locator('.plan-card')).toHaveCount(2);
   await page.getByRole('button', { name: 'PLS', exact: true }).click();
   await expect(page.locator('.plan-card')).toHaveCount(1);
@@ -12,17 +12,18 @@ test('visão geral e lista permitem localizar e abrir os planos', async ({ page 
   await expect(page.getByRole('heading', { name: /^PLS/ })).toBeVisible();
 });
 
-test('menus e ações iniciam recolhidos em cada entrada', async ({ page }) => {
+test('menu de trabalho usa rótulos e pode ser recolhido; ações abrem por contexto', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
-  await expect(page.locator('.sidebar')).toHaveCSS('width', '72px');
-  await expect(page.getByRole('link', { name: 'Planejamentos', exact: true })).toBeVisible();
+  await expect(page.locator('.sumi-shell')).toHaveClass(/sumi-work/);
+  await expect(page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Planos', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Recolher menu lateral' }).click();
+  await expect(page.locator('.sumi-menu')).toHaveCount(0);
   await page.getByRole('button', { name: 'Expandir menu lateral' }).click();
-  await expect(page.locator('.sidebar')).toHaveCSS('width', '224px');
+  await expect(page.locator('.sumi-menu')).toBeVisible();
   await page.reload();
-  await expect(page.locator('.app-shell')).toHaveClass(/sidebar-collapsed/);
+  await expect(page.locator('.sumi-menu')).toBeVisible();
   await openPdi(page);
-  await expect(page.locator('.tree-group.axis').first()).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.plan-tree')).toHaveCount(0);
   await expect(page.locator('.task-row')).toHaveCount(0);
   await expect(page.locator('.action-overview-link').first()).toBeVisible();
 });
@@ -66,17 +67,14 @@ test('PLS acompanha entregas por situação descritiva', async ({ page }) => {
 });
 
 test('busca e filtros atuam sobre eixo, objetivo, item e responsável', async ({ page }) => {
-  await openPdi(page);
-  const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
-  await page.getByRole('searchbox', { name: 'Buscar no plano' }).fill('rankings');
-  await expandTree(page);
-  await expect(tree.getByRole('link')).toHaveCount(1);
-  await expect(detail(page).getByRole('heading', { level: 2 })).toContainText('rankings');
+  await page.goto('/#/plano/pdi/eixo/pdi-axis-8');
+  await page.getByRole('searchbox', { name: 'Buscar neste eixo' }).fill('rankings');
+  await expect(page.locator('.pdi-initiative-link')).toHaveCount(1);
+  await expect(page.locator('.pdi-initiative-link')).toContainText('rankings');
   await chooseOption(page, 'Filtrar situação', 'Concluída');
-  await expect(page.getByRole('heading', { name: 'Nenhum item encontrado' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nenhuma iniciativa encontrada' })).toBeVisible();
   await page.getByRole('button', { name: 'Limpar filtros' }).click();
-  await expandTree(page);
-  await expect(tree.getByRole('link')).toHaveCount(3);
+  await expect(page.locator('.pdi-initiative-link')).toHaveCount(3);
 });
 
 test('ações aceitam novas etapas com prazo e parceiros', async ({ page }) => {
@@ -146,11 +144,13 @@ test('cancelar a edição da justificativa preserva a situação da etapa', asyn
 
 test('alto contraste responde ao teclado e persiste ao recarregar', async ({ page }) => {
   await openPdi(page);
+  await page.locator('.sumi-accessibility summary').click();
   await page.getByRole('button', { name: 'Alto contraste' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-alto-contraste', 'true');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-alto-contraste', 'true');
+  await page.locator('.sumi-accessibility summary').click();
   await page.getByRole('button', { name: 'Contraste padrão' }).click();
   await expect(page.locator('html')).not.toHaveAttribute('data-alto-contraste');
 });

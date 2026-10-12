@@ -3,13 +3,10 @@ import { initialState } from '../../src/data.js';
 
 test('exibe os oito ícones temáticos do PDI, inclusive em eixos vazios', async ({ page }) => {
   await page.goto('/#/plano/pdi');
-  const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
-  await expect(tree.locator('.tree-group.axis')).toHaveCount(8);
-  await expect(tree.locator('.axis-icon')).toHaveCount(8);
-  await expect(tree.getByRole('button', { name: /Eixo 1 · Ensino/ })).toBeVisible();
-  await expect(tree.getByRole('button', { name: /Eixo 8 · Governança e Gestão Institucional/ })).toBeVisible();
-  await tree.getByRole('button', { name: /Eixo 1 · Ensino/ }).click();
-  await expect(tree.getByText('Nenhuma iniciativa cadastrada neste eixo.')).toBeVisible();
+  await expect(page.locator('.pdi-axis-card')).toHaveCount(8);
+  await expect(page.locator('.pdi-axis-card .axis-icon')).toHaveCount(8);
+  await page.getByRole('link', { name: 'Explorar eixo 1: Ensino' }).click();
+  await expect(page.getByRole('heading', { name: 'Nenhum objetivo cadastrado neste eixo' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Estrutura', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Estrutura do planejamento' });
@@ -33,7 +30,6 @@ test('atualiza a prévia local antiga sem perder o eixo 8', async ({ page }) => 
   }, oldWorkspace);
 
   await page.goto('/#/plano/pdi');
-  const tree = page.getByRole('navigation', { name: 'Itens do planejamento' });
-  await expect(tree.locator('.axis-icon')).toHaveCount(8);
-  await expect(tree.locator('.axis-group').last()).toHaveAttribute('style', /#b5336f/);
+  await expect(page.locator('.pdi-axis-card .axis-icon')).toHaveCount(8);
+  await expect(page.locator('.pdi-axis-card').last()).toHaveAttribute('style', /#b5336f/);
 });

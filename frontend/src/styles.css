@@ -803,8 +803,8 @@ br-select::part(option):hover {
   .workspace { margin-left: 0; }
   .topbar { min-height: 56px; padding: var(--spacing-scale-2x); gap: var(--spacing-scale-base); }
   .breadcrumb { font-size: var(--font-size-scale-base); gap: var(--spacing-scale-base); }
-  .topbar-actions { width: 100%; justify-content: space-between; gap: var(--spacing-scale-base); }
-  .account-summary { flex: 1; justify-content: flex-end; gap: var(--spacing-scale-base); padding-left: var(--spacing-scale-base); }
+  .topbar-actions { width: 100%; flex-wrap: wrap; justify-content: space-between; gap: var(--spacing-scale-base); }
+  .account-summary { flex: 1 1 100%; justify-content: flex-start; gap: var(--spacing-scale-base); padding-left: 0; padding-top: var(--spacing-scale-base); border-left: 0; border-top: 1px solid var(--border); }
   .account-identity { flex: 1; max-width: none; }
   .account-identity small { display: none; }
   .page, .plan-page { padding: var(--spacing-scale-3x) var(--spacing-scale-2x) var(--spacing-scale-5x); }

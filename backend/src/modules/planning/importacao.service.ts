@@ -296,6 +296,13 @@ const RISCO_COLUNAS = [
 interface RiscoImportado {
   itemCodigo: string;
   acaoCodigo: string;
+  eixo?: string;
+  objetivo?: string;
+  refIniciativa?: string;
+  iniciativa?: string;
+  refAcao?: string;
+  acao?: string;
+  idRisco?: string;
   etapa: string;
   riscoEstrategico: string;
   titulo: string;
@@ -310,10 +317,21 @@ interface RiscoImportado {
   resposta: string;
   tratamento: string;
   treatmentOwner: string;
+  prazoInicio?: string;
   prazo: string;
+  custoPrevisto?: number | null;
   execucao: number;
+  etapaConcluida?: string;
+  dataInicioReal?: string;
+  dataConclusaoReal?: string;
   situacao: string;
+  justificativa?: string;
   review: string;
+  dataProximaRevisao?: string;
+  mudancaProcesso?: string;
+  novosRiscos?: string;
+  acoesCorretivas?: string;
+  licoesAprendidas?: string;
   status: string;
 }
 
@@ -344,6 +362,13 @@ export function lerAbaRiscos(planilha: ExcelJS.Worksheet): RiscoImportado[] {
     riscos.push({
       itemCodigo: contexto.itemCodigo,
       acaoCodigo: contexto.acaoCodigo,
+      eixo: valores("eixo"),
+      objetivo: valores("objetivo"),
+      refIniciativa: valores("refIniciativa"),
+      iniciativa: valores("iniciativa"),
+      refAcao: valores("refAcao"),
+      acao: valores("acaoTitulo"),
+      idRisco: valores("idRisco"),
       etapa: contexto.etapa,
       riscoEstrategico: valores("riscoEstrategico"),
       titulo: valores("titulo") || valores("idRisco") || "Risco sem título",
@@ -358,10 +383,21 @@ export function lerAbaRiscos(planilha: ExcelJS.Worksheet): RiscoImportado[] {
       resposta: valores("resposta"),
       tratamento: valores("tratamento"),
       treatmentOwner: valores("treatmentOwner"),
+      prazoInicio: converterDataBr(valores("_prazoInicio")),
       prazo: converterDataBr(valores("prazo")),
+      custoPrevisto: valores("_custo") ? Number(valores("_custo").replace(",", ".").replace(/[^\d.-]/g, "")) || null : null,
       execucao: Number(valores("execucao").replace(",", ".").replace("%", "")) || 0,
+      etapaConcluida: valores("_etapaConcluida"),
+      dataInicioReal: converterDataBr(valores("_dataInicioReal")),
+      dataConclusaoReal: converterDataBr(valores("_dataConclusaoReal")),
       situacao: valores("situacao"),
+      justificativa: valores("_justificativaObs"),
       review: valores("review"),
+      dataProximaRevisao: converterDataBr(valores("_dataProximaRevisao")),
+      mudancaProcesso: valores("_mudancaProcesso"),
+      novosRiscos: valores("_novosRiscos"),
+      acoesCorretivas: valores("_acoesCorretivas"),
+      licoesAprendidas: valores("_licoesAprendidas"),
       status: valores("status"),
     });
   }
@@ -553,6 +589,13 @@ export async function importarPlanilha(sessao: SessaoUsuario, planId: string, bu
       }
       return {
         id: randomUUID(),
+        eixo: r.eixo ?? "",
+        objetivo: r.objetivo ?? "",
+        refIniciativa: r.refIniciativa ?? item.code,
+        iniciativa: r.iniciativa ?? item.title,
+        refAcao: r.refAcao ?? r.acaoCodigo,
+        acao: r.acao ?? "",
+        idRisco: r.idRisco ?? "",
         actionId: acao.id,
         stage: r.etapa,
         title: r.titulo,
@@ -569,10 +612,21 @@ export async function importarPlanilha(sessao: SessaoUsuario, planId: string, bu
         response: r.resposta,
         treatment: r.tratamento,
         treatmentOwner: r.treatmentOwner,
+        prazoInicio: r.prazoInicio ?? "",
         deadline: r.prazo,
+        custoPrevisto: r.custoPrevisto ?? null,
         execution: r.execucao,
+        etapaConcluida: r.etapaConcluida ?? "",
+        dataInicioReal: r.dataInicioReal ?? "",
+        dataConclusaoReal: r.dataConclusaoReal ?? "",
         situation: r.situacao,
+        justificativa: r.justificativa ?? "",
         review: r.review,
+        dataProximaRevisao: r.dataProximaRevisao ?? "",
+        mudancaProcesso: r.mudancaProcesso ?? "",
+        novosRiscos: r.novosRiscos ?? "",
+        acoesCorretivas: r.acoesCorretivas ?? "",
+        licoesAprendidas: r.licoesAprendidas ?? "",
         status: r.status,
       };
     }).filter((r): r is Risk => r !== null);

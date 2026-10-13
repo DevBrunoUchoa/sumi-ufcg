@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { actionProgress, axisFor, axisLabel, controlFactor, currentPeriod, executionProgress, executionStatus, formatDate, formatMetricValue, formatNumber, historyEntry, latestMeasurement, metricAchievement, metricResult, metricStatus, metricTone, normalize, objectiveFor, periodLabel, periods, residualRisk, reviewStatusLabel, riskLevel, riskLevelLabel, riskScore, stageStatusLabel, stageStatusLabels, taskOverdue, uid } from './domain.js';
+import { actionProgress, axisFor, axisLabel, controlFactor, currentPeriod, executionProgress, executionStatus, formatDate, formatMetricValue, formatNumber, historyEntry, latestMeasurement, metricAchievement, metricResult, metricStatus, metricTone, normalize, objectiveFor, objectiveLabel, periodLabel, periods, residualRisk, reviewStatusLabel, riskLevel, riskLevelFromScore, riskLevelLabel, riskScore, stageStatusLabel, stageStatusLabels, taskOverdue, uid } from './domain.js';
 import { Badge, Button, Empty, Field, Icon, Input, Modal, Select } from './ui.jsx';
 import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, StageForm, StructureForm, TargetsForm, TemplateForm } from './forms.jsx';
 import { SessionProvider, useSession } from './auth/context.jsx';
@@ -201,7 +201,7 @@ function App({ auth, initialData }) {
     {modal?.type === 'item' && plan && <ItemForm plan={plan} item={modal.item} actor={actor} onClose={close} onSave={(item) => saveItem(item, plan.id)} />}
     {modal?.type === 'action' && plan && <ActionForm plan={plan} item={modal.item} onClose={close} onSave={(action) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, actions: [...item.actions, action], history: [...item.history, historyEntry(`Ação adicionada: ${action.title}.`, actor)] }), 'Ação adicionada.'); close(); }} />}
     {modal?.type === 'stage' && plan && <StageForm plan={plan} onClose={close} onSave={(stage) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, actions: item.actions.map((action) => action.id === modal.action.id ? { ...action, tasks: [...action.tasks, { id: uid(), ...stage, status: 'not_started', justification: '' }] } : action), history: [...item.history, historyEntry(`Etapa adicionada: ${stage.title}.`, actor)] }), 'Etapa adicionada.'); close(); }} />}
-    {modal?.type === 'risk' && plan && <RiskForm item={modal.item} action={modal.action} stage={modal.stage} risk={modal.risk} onClose={close} onSave={(nextRisk) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, risks: modal.risk ? item.risks.map((current) => current.id === nextRisk.id ? nextRisk : current) : [...(item.risks || []), nextRisk], history: [...item.history, historyEntry(`${modal.risk ? 'Risco atualizado' : 'Risco adicionado'}: ${nextRisk.title}.`, actor)] }), modal.risk ? 'Risco atualizado.' : 'Risco adicionado.'); close(); }} />}
+    {modal?.type === 'risk' && plan && <RiskForm plan={plan} item={modal.item} action={modal.action} stage={modal.stage} risk={modal.risk} onClose={close} onSave={(nextRisk) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, risks: modal.risk ? item.risks.map((current) => current.id === nextRisk.id ? nextRisk : current) : [...(item.risks || []), nextRisk], history: [...item.history, historyEntry(`${modal.risk ? 'Risco atualizado' : 'Risco adicionado'}: ${nextRisk.title}.`, actor)] }), modal.risk ? 'Risco atualizado.' : 'Risco adicionado.'); close(); }} />}
     {modal?.type === 'measurement' && plan && <MeasurementForm plan={plan} item={modal.item} year={modal.period} onClose={close} onSave={(entry) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', measurements: [...item.measurements, entry], history: [...item.history, historyEntry(`Resultado registrado para ${periodLabel(plan, item, entry.year)}: ${formatMetricValue(item, entry.value)}${item.metric.unit ? ` ${item.metric.unit}` : ''}. ${entry.note}`, actor)] }), 'Resultado registrado.'); close(); navigate(planUrl(plan.id, modal.item.id, 'indicadores', entry.year)); }} />}
     {modal?.type === 'targets' && plan && <TargetsForm plan={plan} item={modal.item} onClose={close} onSave={(targets) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', metric: { ...item.metric, targets }, history: [...item.history, historyEntry('Metas atualizadas.', actor)] }), 'Metas salvas.'); close(); }} />}
     {modal?.type === 'review' && plan && <ReviewForm item={modal.item} decision={modal.decision} onClose={close} onSave={({ status, note }) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: status, reviewNote: note, history: [...item.history, historyEntry(status === 'validated' ? 'Informações validadas.' : `Correção solicitada: ${note}`, actor)] }), status === 'validated' ? 'Informações validadas.' : 'Correção solicitada.'); close(); }} />}
@@ -380,8 +380,7 @@ function ActionRiskDetail({ plan, item, action, stage, actor, can, onModal, chan
       </div>
       {stage && <div className="risk-detail-deadline">Prazo: <strong>{formatDate(stage.deadline)}</strong></div>}
     </div>
-    <a className="back-link" href={`#${planUrl(plan.id, item.id, 'acao', undefined, action.id)}`}>← Voltar à ação</a>
-    <Risks key={`${action.id}:${stage?.id || 'all'}`} item={item} action={action} stage={stage} canEdit={can(PERMISSIONS.MANAGE_RISK, resource)} onAdd={() => onModal({ type: 'risk', item, action, stage })} onEdit={(risk) => onModal({ type: 'risk', item, action, stage, risk })} />
+    <Risks key={`${action.id}:${stage?.id || 'all'}`} onBack={<Button className="back-link" onClick={() => navigate(planUrl(plan.id, item.id, 'acao', undefined, action.id))}>← Voltar à ação</Button>} plan={plan} item={item} action={action} stage={stage} canEdit={can(PERMISSIONS.MANAGE_RISK, resource)} onAdd={() => onModal({ type: 'risk', item, action, stage })} onEdit={(risk) => onModal({ type: 'risk', item, action, stage, risk })} onDelete={(risk) => changeItem(plan.id, item.id, (current) => ({ ...current, reviewStatus: ['submitted', 'validated'].includes(current.reviewStatus) ? 'draft' : current.reviewStatus, risks: (current.risks || []).filter((entry) => entry.id !== risk.id), history: [...current.history, historyEntry(`Risco removido: ${risk.title}.`, actor)] }), 'Risco removido.')} />
     <footer className="source-note"><Icon name="info" size={13} />{item.source}</footer>
   </ItemHeader>;
 }
@@ -596,12 +595,19 @@ function IndicatorEvolution({ item, plan, period, setPeriod }) {
   </div>;
 }
 
-function Risks({ item, action, stage, canEdit, onAdd, onEdit }) {
+const riskValue = (value) => value === 0 ? '0' : value || 'Não informado';
+const riskDate = (value) => value ? formatDate(value) : 'Não informado';
+const riskCurrency = (value) => value == null || value === '' ? 'Não informado' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value));
+
+function Risks({ plan, item, action, stage, canEdit, onAdd, onEdit, onDelete, onBack }) {
   const [selected, setSelected] = useState(null);
   const [details, setDetails] = useState(null);
+  const [confirmingRemoval, setConfirmingRemoval] = useState(null);
   const risks = (item.risks || []).filter((entry) => (!action || entry.actionId === action.id) && (!stage || entry.stage === stage.title));
-  const probabilities = [5, 4, 3, 2, 1];
-  const impacts = [1, 2, 3, 4, 5];
+  const probabilities = [1, 2, 3, 4, 5];
+  const impacts = [5, 4, 3, 2, 1];
+  const probabilityLabels = { 1: 'Raro', 2: 'Improvável', 3: 'Possível', 4: 'Provável', 5: 'Quase certo' };
+  const impactLabels = { 1: 'Insignificante', 2: 'Baixo', 3: 'Moderado', 4: 'Alto', 5: 'Gravíssimo' };
   const selectedRisks = selected?.mode === 'cell'
     ? risks.filter((entry) => entry.probability === selected.probability && entry.impact === selected.impact)
     : selected?.mode === 'level'
@@ -611,26 +617,35 @@ function Risks({ item, action, stage, canEdit, onAdd, onEdit }) {
   return (
     <div className="risk-panel">
       <div className="section-heading">
+        <div className="risk-panel-context">{onBack}</div>
         <div className="risk-panel-context" aria-hidden="true" />
         <div className="flex items-center gap-3"><Badge>{risks.length} registros</Badge>{canEdit && <Button icon="plus" onClick={onAdd}>Adicionar risco</Button>}</div>
       </div>
-      <div className="risk-legend">
-        {['low', 'moderate', 'high', 'critical'].map((level) => <button key={level} className="risk-filter-button" aria-pressed={selected?.mode === 'level' && selected.level === level} onClick={() => selectLevel(level)}><i className={`risk-dot ${level}`} />{riskLevelLabel(level)} <small>{risks.filter((entry) => riskLevel(entry.probability, entry.impact) === level).length}</small></button>)}
-      </div>
-      <div className="risk-matrix-wrap">
-        <div className="risk-axis-label vertical">PROBABILIDADE</div>
-        <div className="risk-matrix">
-          <div className="risk-corner"><span>IMPACTO</span></div>
-          <div className="risk-impact-head">{impacts.map((impact) => <span key={impact}>{impact}</span>)}</div>
-          {probabilities.map((probability) => <React.Fragment key={probability}>
-            <span className="risk-probability">{probability}</span>
-            {impacts.map((impact) => {
-              const level = riskLevel(probability, impact);
-              const count = risks.filter((entry) => entry.probability === probability && entry.impact === impact).length;
-              const active = selected?.mode === 'cell' && selected.probability === probability && selected.impact === impact;
-              return <button key={`${probability}-${impact}`} className={`risk-cell ${level} ${active ? 'selected' : ''}`} aria-label={`Probabilidade ${probability}, impacto ${impact}: ${riskLevelLabel(level)}${count ? `, ${count} risco${count > 1 ? 's' : ''}` : ''}`} aria-pressed={active} onClick={() => setSelected(active ? null : { mode: 'cell', probability, impact, level })}><b>{riskLevelLabel(level)}</b>{count > 0 && <small>{count}</small>}</button>;
-            })}
-          </React.Fragment>)}
+      <div className="risk-matrix-block">
+        <div className="risk-matrix-header">
+          <h3>Matriz de Riscos</h3>
+          <div className="risk-legend">
+            {['low', 'moderate', 'high', 'critical'].map((level) => <button key={level} className="risk-filter-button" aria-pressed={selected?.mode === 'level' && selected.level === level} onClick={() => selectLevel(level)}><i className={`risk-dot ${level}`} />{riskLevelLabel(level)} <small>{risks.filter((entry) => riskLevel(entry.probability, entry.impact) === level).length}</small></button>)}
+          </div>
+        </div>
+        <div className="risk-matrix-wrap">
+          <div className="risk-matrix">
+            <div className="risk-corner"><span>IMPACTO</span></div>
+            <div className="risk-axis-title">PROBABILIDADE</div>
+            <div className="risk-probability-head">{probabilities.map((probability) => <span key={probability}>{probability}</span>)}</div>
+            {impacts.map((impact) => <React.Fragment key={impact}>
+              <span className="risk-row-name">{impactLabels[impact]}</span>
+              <span className="risk-row-number">{impact}</span>
+              {probabilities.map((probability) => {
+                const level = riskLevel(probability, impact);
+                const count = risks.filter((entry) => entry.probability === probability && entry.impact === impact).length;
+                const active = selected?.mode === 'cell' && selected.probability === probability && selected.impact === impact;
+                return <button key={`${probability}-${impact}`} className={`risk-cell ${level} ${active ? 'selected' : ''}`} aria-label={`Probabilidade ${probability}, impacto ${impact}: ${riskLevelLabel(level)}${count ? `, ${count} risco${count > 1 ? 's' : ''}` : ''}`} aria-pressed={active} onClick={() => setSelected(active ? null : { mode: 'cell', probability, impact, level })}><b>{riskLevelLabel(level)}</b>{count > 0 && <small>{count}</small>}</button>;
+              })}
+            </React.Fragment>)}
+            <span className="risk-footer-spacer" />
+            {probabilities.map((probability) => <span key={probability} className="risk-column-name">{probabilityLabels[probability]}</span>)}
+          </div>
         </div>
       </div>
       <p className="risk-matrix-caption">Selecione uma célula ou classificação para filtrar os riscos.</p>
@@ -638,25 +653,169 @@ function Risks({ item, action, stage, canEdit, onAdd, onEdit }) {
       <div className="risk-list">
         {selectedRisks.length ? selectedRisks.map((entry) => (
           <article className="risk-card" key={entry.id}>
-            <div className={`risk-card-level ${riskLevel(entry.probability, entry.impact)}`}>
-              <strong>{riskLevelLabel(riskLevel(entry.probability, entry.impact))}</strong>
-              <span>RI {riskScore(entry.probability, entry.impact)} · RR {formatNumber(residualRisk(entry.probability, entry.impact, entry.maturity))}</span>
-            </div>
-            <div className="risk-card-body">
-              <div className="risk-card-title">
-                <h4>{entry.title}</h4>
-                <div><button className="text-button" onClick={() => setDetails((current) => current === entry.id ? null : entry.id)}>{details === entry.id ? 'Ocultar detalhes' : 'Detalhar'}</button>{canEdit && <button className="text-button" onClick={() => onEdit(entry)}>Editar</button>}</div>
+            <div className="risk-card-header">
+              <div className={`risk-card-level ${riskLevel(entry.probability, entry.impact)}`}>
+                <strong>{riskLevelLabel(riskLevel(entry.probability, entry.impact))}</strong>
+                <span>RI {riskScore(entry.probability, entry.impact)} · RR {formatNumber(residualRisk(entry.probability, entry.impact, entry.maturity))}</span>
               </div>
-              <p><b>Ação:</b> {item.actions.find((action) => action.id === entry.actionId)?.title || entry.actionId} · <b>Etapa:</b> {entry.stage || 'Não especificada'}</p>
-              <p><b>Categoria:</b> {entry.category} · <b>Resposta:</b> {entry.response}</p>
-              {details === entry.id && <div className="risk-extra-details"><p><b>Risco estratégico:</b> {entry.strategicRisk}</p><p><b>Causa:</b> {entry.cause}</p><p><b>Consequência:</b> {entry.consequence}</p><p><b>Controle:</b> {entry.controls} · {entry.controlType} · {entry.maturity} (FC {controlFactor(entry.maturity)})</p><p><b>Tratamento:</b> {entry.treatment}</p><div className="risk-card-meta"><span>Responsável: <b>{entry.treatmentOwner}</b></span><span>Execução: <b>{entry.execution}%</b></span><span>Revisão: <b>{entry.review}</b></span><span>Status: <b>{entry.status}</b></span></div></div>}
+              <div className="risk-card-body">
+                <div className="risk-card-title">
+                  <h4>{entry.title}</h4>
+                  <div>
+                    <Button variant="tertiary" onClick={() => setDetails((current) => current === entry.id ? null : entry.id)}>
+                      {details === entry.id ? 'Ocultar detalhes' : 'Detalhar'}
+                    </Button>
+                    {canEdit && <><Button variant="tertiary" icon="edit" onClick={() => onEdit(entry)}>Editar</Button><Button variant="tertiary" icon="close" className="remove-risk-button" onClick={() => setConfirmingRemoval(entry)}>Excluir</Button></>}
+                  </div>
+                </div>
+                <div className="risk-card-meta">
+                  <p>
+                    <b>Ação:</b>{' '}
+                    {item.actions.find((action) => action.id === entry.actionId)?.title || entry.actionId}
+                  </p>
+                  <p>
+                    <b>Etapa:</b>{' '}
+                    {entry.stage || 'Não especificada'}
+                  </p>
+                </div>
+                <div className="risk-summary">
+                  <span><b>Categoria</b>{riskValue(entry.category)}</span>
+                  <span><b>Resposta</b>{riskValue(entry.response)}</span>
+                  <span><b>Status</b>{riskValue(entry.status)}</span>
+                  <span><b>Responsável</b>{riskValue(entry.treatmentOwner)}</span>
+                  <span><b>Prazo</b>{riskDate(entry.deadline)}</span>
+                  <span><b>Execução</b>{entry.execution == null || entry.execution === '' ? 'Não informado' : `${entry.execution}%`}</span>
+                </div>
+              </div>
             </div>
+            {details === entry.id && <div className="risk-card-details"><RiskDetails plan={plan} entry={entry} item={item} /></div>}
           </article>
         )) : (
           <Empty title={risks.length ? 'Nenhum risco nesta classificação' : 'Nenhum risco cadastrado'}>{risks.length ? 'Selecione outra célula ou classificação.' : 'Os riscos vinculados às etapas aparecerão aqui.'}</Empty>
         )}
       </div>
+      {confirmingRemoval && <Modal title="Excluir risco?" subtitle={confirmingRemoval.title} onClose={() => setConfirmingRemoval(null)}>
+        <div className="form-body"><p>Tem certeza de que deseja excluir este risco? Essa ação não pode ser desfeita.</p></div>
+        <div className="form-end"><Button onClick={() => setConfirmingRemoval(null)}>Cancelar</Button><Button variant="primary" className="danger-primary" onClick={() => { onDelete(confirmingRemoval); setConfirmingRemoval(null); }}>Excluir risco</Button></div>
+      </Modal>}
     </div>
+  );
+}
+
+const PROBABILITY_LABELS = { 1: 'Raro', 2: 'Improvável', 3: 'Possível', 4: 'Provável', 5: 'Quase certo' };
+const IMPACT_LABELS = { 1: 'Insignificante', 2: 'Baixo', 3: 'Moderado', 4: 'Alto', 5: 'Gravíssimo' };
+
+const isEmptyValue = (value) => typeof value === 'string' && value.startsWith('Não informado');
+
+
+function RiskField({ label, value, span = 6, score = false, level = null }) {
+  const className = [
+    'risk-detail-item',
+    `risk-span-${span}`,
+    score && 'risk-detail-score',
+    isEmptyValue(value) && 'is-empty',
+  ].filter(Boolean).join(' ');
+  return (
+    <div className={className}>
+      <span>{label}</span>
+      {level
+        ? <strong><i className={`risk-level-chip ${level}`}>{value}</i></strong>
+        : <strong>{value}</strong>}
+    </div>
+  );
+}
+
+function RiskSection({ title, full = false, children }) {
+  return (
+    <section className={`risk-detail-section ${full ? 'is-full' : ''}`}>
+      <h5>{title}</h5>
+      <div className="risk-detail-grid">{children}</div>
+    </section>
+  );
+}
+
+function RiskDetails({ plan, entry, item }) {
+  const inherentScore = riskScore(entry.probability, entry.impact);
+  const inherentKey = riskLevel(entry.probability, entry.impact);
+  const inherentLabel = riskLevelLabel(inherentKey);
+  const residual = residualRisk(entry.probability, entry.impact, entry.maturity);
+  const residualKey = riskLevelFromScore(residual);
+  const residualLabel = riskLevelLabel(residualKey);
+  const execution = entry.execution == null || entry.execution === '' ? 'Não informado' : `${entry.execution}%`;
+  const action = item.actions.find((candidate) => candidate.id === entry.actionId);
+  const actionTitle = action?.title || entry.actionId;
+  const axis = plan.axes.find((candidate) => candidate.id === entry.eixo) || axisFor(plan, item);
+  const objective = plan.objectives.find((candidate) => candidate.id === entry.objetivo) || objectiveFor(plan, item);
+  const stageIndex = action ? Math.max(0, action.tasks.findIndex((task) => task.title === entry.stage)) + 1 : 0;
+  const generatedRiskId = action ? `R-${action.code}.${String(stageIndex).padStart(2, '0')}` : null;
+
+  return (
+
+      <div className="risk-detail-rows">
+        <RiskSection title="1. Identificação da ação">
+          <RiskField label="Eixo" value={axis ? axisLabel(axis) : riskValue(entry.eixo ?? item.axisId)} span={12} />
+          <RiskField label="Objetivo" value={objective ? objectiveLabel(objective) : riskValue(entry.objetivo ?? item.objectiveId)} span={12} />
+          <RiskField label="Ref. iniciativa" value={riskValue(entry.refIniciativa ?? item.code)} />
+          <RiskField label="Iniciativa" value={riskValue(entry.iniciativa ?? item.title)} />
+          <RiskField label="Ref. ação" value={riskValue(entry.refAcao ?? action?.code)} />
+          <RiskField label="Ação estratégica" value={riskValue(actionTitle)} />
+          <RiskField label="Etapa (tarefa)" value={riskValue(entry.stage)} span={12} />
+        </RiskSection>
+
+        <RiskSection title="2. Identificação do risco">
+          <RiskField label="Risco estratégico (da iniciativa)" value={riskValue(entry.strategicRisk)} span={12} />
+          <RiskField label="ID do risco (etapa)" value={riskValue(entry.idRisco || generatedRiskId)} />
+          <RiskField label="Categoria do risco" value={riskValue(entry.category)} />
+          <RiskField label="Risco do processo (da etapa)" value={riskValue(entry.title)} span={12} />
+          <RiskField label="Causa do risco" value={riskValue(entry.cause)} span={12} />
+          <RiskField label="Efeito / consequência" value={riskValue(entry.consequence)} span={12} />
+        </RiskSection>
+
+        <RiskSection title="3. Avaliação do risco inerente" full>
+          <RiskField label="Probabilidade (P) · 1 a 5" value={`${riskValue(entry.probability)} · ${riskValue(PROBABILITY_LABELS[entry.probability])}`} span={3} />
+          <RiskField label="Impacto (I) · 1 a 5" value={`${riskValue(entry.impact)} · ${riskValue(IMPACT_LABELS[entry.impact])}`} span={3} />
+          <RiskField label="Risco inerente (RI = P × I)" value={String(inherentScore)} span={3} score />
+          <RiskField label="Nível do RI" value={inherentLabel} span={3} score level={inherentKey} />
+        </RiskSection>
+
+        <RiskSection title="4. Controles e risco residual" full>
+          <RiskField label="Controles existentes" value={riskValue(entry.controls)} span={6} />
+          <RiskField label="Tipo de controle" value={riskValue(entry.controlType)} span={3} />
+          <RiskField label="Maturidade" value={riskValue(entry.maturity)} span={3} />
+          <RiskField label="Fator de controle (FC)" value={String(controlFactor(entry.maturity))} span={4} />
+          <RiskField label="Risco residual (RR = RI × FC)" value={formatNumber(residual)} span={4} score />
+          <RiskField label="Nível do RR" value={residualLabel} span={4} score level={residualKey} />
+        </RiskSection>
+
+        <RiskSection title="5. Resposta e tratamento">
+          <RiskField label="Resposta ao risco" value={riskValue(entry.response)} />
+          <RiskField label="Responsável pelo tratamento" value={riskValue(entry.treatmentOwner)} />
+          <RiskField label="Plano de tratamento (controles propostos)" value={riskValue(entry.treatment)} span={12} />
+          <RiskField label="Prazo de início" value={riskDate(entry.prazoInicio)} />
+          <RiskField label="Prazo de conclusão" value={riskDate(entry.deadline)} />
+          <RiskField label="Custo previsto" value={riskCurrency(entry.custoPrevisto)} span={12} />
+        </RiskSection>
+
+        <RiskSection title="6. Monitoramento da execução">
+          <RiskField label="% Execução" value={execution} />
+          <RiskField label="Etapa concluída?" value={riskValue(entry.etapaConcluida)} />
+          <RiskField label="Data de início real" value={riskDate(entry.dataInicioReal)} />
+          <RiskField label="Data de conclusão real" value={riskDate(entry.dataConclusaoReal)} />
+          <RiskField label="Situação" value={riskValue(entry.situation)} span={12} />
+          <RiskField label="Justificativa / observações" value={riskValue(entry.justificativa)} span={12} />
+        </RiskSection>
+
+        <RiskSection title="7. Revisão do risco" full>
+          <RiskField label="Status do risco" value={riskValue(entry.status)} span={3} />
+          <RiskField label="Frequência de revisão" value={riskValue(entry.review)} span={3} />
+          <RiskField label="Data da próxima revisão" value={riskDate(entry.dataProximaRevisao)} span={3} />
+          <RiskField label="Houve mudança no processo?" value={riskValue(entry.mudancaProcesso)} span={3} />
+          <RiskField label="Novos riscos identificados?" value={riskValue(entry.novosRiscos)} span={4} />
+          <RiskField label="Ações corretivas" value={riskValue(entry.acoesCorretivas)} span={4} />
+          <RiskField label="Lições aprendidas" value={riskValue(entry.licoesAprendidas)} span={4} />
+        </RiskSection>
+      </div>
+
   );
 }
 

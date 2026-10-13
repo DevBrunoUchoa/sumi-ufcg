@@ -54,6 +54,8 @@ describe("montarSessao", () => {
     expect(pode(sessao, "item.review", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "stage.update", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
     expect(pode(sessao, "item.submit", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
+    // Pode anexar documentos mesmo sem permissão de execução:
+    expect(pode(sessao, "item.attach", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "review_queue.read")).toBe(true);
   });
 

@@ -25,6 +25,7 @@ export const PERMISSOES = Object.freeze({
   REVIEW_ITEM: "item.review",
   VIEW_WORK_QUEUE: "work_queue.read",
   VIEW_REVIEW_QUEUE: "review_queue.read",
+  ATTACH_FILE: "item.attach",
 } as const);
 
 /** O administrador recebe, em escopo global, todo o vocabulário do contrato. */
@@ -39,6 +40,7 @@ export const PERMISSOES_GESTOR_EIXO = Object.freeze([
   PERMISSOES.VIEW_HISTORY,
   PERMISSOES.COMMENT_HISTORY,
   PERMISSOES.SUBMIT_ITEM,
+  PERMISSOES.ATTACH_FILE,
 ]);
 
 /** Concedidas por eixo a quem está em `reviewerIds` (Responsável pelo Eixo). */
@@ -48,6 +50,7 @@ export const PERMISSOES_RESPONSAVEL_EIXO = Object.freeze([
   PERMISSOES.VIEW_HISTORY,
   PERMISSOES.COMMENT_HISTORY,
   PERMISSOES.REVIEW_ITEM,
+  PERMISSOES.ATTACH_FILE,
 ]);
 
 /**
@@ -69,4 +72,5 @@ export const PERMISSOES_CONCEDIVEIS_POR_EIXO = Object.freeze([
   PERMISSOES.COMMENT_HISTORY,
   PERMISSOES.SUBMIT_ITEM,
   PERMISSOES.REVIEW_ITEM,
+  PERMISSOES.ATTACH_FILE,
 ]);

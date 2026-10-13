@@ -18,6 +18,12 @@ export const AUTH_SESSION_PATH = "/api/v1/auth/session" as const;
  * src/auth/permissions.js e dev/session-fixtures.js do frontend) e não
  * existiam na versão do protótipo que a PR #6 tomou como referência. Ver
  * docs/adr/0005-integracao-workspace-real.md.
+ *
+ * "item.attach" foi acrescentado depois: cobre o anexo de documentos de
+ * execução/comprovação, hoje verificado via edit/update/create (ver
+ * anexos.service.ts) — passou a ser concedido também ao Responsável pelo
+ * eixo, que antes não tinha nenhuma das três permissões de edição e por
+ * isso não conseguia anexar nada.
  */
 export const PERMISSION_CODES = [
   "plan.read_published",
@@ -37,6 +43,7 @@ export const PERMISSION_CODES = [
   "item.review",
   "work_queue.read",
   "review_queue.read",
+  "item.attach",
 ] as const;
 
 export const permissionCodeSchema = z.enum(PERMISSION_CODES);

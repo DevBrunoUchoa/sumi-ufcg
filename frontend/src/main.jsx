@@ -323,7 +323,9 @@ function PlanItemDetail({ plan, item, action, stage, view, route, actor, can, on
   const selectedPeriod = Number(route.query.get('period'));
   const period = periods(plan, item).includes(selectedPeriod) ? selectedPeriod : currentPeriod(plan, item);
   const setPeriod = (next) => navigate(itemUrl(plan, item, 'indicadores', next));
-  return <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan, item))}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider>;
+  const attachmentsResource = resourceFor(plan, item);
+  const attachmentsEnabled = can(PERMISSIONS.VIEW_INTERNAL_PLAN, attachmentsResource) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, attachmentsResource));
+  return <AttachmentsProvider key={item.id} itemId={item.id} enabled={attachmentsEnabled}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider>;
 }
 
 function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPlanilha }) {
@@ -374,7 +376,7 @@ function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPl
       ]}
     /></div>
     <nav aria-label="Itens do planejamento" className="tree-content">{groups.map((axis) => <div key={axis.id} className="axis-group" style={{ '--axis-color': axis.color }}><button className="tree-group axis" aria-expanded={expanded.includes(axis.id)} onClick={() => toggle(axis.id)}><Icon name="chevron" size={13} className={expanded.includes(axis.id) ? 'rotated' : ''} /><AxisIcon planType={plan.type} axis={axis} /><span>{plan.template.labels.axis} {axisLabel(axis)}</span></button>{expanded.includes(axis.id) && !filtered.some((candidate) => candidate.axisId === axis.id) && <p className="axis-empty">Nenhuma iniciativa cadastrada neste eixo.</p>}{expanded.includes(axis.id) && plan.objectives.filter((objective) => objective.axisId === axis.id && filtered.some((candidate) => candidate.objectiveId === objective.id)).map((objective) => <div className="objective-group" key={objective.id}><button className="tree-group objective" aria-expanded={expanded.includes(objective.id)} onClick={() => toggle(objective.id)}><Icon name="chevron" size={12} className={expanded.includes(objective.id) ? 'rotated' : ''} /><span>{plan.template.labels.objective} {objective.code} · {objective.title}</span></button>{expanded.includes(objective.id) && filtered.filter((candidate) => candidate.objectiveId === objective.id).map((candidate) => <div className="initiative-group" key={candidate.id}><div className="tree-item-row"><button className="tree-expand" aria-label={`${expanded.includes(candidate.id) ? 'Recolher' : 'Expandir'} ações de ${candidate.code}`} aria-expanded={expanded.includes(candidate.id)} onClick={() => toggle(candidate.id)}><Icon name="chevron" size={12} className={expanded.includes(candidate.id) ? 'rotated' : ''} /></button><a href={`#${itemUrl(plan, candidate.id)}`} className={`tree-item ${item?.id === candidate.id && view === 'indicadores' ? 'selected' : ''}`} aria-current={item?.id === candidate.id && view === 'indicadores' ? 'page' : undefined} style={{ '--axis-color': axis.color }}><span className="node-dot" /><span><small>{plan.template.labels.item} {candidate.code}</small>{candidate.title}</span></a></div>{expanded.includes(candidate.id) && <div className="action-tree">{candidate.actions.map((candidateAction) => <a key={candidateAction.id} href={`#${itemUrl(plan, candidate.id, 'acao', undefined, candidateAction.id)}`} className={`tree-action ${item?.id === candidate.id && action?.id === candidateAction.id ? 'selected' : ''}`} aria-current={item?.id === candidate.id && action?.id === candidateAction.id ? 'page' : undefined}><span><small>Ação {candidateAction.code}</small>{candidateAction.title}</span></a>)}</div>}</div>)}</div>)}</div>)}{!filtered.length && <p className="tree-no-results">Nenhum item corresponde aos filtros.</p>}</nav></aside>
-    <section className="detail" aria-label="Detalhe do item">{item ? <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resource)}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
+    <section className="detail" aria-label="Detalhe do item">{item ? <AttachmentsProvider key={item.id} itemId={item.id} enabled={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resource) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, resource))}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider> : <Empty title={plan.items.length ? 'Nenhum item encontrado' : 'Estrutura pronta para receber conteúdo'} action={plan.items.length ? <Button onClick={resetFilters}>Limpar filtros</Button> : can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) ? <Button onClick={() => onModal({ type: 'structure' })}>Configurar estrutura</Button> : null}>{plan.items.length ? 'Ajuste os filtros para continuar.' : 'Cadastre os eixos e objetivos antes de incluir o primeiro item.'}</Empty>}</section></div></div>;
 }
 
   function ItemHeader({ plan, item, actor, can, onModal, changeItem, hideDetails = false, scoped = false, children }) {
@@ -439,7 +441,7 @@ function ActionRiskDetail({ plan, item, action, stage, actor, can, onModal, chan
   </ItemHeader>;
 }
 
-function StageRow({ task, action, actor, canUpdate, canManageAction, canViewRisk, riskCount, onChange, onViewRisks, itemId }) {
+function StageRow({ task, action, actor, canUpdate, canAttach, canManageAction, canViewRisk, riskCount, onChange, onViewRisks, itemId }) {
   const [justifying, setJustifying] = useState(false);
   const [justification, setJustification] = useState(task.justification || '');
   const [justificationModalOpen, setJustificationModalOpen] = useState(false);
@@ -506,7 +508,7 @@ function StageRow({ task, action, actor, canUpdate, canManageAction, canViewRisk
     <div className="stage-tools">
       {!justifying && canUpdate && (overdue || task.status === 'cancelled') && !task.justification && <Button variant="tertiary" icon="edit" aria-expanded={false} onClick={() => { setJustification(''); setJustifying(true); setError(''); }}>{task.status === 'cancelled' ? 'Justificar cancelamento' : 'Justificar atraso'}</Button>}
       {canViewRisk && <Button variant="tertiary" icon="danger" onClick={() => onViewRisks(task)}>Riscos</Button>}
-      <Attachments itemId={itemId} etapaId={task.id} canManage={canUpdate} buttonVariant="tertiary" />
+      <Attachments itemId={itemId} etapaId={task.id} canManage={canAttach} buttonVariant="tertiary" />
     </div>
     {task.justification && <Button variant="tertiary" icon="eye" className="justification-trigger" onClick={openJustification}>Ver justificativa</Button>}
     {canManageAction && riskCount === 0 && <Button variant="tertiary" icon="close" className="remove-stage-button" onClick={() => setConfirmingRemoval(true)}>Remover etapa</Button>}
@@ -539,6 +541,7 @@ function Actions({ item, action: selectedAction, actor, can, plan, onAdd, onModa
   const resource = resourceFor(plan, item);
   const canManageAction = can(PERMISSIONS.MANAGE_ACTION, resource);
   const canUpdateStage = can(PERMISSIONS.UPDATE_STAGE, resource);
+  const canAttachStage = canUpdateStage || can(PERMISSIONS.ATTACH_FILE, resource);
   const canViewRisk = can(PERMISSIONS.VIEW_RISK, resource);
   const toggleAction = (actionId) => setExpanded((current) => current.includes(actionId) ? current.filter((id) => id !== actionId) : [...current, actionId]);
 
@@ -568,7 +571,7 @@ function Actions({ item, action: selectedAction, actor, can, plan, onAdd, onModa
             <Icon name="chevron" size={14} className={!closed ? 'rotated' : ''} />
           </div>}
           {(selectedAction || !closed) && <div className="action-body">
-            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} canManageAction={canManageAction} canViewRisk={canViewRisk} riskCount={(item.risks || []).filter((risk) => risk.actionId === action.id && risk.stage === task.title).length} onViewRisks={() => navigate(itemUrl(plan, item.id, 'riscos', undefined, action.id, task.id))} onChange={onChange} itemId={item.id} />)}
+            {action.tasks.map((task) => <StageRow key={task.id} task={task} action={action} actor={actor} canUpdate={canUpdateStage} canAttach={canAttachStage} canManageAction={canManageAction} canViewRisk={canViewRisk} riskCount={(item.risks || []).filter((risk) => risk.actionId === action.id && risk.stage === task.title).length} onViewRisks={() => navigate(itemUrl(plan, item.id, 'riscos', undefined, action.id, task.id))} onChange={onChange} itemId={item.id} />)}
             {!action.tasks.length && <p className="hint px-5 pt-3">Esta ação ainda não possui etapas.</p>}
           </div>}
         </article>;
@@ -585,6 +588,7 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
   const achievement = metricAchievement(item, period);
   const resource = resourceFor(plan, item);
   const canRecord = item.metric.measurementMode !== 'stages' && can(PERMISSIONS.RECORD_RESULT, resource);
+  const canAttachResult = canRecord || can(PERMISSIONS.ATTACH_FILE, resource);
   const descriptive = item.metric.valueType === 'status';
   const list = periods(plan, item);
   const hasEvolution = list.length > 1 && !descriptive;
@@ -631,7 +635,7 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
       })}</tbody>
     </table></div> : <IndicatorEvolution item={item} plan={plan} period={period} setPeriod={setPeriod} />}
     <div className="record-footer"><p>{latestMeasurement(item, period) ? `Último registro: ${formatDate(latestMeasurement(item, period).at)}` : item.metric.measurementMode === 'stages' ? 'Resultado atualizado automaticamente pelas etapas.' : 'Nenhum resultado registrado para o período.'}</p>{canRecord && <Button variant="primary" icon="plus" onClick={onRecord}>Registrar resultado</Button>}</div>
-    <div className="measurements"><h3>Registros do período</h3>{measurements.length ? measurements.map((entry) => <article className="measurement" key={entry.id}><div><strong>{metricValue(entry.value)}</strong><time>{formatDate(entry.at)}</time></div><p>{entry.note}</p>{entry.evidence && <a href={entry.evidence} target="_blank" rel="noreferrer">Abrir evidência <Icon name="arrow" size={13} /></a>}<Attachments itemId={item.id} resultadoId={entry.id} canManage={canRecord} /></article>) : <p className="hint">Nenhum registro manual para este período.</p>}</div>
+    <div className="measurements"><h3>Registros do período</h3>{measurements.length ? measurements.map((entry) => <article className="measurement" key={entry.id}><div><strong>{metricValue(entry.value)}</strong><time>{formatDate(entry.at)}</time></div><p>{entry.note}</p>{entry.evidence && <a href={entry.evidence} target="_blank" rel="noreferrer">Abrir evidência <Icon name="arrow" size={13} /></a>}<Attachments itemId={item.id} resultadoId={entry.id} canManage={canAttachResult} /></article>) : <p className="hint">Nenhum registro manual para este período.</p>}</div>
   </section>;
 }
 

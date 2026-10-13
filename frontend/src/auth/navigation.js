@@ -1,6 +1,6 @@
 export function safeReturnPath(value) {
   if (typeof value !== 'string' || /[\\\r\n]/.test(value)) return '/inicio';
-  return /^\/(inicio|planejamentos|pendencias|validacoes|modelos|usuarios|sobre|ajuda|privacidade)(\?|$)/.test(value) || /^\/plano\/[^/?]+(?:\/eixo\/[^/?]+(?:\/objetivo\/[^/?]+)?)?(?:\?|$)/.test(value) ? value : '/inicio';
+  return /^\/(inicio|planejamentos|pendencias|validacoes|modelos|usuarios|sobre|ajuda|privacidade)(\?|$)/.test(value) || /^\/plano\/[^/?]+(?:\/painel|\/eixo\/[^/?]+(?:\/objetivo\/[^/?]+)?)?(?:\?|$)/.test(value) ? value : '/inicio';
 }
 
 export function loginUrl(route) {

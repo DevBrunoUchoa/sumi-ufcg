@@ -1,0 +1,29 @@
+/* ODS belong to objective identity; the official artwork keeps its own colors. */
+.objective-ods { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--spacing-scale-baseh); margin-top: var(--spacing-scale-2x); }
+.objective-ods-label { color: var(--text-muted); font-size: var(--font-size-scale-base); line-height: 1.5; padding-top: var(--spacing-scale-base); }
+.objective-ods-icons { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-base); list-style: none; padding: 0; margin: 0; }
+.objective-ods-icons li { padding: 0; margin: 0; }
+.objective-ods-icons a { display: block; border-radius: 0; text-decoration: none; }
+.objective-ods-icons img { display: block; width: 64px; height: 64px; max-width: none; object-fit: contain; filter: none; }
+.objective-ods-icons a:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
+.objective-ods-all { flex: 1 1 200px; min-width: 0; }
+.objective-ods-all summary { width: fit-content; cursor: pointer; color: var(--primary-strong); font-size: var(--font-size-scale-base); line-height: 1.5; padding: var(--spacing-scale-base) 0; }
+.objective-ods-all summary:hover { text-decoration: underline; }
+.objective-ods-all summary:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.objective-ods-all[open] .objective-ods-icons { margin-top: var(--spacing-scale-baseh); }
+.pdi-identity:has(.objective-ods) { align-items: flex-start; }
+.pdi-identity:has(.objective-ods) > .axis-icon { margin-top: var(--spacing-scale-4x); }
+.ods-picker fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.ods-checklist { list-style: none; margin: var(--spacing-scale-base) 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-scale-base); }
+.ods-checklist label { display: flex; align-items: center; gap: var(--spacing-scale-base); font-weight: var(--font-weight-regular); }
+.ods-checklist input, .ods-checklist img { flex-shrink: 0; }
+.ods-checklist img { width: 32px; height: 32px; object-fit: contain; filter: none; }
+.ods-checklist input:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+html[data-alto-contraste="true"] .objective-ods-icons a:focus-visible,
+html[data-alto-contraste="true"] .objective-ods-all summary:focus-visible { outline-color: #000; }
+@media (max-width: 640px) {
+  .ods-checklist { grid-template-columns: 1fr; }
+  .objective-ods { gap: var(--spacing-scale-base); }
+  .objective-ods-label { flex-basis: 100%; padding-top: 0; }
+  .objective-ods-all { flex-basis: 100%; }
+}

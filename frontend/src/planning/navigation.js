@@ -24,6 +24,14 @@ export function objectiveUrl(plan, objective) {
 
 export const objectiveCode = (objective) => /^\d+(?:\.\d+)*$/.test(objective?.code || '') ? objective.code : '';
 
+export function dashboardUrl(plan, filters = {}) {
+  const query = new URLSearchParams();
+  for (const key of ['axis', 'objective', 'period', 'focus']) if (filters[key]) query.set(key, filters[key]);
+  return `${planUrl(plan.id)}/painel${query.size ? `?${query}` : ''}`;
+}
+
+export const isDashboardRoute = (route) => /^\/plano\/[^/]+\/painel$/.test(route.path);
+
 export function itemUrl(plan, itemOrId, view = 'indicadores', period, actionId, stageId) {
   const item = typeof itemOrId === 'object' ? itemOrId : plan.items.find((entry) => entry.id === itemOrId);
   const legacy = planUrl(plan.id, item?.id || itemOrId, view, period, actionId, stageId);

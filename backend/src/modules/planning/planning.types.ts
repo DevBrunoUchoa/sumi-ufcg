@@ -48,8 +48,8 @@ export interface Objective {
   axisId: string;
   code: string;
   title: string;
-  /** Números dos ODS (1 a 17) vinculados a este objetivo. */
-  ods: number[];
+  /** Ausente mantém referência documental/valor existente; [] remove os vínculos. */
+  ods?: number[];
 }
 
 export interface Metric {

@@ -8,9 +8,10 @@ function DataTable({ caption, headings, rows }) {
   return <details className="chart-data"><summary>Ver dados em tabela</summary><div className="chart-table-wrap"><table><caption>{caption}</caption><thead><tr>{headings.map((heading) => <th scope="col" key={heading}>{heading}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={index}>{row.map((cell, column) => column === 0 ? <th scope="row" key={column}>{cell}</th> : <td key={column}>{cell}</td>)}</tr>)}</tbody></table></div></details>;
 }
 
-export function ExecutionChart({ title, description, rows, summary }) {
+export function ExecutionChart({ title, description, rows, summary, headingLevel = 3 }) {
   const id = useId();
-  return <section className="br-card planning-chart" aria-labelledby={id}><div className="card-content"><h3 id={id}>{title}</h3>
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
+  return <section className="br-card planning-chart" aria-labelledby={id}><div className="card-content"><Heading id={id}>{title}</Heading>
     {summary && <div className="chart-scope-summary">{summary.total ? <><strong>{percentLabel(summary.percent)} concluído</strong><span>{summary.done} de {summary.total} etapas ativas concluídas</span></> : <span>Sem etapas ativas</span>}</div>}
     <details className="chart-method"><summary>Como este cálculo funciona</summary><p className="hint">{description}</p></details>
     {rows.length ? <><div className="chart-scale" aria-hidden="true"><span>0%</span><span>50%</span><span>100%</span></div><div className="chart-comparison" tabIndex={rows.length > 6 ? 0 : undefined} role={rows.length > 6 ? 'region' : undefined} aria-label={rows.length > 6 ? title : undefined}>{rows.map((row) => <div className="chart-row" key={row.id}>
@@ -20,10 +21,11 @@ export function ExecutionChart({ title, description, rows, summary }) {
   </div></section>;
 }
 
-export function DistributionChart({ title, description, values, noun }) {
+export function DistributionChart({ title, description, values, noun, headingLevel = 3 }) {
   const id = useId();
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const total = values.reduce((sum, entry) => sum + entry.value, 0);
-  return <section className="br-card planning-chart" aria-labelledby={id}><div className="card-content"><h3 id={id}>{title}</h3><p className="hint">{description}</p>
+  return <section className="br-card planning-chart" aria-labelledby={id}><div className="card-content"><Heading id={id}>{title}</Heading><p className="hint">{description}</p>
     <div className="chart-total"><strong>{total}</strong><span>{noun}</span></div>
     {total ? <div className="chart-stacked" aria-hidden="true">{values.filter((entry) => entry.value).map((entry) => <span className={`chart-tone-${entry.tone}`} key={entry.key} style={{ width: `${entry.value / total * 100}%` }} />)}</div> : <p className="chart-empty">Sem dados disponíveis neste escopo.</p>}
     <dl className="chart-legend">{values.filter((entry) => entry.key !== 'cycle' || entry.value > 0).map((entry) => <div key={entry.key}><dt><i className={`chart-tone-${entry.tone}`} aria-hidden="true" />{entry.label}</dt><dd><strong>{entry.value}</strong><span>{total ? percentLabel(Math.round(entry.value / total * 1000) / 10) : '—'}</span></dd></div>)}</dl>

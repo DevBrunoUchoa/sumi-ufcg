@@ -245,9 +245,10 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 
 /* Plan workspace */
 .plan-page { padding: var(--spacing-scale-3x) var(--spacing-scale-4x) var(--spacing-scale-6x); max-width: 1680px; margin: auto; }
-.plan-page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-3x); }
-.heading-actions { display: flex; align-items: center; gap: var(--spacing-scale-baseh); }
-.import-tools { display: flex; align-items: center; gap: var(--spacing-scale-base); position: relative; }
+.plan-page-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-3x); }
+.plan-page-heading > div:first-child { flex: 1 1 280px; min-width: 0; }
+.heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-scale-baseh); min-width: 0; max-width: 100%; }
+.import-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-scale-base); position: relative; min-width: 0; max-width: 100%; }
 .import-tools .form-error { position: absolute; top: 100%; right: 0; white-space: nowrap; margin-top: var(--spacing-scale-half); }
 .back-link { font-size: var(--font-size-scale-base); color: var(--text-muted); display: inline-block; margin-bottom: var(--spacing-scale-base); }
 .back-link:hover { color: var(--primary); text-decoration: underline; }
@@ -940,14 +941,6 @@ br-select::part(option):hover {
    vai criar depois que a classe já foi marcada. */
 html.vlibras-off div[vw],
 html.vlibras-off #vlibras-access-wrapper { display: none !important; }
-
-/* ODS vinculados a um objetivo (checklist no formulário de estrutura e selos de exibição) */
-.ods-checklist { list-style: none; margin: var(--spacing-scale-base) 0 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--spacing-scale-base) / 2); max-height: 220px; overflow-y: auto; }
-.ods-checklist label { display: flex; align-items: center; gap: var(--spacing-scale-base); font-weight: var(--font-weight-regular); }
-.ods-swatch { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; background: var(--ods-color); color: #fff; font-size: 11px; font-weight: var(--font-weight-semi-bold); flex-shrink: 0; }
-.ods-badges { list-style: none; margin: var(--spacing-scale-base) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: calc(var(--spacing-scale-base) / 2); }
-.ods-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 4px; background: var(--ods-color); color: #fff; font-size: 12px; font-weight: var(--font-weight-semi-bold); cursor: default; }
-.ods-badges-small .ods-badge { width: 18px; height: 18px; font-size: 10px; }
 
 /* Histórico de versões do eixo (importações retidas por período) */
 .axis-version-history { margin-top: var(--spacing-scale-3x); font-size: var(--font-size-scale-base); border: 1px solid var(--border); border-radius: 4px; padding: var(--spacing-scale-base) var(--spacing-scale-2x); background: var(--surface); }

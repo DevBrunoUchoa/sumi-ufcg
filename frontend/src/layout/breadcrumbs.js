@@ -1,10 +1,11 @@
-import { axisUrl, itemUrl, objectiveCode, objectiveUrl, planUrl, resolvePlanRoute } from '../planning/navigation.js';
+import { axisUrl, isDashboardRoute, itemUrl, objectiveCode, objectiveUrl, planUrl, resolvePlanRoute } from '../planning/navigation.js';
 
 export function breadcrumbsFor(route, plan) {
   if (route.path === '/inicio' || route.path === '/login') return [];
   const entries = [{ label: 'Início', url: '/inicio' }];
   if (plan) {
     entries.push({ label: 'Planos', url: '/planejamentos' }, { label: `${plan.shortName} ${plan.start}–${plan.end}`, url: planUrl(plan.id) });
+    if (isDashboardRoute(route)) return [...entries, { label: 'Painel de acompanhamento' }];
     const context = resolvePlanRoute(plan, route);
     if (!context.valid) return entries;
     const { axis, objective, item, action, stage, view } = context;

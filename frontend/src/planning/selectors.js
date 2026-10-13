@@ -16,12 +16,12 @@ export function summarizeScope(items, objectiveCount) {
 export const numericValue = (value) => value == null || String(value).trim() === '' || !Number.isFinite(Number(value)) ? null : Number(value);
 
 // A count of comparable indicators, never an average of unrelated units.
-export function targetState(item, period, plan) {
+export function targetState(item, period, plan, now = new Date()) {
   if (item.metric.periodicity === 'final' && period !== plan.end) return 'cycle';
   const target = item.metric.targets[period];
-  if (target == null || target === '' || (item.metric.valueType !== 'status' && numericValue(target) === null)) return 'no_target';
-  const result = metricResult(item, period);
-  if (result == null || result === '' || (item.metric.valueType !== 'status' && numericValue(result) === null)) return 'no_result';
+  if (target == null || String(target).trim() === '' || (item.metric.valueType !== 'status' && numericValue(target) === null)) return 'no_target';
+  const result = metricResult(item, period, now);
+  if (result == null || String(result).trim() === '' || (item.metric.valueType !== 'status' && numericValue(result) === null)) return 'no_result';
   const reached = item.metric.valueType === 'status' ? normalize(target) === normalize(result)
     : item.metric.direction === 'down' ? Number(result) <= Number(target) : Number(result) >= Number(target);
   return reached ? 'reached' : 'below';

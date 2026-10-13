@@ -1,4 +1,7 @@
+import { isDeepStrictEqual } from "node:util";
 import { HttpError } from "../../lib/http-error.js";
+import { prepareRiskWrite } from "./risk-write-policy.js";
+import { normalizeObjectiveOds, objectiveData } from "./objective-ods.js";
 import { pode } from "../auth/auth.can.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import {
@@ -120,8 +123,8 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
       const objetivosRows = nosPorPai.get(eixo.id) ?? [];
       for (const objetivo of objetivosRows) {
         const od = objetivo.dados as Partial<Objective>;
-        const ods = Array.isArray(od.ods) ? od.ods.filter((n): n is number => typeof n === "number" && n >= 1 && n <= 17) : [];
-        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? ""), ods });
+        const ods = normalizeObjectiveOds(od.ods);
+        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? ""), ...(ods === undefined ? {} : { ods }) });
 
         const itensRows = nosPorPai.get(objetivo.id) ?? [];
         for (const itemRow of itensRows) {
@@ -260,7 +263,13 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
 // ---------------------------------------------------------------------------
 
 function diferente(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) !== JSON.stringify(b);
+  // JSONB reorders keys; undefined properties are also used below to exclude
+  // protected fields from a comparison. Preserve both JSON semantics.
+  const asJson = (value: unknown): unknown => {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? undefined : JSON.parse(serialized);
+  };
+  return !isDeepStrictEqual(asJson(a), asJson(b));
 }
 
 function exigir(autorizado: boolean, mensagem: string): void {
@@ -365,8 +374,10 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     objetivosAtuais.length !== plano.objectives.length ||
     plano.objectives.some((objective) => {
       const atual = objetivosAtuaisPorId.get(objective.id);
-      const dadosNovos = { code: objective.code, title: objective.title, ods: objective.ods };
-      return !atual || atual.no_pai_id !== objective.axisId || diferente(atual.dados, dadosNovos);
+      const dadosNovos = objectiveData(objective, atual?.dados);
+      const odsAtuais = normalizeObjectiveOds(atual?.dados.ods);
+      const dadosAtuais = atual && { ...atual.dados, ...(odsAtuais === undefined ? {} : { ods: odsAtuais }) };
+      return !atual || atual.no_pai_id !== objective.axisId || diferente(dadosAtuais, dadosNovos);
     });
   if (objetivoMudou) {
     exigir(pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
@@ -381,7 +392,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
           noPaiId: objective.axisId,
           nivel: 1,
           ordem,
-          dados: { code: objective.code, title: objective.title, ods: objective.ods },
+          dados: objectiveData(objective, objetivosAtuaisPorId.get(objective.id)?.dados),
         };
       }),
     );
@@ -555,14 +566,23 @@ async function salvarItem(
     status: row.status,
   }));
   const riscosNovosComparaveis = item.risks.map((risk) => ({ ...risk, deadline: risk.deadline || null }));
-  if (diferente(riscosAntigosComparaveis, riscosNovosComparaveis)) {
-    exigir(pode(sessao, "risk.manage", recurso), `Sem permissão para alterar riscos do item "${item.code}"`);
-  }
+  const riscosParaPersistir = prepareRiskWrite({
+    existing: riscosAntigosComparaveis, submitted: riscosNovosComparaveis,
+    canRead: pode(sessao, "risk.read", recurso), canManage: pode(sessao, "risk.manage", recurso),
+    changed: diferente(riscosAntigosComparaveis, riscosNovosComparaveis),
+    actionIds: new Set(item.actions.map((action) => action.id)), itemCode: item.code,
+  });
 
   // Histórico: só é possível adicionar (frontend nunca edita/remove entradas existentes) — exige history.comment.
-  if (item.history.length > contexto.historicoAntigo.length) {
+  const historicoIdsExistentes = new Set(contexto.historicoAntigo.map((entry) => entry.id));
+  const novasEntradasHistorico = item.history.filter((entry) => !historicoIdsExistentes.has(entry.id));
+  if (novasEntradasHistorico.length > 0) {
     exigir(pode(sessao, "history.comment", recurso), `Sem permissão para comentar no histórico do item "${item.code}"`);
   }
+  const historicoParaPersistir = pode(sessao, "history.read", recurso) ? item.history : [
+    ...contexto.historicoAntigo.map((entry) => ({ id: entry.id, at: entry.em, text: entry.texto, actor: entry.autor })),
+    ...novasEntradasHistorico,
+  ];
 
   if (dadosAntigos.reviewStatus !== item.reviewStatus) {
     if (item.reviewStatus === "submitted") {
@@ -651,7 +671,7 @@ async function salvarItem(
 
   await riscoRepo.removerPorItens([item.id]);
   await riscoRepo.inserirLote(
-    item.risks.map((risk) => ({
+    riscosParaPersistir.map((risk) => ({
       id: risk.id,
       no_plano_id: item.id,
       acao_id: risk.actionId,
@@ -680,6 +700,6 @@ async function salvarItem(
 
   await historicoRepo.removerPorItens([item.id]);
   await historicoRepo.inserirLote(
-    item.history.map((entry) => ({ id: entry.id, no_plano_id: item.id, em: entry.at, texto: entry.text, autor: entry.actor })),
+    historicoParaPersistir.map((entry) => ({ id: entry.id, no_plano_id: item.id, em: entry.at, texto: entry.text, autor: entry.actor })),
   );
 }

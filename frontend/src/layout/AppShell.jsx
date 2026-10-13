@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui.jsx';
 import { breadcrumbsFor } from './breadcrumbs.js';
 import { loginUrl } from '../auth/navigation.js';
+import { isDashboardRoute } from '../planning/navigation.js';
 
 function Brand() {
   return <a className="sumi-brand" href="#/inicio" aria-label="SUMI início"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>SUMI<small>Sistema Unificado de Monitoramento Institucional</small></span></a>;
@@ -47,7 +48,7 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
   const crumbs = mode === 'public' && !plan ? [] : breadcrumbsFor(route, plan);
   const work = mode === 'work';
   const mobileMenuOpen = work && menuOpen && !window.matchMedia('(min-width: 992px)').matches;
-  const locationKey = `${route.path}|${['item', 'action', 'stage', 'view', 'tab', 'objective'].map((key) => route.query.get(key)).join('|')}`;
+  const locationKey = isDashboardRoute(route) ? route.path : `${route.path}|${['item', 'action', 'stage', 'view', 'tab', 'objective'].map((key) => route.query.get(key)).join('|')}`;
   const closeMenu = () => { returnMenuFocus.current = true; setMenuOpen(false); };
   useEffect(() => {
     if (!mobileMenuOpen && returnMenuFocus.current) {

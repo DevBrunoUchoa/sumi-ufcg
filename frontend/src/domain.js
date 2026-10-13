@@ -43,7 +43,10 @@ export const executionStatus = (item) => {
 export const latestMeasurement = (item, period) => item.measurements.filter((entry) => Number(entry.year) === Number(period)).at(-1);
 export function metricResult(item, period, now = new Date()) {
   if (item.metric.measurementMode !== 'stages') return latestMeasurement(item, period)?.value;
-  if (item.metric.periodicity === 'final' || Number(period) === now.getFullYear()) return taskProgress(item).percent;
+  if (item.metric.periodicity === 'final' || Number(period) === now.getFullYear()) {
+    const progress = taskProgress(item);
+    return progress.total ? progress.percent : undefined;
+  }
   return latestMeasurement(item, period)?.value;
 }
 

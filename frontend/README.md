@@ -48,6 +48,8 @@ Variáveis disponíveis (ver `.env.example`):
 - `VITE_AUTH_SESSION_PATH`: caminho do endpoint de sessão;
 - `VITE_PLANNING_WORKSPACE_PATH`: caminho do endpoint agregado de planejamento;
 - `VITE_DATA_SOURCE`: `local` para dados de desenvolvimento ou `http` para a API.
+  Builds de produção sempre usam HTTP; o adaptador em `dev/planning-client.js`
+  e os exemplos locais são eliminados do bundle.
 
 ## Erros e SEO
 

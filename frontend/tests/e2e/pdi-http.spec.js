@@ -95,3 +95,63 @@ test('objetivo e gráficos usam UUIDs e a API HTTP sem gravações de navegaçã
   expect(writes).toBe(0);
   expect(developmentRequests).toBe(0);
 });
+
+test('painel independente filtra dados da API e não grava o workspace', async ({ page }) => {
+  const workspace = serverWorkspace();
+  const plan = workspace.plans[0];
+  let writes = 0;
+  let developmentRequests = 0;
+  page.on('request', (request) => { if (request.url().includes('/__dev/')) developmentRequests += 1; });
+  await page.route('**/api/v1/auth/session', (route) => route.fulfill({ json: developmentSessions.public }));
+  await page.route('**/api/v1/planning/workspace', (route) => {
+    if (route.request().method() !== 'GET') writes += 1;
+    return route.fulfill({ json: workspace });
+  });
+  await page.goto(`/#/plano/${plan.id}/painel?period=2027`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Painel de acompanhamento');
+  await page.getByRole('region', { name: 'Execução por eixo', exact: true }).getByRole('link', { name: '8 · Governança e Gestão Institucional', exact: true }).click();
+  await expect(page.locator('.dashboard-scope')).toContainText('3 iniciativas');
+  await page.getByRole('link', { name: /indicadores sem resultado/ }).click();
+  await expect(page.locator('.attention-row')).toHaveCount(3);
+  await page.reload();
+  await expect(page.locator('.attention-row')).toHaveCount(3);
+  expect(writes).toBe(0);
+  expect(developmentRequests).toBe(0);
+});
+
+test('estrutura permite sobrescrever e remover ODS, mantendo a escolha após recarga', async ({ page }) => {
+  let workspace = initialState();
+  await page.route('**/api/v1/auth/session', (route) => route.fulfill({ json: developmentSessions.administrator }));
+  await page.route('**/api/v1/admin/usuarios', (route) => route.fulfill({ json: [] }));
+  let writes = 0;
+  await page.route('**/api/v1/planning/workspace', async (route) => {
+    if (route.request().method() === 'PUT') { workspace = route.request().postDataJSON(); writes += 1; }
+    await route.fulfill({ json: workspace });
+  });
+  await page.goto('/#/plano/pdi/eixo/pdi-axis-8/objetivo/pdi-objective-8-2');
+  await page.getByRole('button', { name: 'Estrutura', exact: true }).click();
+  const picker = page.getByRole('dialog').locator('.ods-picker').filter({ hasText: 'ODS vinculadas ao objetivo 8.2' });
+  await picker.locator('summary').click();
+  await expect(picker.getByRole('checkbox', { name: /^ODS 10 ·/ })).toBeChecked();
+  await picker.getByRole('checkbox', { name: /^ODS 4 ·/ }).check();
+  await page.getByRole('button', { name: 'Salvar estrutura', exact: true }).click();
+  await expect.poll(() => writes).toBe(1);
+  await expect(page.locator('.objective-ods img')).toHaveCount(3);
+  await page.reload();
+  await expect(page.locator('.objective-ods img')).toHaveCount(3);
+  expect(workspace.plans[0].objectives.find(entry => entry.code === '8.2').ods).toEqual([4, 10, 16]);
+  await page.getByRole('button', { name: 'Estrutura', exact: true }).click();
+  await picker.locator('summary').click();
+  for (const number of [4, 10, 16]) await picker.getByRole('checkbox', { name: new RegExp(`^ODS ${number} ·`) }).uncheck();
+  await page.getByRole('button', { name: 'Salvar estrutura', exact: true }).click();
+  await expect.poll(() => writes).toBe(2);
+  await page.reload();
+  await expect(page.locator('.objective-ods')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Estrutura', exact: true }).click();
+  await picker.locator('summary').click();
+  await picker.getByRole('button', { name: 'Aplicar vínculos documentados no PDI' }).click();
+  await page.getByRole('button', { name: 'Salvar estrutura', exact: true }).click();
+  await expect.poll(() => writes).toBe(3);
+  await page.reload();
+  await expect(page.locator('.objective-ods img')).toHaveCount(2);
+});

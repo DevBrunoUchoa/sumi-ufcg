@@ -91,3 +91,40 @@ describe("salvarWorkspace — criação de objetivo durante a importação (Gest
     await expect(salvarWorkspace(outroEixo, workspaceComNovoObjetivo())).rejects.toMatchObject({ status: 403 });
   });
 });
+
+describe("salvarWorkspace — eixo sem customGrants gravado (dado antigo)", () => {
+  const planoId = "p1";
+  const axisId = "a1";
+  const now = new Date().toISOString();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.listar.mockResolvedValue([{ id: "pdi", versao: 1, rotulos: { item: "Iniciativa", axis: "Eixo", objective: "Objetivo" }, campos_extras: [] }]);
+    // Reproduz uma linha de eixo gravada antes de customGrants existir
+    // (PR #17): a chave simplesmente não está em `dados`, como no banco real.
+    (noPlanoRepo.listarTodos as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: planoId, tipo_plano_id: "pdi", no_pai_id: null, nivel: -1, ordem: 0, dados: { shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "published" }, criado_em: now, atualizado_em: now },
+      { id: axisId, tipo_plano_id: "pdi", no_pai_id: planoId, nivel: 0, ordem: 0, dados: { code: "8", name: "Governança", color: "#000", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: [] }, criado_em: now, atualizado_em: now },
+    ]);
+  });
+
+  it("não trata customGrants ausente no banco como diferente de [] no workspace (eixo não deveria 'mudar')", async () => {
+    const gestor: SessaoUsuario = { ...session, grants: [...session.grants, { permission: "item.edit", scope: { type: "axis", planId: planoId, axisId } }] };
+    const ws: Workspace = {
+      version: 2,
+      templates: [{ id: "pdi", type: "PDI", name: "PDI", version: 1, description: "", labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" }, defaultPeriodicity: "annual", fields: [] }],
+      plans: [{
+        id: planoId, type: "PDI", shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "published",
+        template: { id: "pdi", type: "PDI", name: "PDI", version: 1, description: "", labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" }, defaultPeriodicity: "annual", fields: [] },
+        // Mesmo eixo, nenhuma mudança de estrutura — só customGrants chega
+        // como [] (como montarWorkspace sempre entrega), diferente da linha
+        // no banco, que nunca teve essa chave gravada.
+        axes: [{ id: axisId, code: "8", name: "Governança", color: "#000", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: [], customGrants: [] }],
+        objectives: [],
+        items: [],
+      }],
+    };
+    await expect(salvarWorkspace(gestor, ws)).resolves.toBeUndefined();
+    expect(noPlanoRepo.upsertLote).not.toHaveBeenCalled();
+  });
+});

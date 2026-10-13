@@ -8,8 +8,38 @@ function Brand() {
   return <a className="sumi-brand" href="#/inicio" aria-label="SUMI início"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>SUMI<small>Sistema Unificado de Monitoramento Institucional</small></span></a>;
 }
 
+function OrgBar() {
+  return (
+    <div className="sumi-org-bar">
+      <div className="sumi-container">
+        <a href="https://www.ufcg.edu.br/" target="_blank" rel="noopener noreferrer">Universidade Federal de Campina Grande</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://www.gov.br/" target="_blank" rel="noopener noreferrer">Portal gov.br</a>
+      </div>
+    </div>
+  );
+}
+
+function CidadaoLinks({ className }) {
+  return (
+    <nav className={className} aria-label="Serviços ao cidadão">
+      <a href="https://falabr.cgu.gov.br/" target="_blank" rel="noopener noreferrer">Ouvidoria (Fala.BR)</a>
+      <a href="https://falabr.cgu.gov.br/" target="_blank" rel="noopener noreferrer">e-SIC</a>
+      <a href="https://www.ufcg.edu.br/" target="_blank" rel="noopener noreferrer">Acesso à Informação</a>
+    </nav>
+  );
+}
+
 function Footer({ inert = false, work = false }) {
-  if (work) return <footer className="sumi-work-footer" id="footer" aria-label="Rodapé" inert={inert}><div className="sumi-container"><span>SUMI</span><nav aria-label="Links do rodapé"><a href="#/ajuda">Ajuda</a><a href="#/privacidade">Privacidade</a></nav></div></footer>;
+  if (work) return (
+    <footer className="sumi-work-footer" id="footer" aria-label="Rodapé" inert={inert}>
+      <div className="sumi-container">
+        <span>SUMI</span>
+        <nav aria-label="Links do rodapé"><a href="#/ajuda">Ajuda</a><a href="#/privacidade">Privacidade</a></nav>
+        <CidadaoLinks className="sumi-work-footer-cidadao" />
+      </div>
+    </footer>
+  );
   return (
     <footer className="br-footer sumi-footer" id="footer" aria-label="Rodapé" inert={inert}>
       <div className="sumi-container">
@@ -24,6 +54,7 @@ function Footer({ inert = false, work = false }) {
             <a href="#/ajuda">Ajuda e acessibilidade</a>
             <a href="#/privacidade">Informações sobre privacidade</a>
           </nav>
+          <CidadaoLinks />
         </div>
         <div className="sumi-footer-bottom">
           <a href="https://www.gov.br" aria-label="Portal GOV.BR">
@@ -116,6 +147,7 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
         <a href="#main-content" onClick={(event) => { event.preventDefault(); document.getElementById('main-content')?.focus(); }}>Ir para o conteúdo</a>
         <a href="#footer" onClick={(event) => { event.preventDefault(); const footer = document.getElementById('footer'); footer.tabIndex = -1; footer.focus(); }}>Ir para o rodapé</a>
       </nav>
+      <OrgBar />
       <header className="br-header compact sumi-header" inert={mobileMenuOpen}>
         <div className="sumi-container">
           <div className="header-top">

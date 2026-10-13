@@ -5,6 +5,10 @@
 .sumi-skiplinks a { position: absolute; left: var(--sumi-gutter); top: 0; white-space: nowrap; transform: translateY(-150%); background: var(--primary-strong); color: var(--pure-0); padding: var(--spacing-scale-2x); }
 .sumi-skiplinks a:focus { transform: translateY(0); }
 .sumi-container, .sumi-content { width: 100%; max-width: var(--sumi-content-width); margin-inline: auto; padding-inline: var(--sumi-gutter); }
+.sumi-org-bar { background: var(--primary-strong); color: var(--pure-0); font-size: var(--font-size-scale-down-01); }
+.sumi-org-bar .sumi-container { display: flex; gap: var(--spacing-scale-base); align-items: center; padding-block: var(--spacing-scale-half); }
+.sumi-org-bar a { color: var(--pure-0); text-decoration: underline; }
+.sumi-org-bar a:focus-visible { outline-color: var(--pure-0); }
 .sumi-header.br-header { position: relative; z-index: 20; padding: var(--spacing-scale-2x) 0 0; box-shadow: var(--elevation-layer-1); }
 .sumi-header.br-header > .sumi-container { display: block; }
 .sumi-header.br-header .header-top { display: flex; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-2x); align-items: center; }
@@ -56,6 +60,8 @@
 .sumi-work-footer > .sumi-container { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-2x); }
 .sumi-work-footer nav { display: flex; gap: var(--spacing-scale-2x); }
 .sumi-work-footer a { color: var(--primary-strong); text-decoration: underline; }
+.sumi-work-footer-cidadao { display: none; }
+@media (min-width: 1100px) { .sumi-work-footer-cidadao { display: flex; } }
 .sumi-footer.br-footer { margin-top: auto; padding: var(--spacing-scale-3x) 0 var(--spacing-scale-2x); }
 .sumi-footer-main { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-3x); }
 .sumi-footer-main strong { font-size: var(--font-size-scale-up-02); }
@@ -119,8 +125,8 @@
 .sumi-shell .planning-context { background: var(--surface-soft); border-left-color: var(--axis-color, var(--primary)); }
 .sumi-shell .pdi-detail > .item-heading h2 { font-size: var(--font-size-scale-up-02); }
 .sumi-shell .pdi-heading .heading-actions { flex-basis: auto; margin-left: auto; }
-html[data-alto-contraste="true"] .sumi-footer { background: #000; color: #fff; }
-html[data-alto-contraste="true"] .sumi-footer a { color: #fff; }
+html[data-alto-contraste="true"] :is(.sumi-footer, .sumi-org-bar) { background: #000; color: #fff; }
+html[data-alto-contraste="true"] :is(.sumi-footer, .sumi-org-bar) a { color: #fff; }
 html[data-alto-contraste="true"] :is(.sumi-menu, .sumi-accessibility-panel, .public-plan-card, .access-public-info, .sumi-public-nav, .sumi-work-footer) { border-color: #000; }
 @media (max-width: 1100px) { .sumi-brand small { max-width: 300px; } .sumi-header .account-identity { max-width: 130px; } }
 @media (max-width: 991px) {

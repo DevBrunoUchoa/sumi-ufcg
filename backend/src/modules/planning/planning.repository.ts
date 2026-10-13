@@ -306,3 +306,67 @@ export const anexoRepo = {
     tratarErro(error, "Falha ao restaurar anexos");
   },
 };
+
+// ---- eixo_versao (histórico versionado de importações por eixo) -----------
+
+export interface EixoVersaoRow {
+  id: string;
+  eixo_id: string;
+  periodo: number;
+  arquivo_nome: string;
+  arquivo_tipo_mime: string;
+  arquivo_tamanho_bytes: number;
+  arquivo_caminho_storage: string;
+  itens_criados: number;
+  itens_atualizados: number;
+  cobertura_execucao_percentual: number;
+  riscos_total: number;
+  enviado_por: string;
+  enviado_em: string;
+}
+
+export const eixoVersaoRepo = {
+  async listarPorEixo(eixoId: string): Promise<EixoVersaoRow[]> {
+    const { data, error } = await supabase.from("eixo_versao").select("*").eq("eixo_id", eixoId).order("enviado_em", { ascending: false });
+    tratarErro(error, "Falha ao listar versões do eixo");
+    return data as EixoVersaoRow[];
+  },
+  async buscarPorId(id: string): Promise<EixoVersaoRow | null> {
+    const { data, error } = await supabase.from("eixo_versao").select("*").eq("id", id).maybeSingle();
+    tratarErro(error, "Falha ao buscar versão do eixo");
+    return data as EixoVersaoRow | null;
+  },
+  async criar(input: {
+    eixoId: string;
+    periodo: number;
+    arquivoNome: string;
+    arquivoTipoMime: string;
+    arquivoTamanhoBytes: number;
+    arquivoCaminhoStorage: string;
+    itensCriados: number;
+    itensAtualizados: number;
+    coberturaExecucaoPercentual: number;
+    riscosTotal: number;
+    enviadoPor: string;
+  }): Promise<EixoVersaoRow> {
+    const { data, error } = await supabase
+      .from("eixo_versao")
+      .insert({
+        eixo_id: input.eixoId,
+        periodo: input.periodo,
+        arquivo_nome: input.arquivoNome,
+        arquivo_tipo_mime: input.arquivoTipoMime,
+        arquivo_tamanho_bytes: input.arquivoTamanhoBytes,
+        arquivo_caminho_storage: input.arquivoCaminhoStorage,
+        itens_criados: input.itensCriados,
+        itens_atualizados: input.itensAtualizados,
+        cobertura_execucao_percentual: input.coberturaExecucaoPercentual,
+        riscos_total: input.riscosTotal,
+        enviado_por: input.enviadoPor,
+      })
+      .select("*")
+      .single();
+    tratarErro(error, "Falha ao registrar versão do eixo");
+    return data as EixoVersaoRow;
+  },
+};

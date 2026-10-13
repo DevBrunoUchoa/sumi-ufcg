@@ -939,6 +939,16 @@ br-select::part(option):hover {
 .ods-badges { list-style: none; margin: var(--spacing-scale-base) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: calc(var(--spacing-scale-base) / 2); }
 .ods-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 4px; background: var(--ods-color); color: #fff; font-size: 12px; font-weight: var(--font-weight-semi-bold); cursor: default; }
 .ods-badges-small .ods-badge { width: 18px; height: 18px; font-size: 10px; }
+
+/* Histórico de versões do eixo (importações retidas por período) */
+.axis-version-history { margin-top: var(--spacing-scale-3x); font-size: var(--font-size-scale-base); border: 1px solid var(--border); border-radius: 4px; padding: var(--spacing-scale-base) var(--spacing-scale-2x); background: var(--surface); }
+.axis-version-history summary { cursor: pointer; color: var(--text-body); font-weight: var(--font-weight-medium); }
+.axis-version-period { margin-top: var(--spacing-scale-2x); }
+.axis-version-period h4 { margin: 0 0 var(--spacing-scale-base); color: var(--text-muted); font-size: var(--font-size-scale-base); text-transform: uppercase; letter-spacing: .03em; }
+.axis-version-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-scale-2x); }
+.axis-version-list > li { border-top: 1px solid var(--border-soft); padding-top: var(--spacing-scale-base); }
+.axis-version-list > li:first-child { border-top: none; padding-top: 0; }
+.axis-version-summary { display: flex; align-items: center; gap: var(--spacing-scale-base); flex-wrap: wrap; margin-bottom: calc(var(--spacing-scale-base) / 2); }
 .searchbar { max-width: '320px'; width: '100%' }
 .empty {
   display: flex;

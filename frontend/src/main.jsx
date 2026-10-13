@@ -66,6 +66,7 @@ const planningClient = createPlanningClient();
 const ALTO_CONTRASTE_KEY = 'sumi.ui.alto-contraste';
 const DARK_MODE_KEY = 'sumi.ui.dark-mode';
 const VLIBRAS_KEY = 'sumi.ui.vlibras';
+const ONBOARDING_KEY = 'sumi.ui.onboarding-dispensado';
 const navigate = (path) => { window.location.hash = path; };
 const readRoute = () => { const [path, query] = (window.location.hash.slice(1) || '/inicio').split('?'); return { path, query: new URLSearchParams(query) }; };
 const statusTone = (status) => status === 'Concluída' || status === 'Meta atingida' || status === 'Validado' ? 'green' : status === 'Em andamento' || status === 'Aguardando validação' ? 'blue' : status === 'Correção solicitada' ? 'attention' : 'neutral';
@@ -74,10 +75,48 @@ const readDarkModePreference = () => { try { return !readAltoContrastePreference
 // VLibras vem sempre ligado no HTML (index.html) — a preferência só existe
 // pra permitir desligar; sem valor salvo, assume ligado (comportamento atual).
 const readVlibrasPreference = () => { try { return localStorage.getItem(VLIBRAS_KEY) !== 'false'; } catch { return true; } };
+const readOnboardingDispensado = () => { try { return localStorage.getItem(ONBOARDING_KEY) === 'true'; } catch { return false; } };
+
+// Com tantos níveis (eixo → objetivo → iniciativa → ação → etapa) e um
+// modelo de permissões em três camadas (Gestor, Responsável, avulsas por
+// usuário), quem chega pela primeira vez não tinha nenhuma orientação além
+// da página Ajuda, que precisa ser procurada — isso fica à vista até ser
+// dispensado, uma vez por navegador.
+function OnboardingCard({ can }) {
+  const [dispensado, setDispensado] = useState(readOnboardingDispensado);
+  if (dispensado) return null;
+  const dispensar = () => { setDispensado(true); try { localStorage.setItem(ONBOARDING_KEY, 'true'); } catch { /* armazenamento indisponível */ } };
+  return <section className="br-card onboarding-card" aria-labelledby="onboarding-title">
+    <div className="card-content">
+      <div className="onboarding-heading"><h2 id="onboarding-title">Primeiros passos no SUMI</h2><button type="button" className="text-button" onClick={dispensar}>Dispensar</button></div>
+      <p className="hint">Cada plano institucional (PDI, PLS) é organizado em níveis: <strong>Eixo</strong> → <strong>Objetivo</strong> → <strong>Iniciativa</strong> → <strong>Ação</strong> → <strong>Etapa</strong>. Acompanhe a execução e os indicadores navegando por essa hierarquia a partir de Planos.</p>
+      <ul className="onboarding-steps">
+        <li><Icon name="layers" size={16} /><span><strong>Estrutura</strong> — dentro de um plano, cadastre eixos e objetivos, e defina quem é Gestor ou Responsável de cada eixo.</span></li>
+        <li><Icon name="upload" size={16} /><span><strong>Importar planilha</strong> — traga o conteúdo de um eixo direto da planilha de monitoramento, sem redigitar.</span></li>
+        {can(PERMISSIONS.MANAGE_MODEL) && <li><Icon name="user" size={16} /><span><strong>Usuários</strong> — gerencie quem tem acesso e, por eixo, atribua permissões específicas sem precisar tornar alguém Gestor ou Responsável inteiro.</span></li>}
+      </ul>
+      <a className="text-button" href="#/ajuda">Ver guia completo de ajuda <Icon name="arrow" size={14} /></a>
+    </div>
+  </section>;
+}
 
 function Progress({ done, total, percent, label = 'etapas', compact = false }) {
   const value = percent ?? (total ? done / total * 100 : 0);
   return <div className={`progress-block ${compact ? 'compact' : ''}`}><div className="progress-track" role="progressbar" aria-label={`Execução das ${label}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)}><span style={{ width: `${value}%` }} /></div><span>{Math.round(value)}% {label}</span></div>;
+}
+
+// O backend roda no plano gratuito do Render, que "dorme" sem tráfego —
+// a primeira consulta depois de um tempo ocioso pode levar até um minuto
+// pra responder. Sem um aviso depois de alguns segundos, isso parece uma
+// tela travada em vez de um carregamento em andamento.
+function LoadingState() {
+  const [demorando, setDemorando] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setDemorando(true), 4000); return () => clearTimeout(timer); }, []);
+  return <div className="sumi-loading" role="status">
+    <div className="br-loading medium" aria-hidden="true" />
+    <p>Carregando os planos…</p>
+    {demorando && <p className="hint">O servidor pode estar iniciando — isso pode levar até 1 minuto na primeira consulta do dia.</p>}
+  </div>;
 }
 
 function AppGate() {
@@ -221,7 +260,7 @@ function App({ auth }) {
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
         {route.path === '/login' ? <LoginPage authenticated={session.authenticated} returnTo={safeReturnPath(route.query.get('returnTo'))} onSuccess={async () => { await auth.reload(); navigate(safeReturnPath(route.query.get('returnTo'))); }} />
           : ['/sobre', '/ajuda', '/privacidade'].includes(route.path) ? <InformationPage path={route.path} />
-          : loading ? <div className="sumi-loading" role="status"><div className="br-loading medium" aria-hidden="true" /><p>Carregando os planos…</p></div>
+          : loading ? <LoadingState />
           : auth.status === 'error' ? (isOfflineError(auth.error) ? <OfflinePage onRetry={() => auth.reload().catch(() => {})} /> : <ServerErrorPage onRetry={() => auth.reload().catch(() => {})} />)
           : workspaceState.status === 'error' ? (isOfflineError(workspaceState.error) ? <OfflinePage onRetry={loadWorkspace} /> : <ServerErrorPage onRetry={loadWorkspace} />)
           : route.path === '/inicio' ? <Home data={{ ...data, plans: visiblePlans }} session={session} can={can} />
@@ -259,6 +298,7 @@ function Home({ data, session, can }) {
   const overdue = internalItems.reduce((total, { item }) => total + item.actions.flatMap((action) => action.tasks).filter((task) => taskOverdue(task)).length, 0);
   const awaiting = items.filter(({ plan, item }) => item.reviewStatus === 'submitted' && can(PERMISSIONS.REVIEW_ITEM, resourceFor(plan, item))).length;
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">VISÃO GERAL</p><h1>{session.authenticated ? `Olá, ${session.user?.name?.split(' ')[0] || 'usuário'}` : 'Planejamento institucional'}</h1><p>{session.authenticated ? 'Acompanhe suas responsabilidades e os resultados dos planos institucionais.' : 'Consulte os planos e resultados publicados pela UFCG.'}</p></div></div>
+    <OnboardingCard can={can} />
     <div className="overview-grid"><article><span>Planejamentos disponíveis</span><strong>{data.plans.length}</strong><a href="#/planejamentos">Consultar planos <Icon name="arrow" size={14} /></a></article><article><span>Itens acompanhados</span><strong>{items.length}</strong><small>Iniciativas e metas</small></article>{session.authenticated && internalItems.length > 0 ? <article className={overdue ? 'has-overdue' : undefined}><span>Etapas atrasadas</span><strong>{overdue}</strong><small>Nos seus escopos de acesso</small></article> : <article><span>Planos publicados</span><strong>{data.plans.filter((plan) => plan.status === 'published').length}</strong><small>Consulta disponível</small></article>}{can(PERMISSIONS.VIEW_REVIEW_QUEUE) && <article><span>Aguardando validação</span><strong>{awaiting}</strong><a href="#/validacoes">Abrir fila <Icon name="arrow" size={14} /></a></article>}</div>
     <section className="home-section"><div className="section-heading"><div><h2>Planejamentos em acompanhamento</h2><p className="hint">Visão consolidada dos ciclos institucionais.</p></div><a className="text-button" href="#/planejamentos">Ver todos</a></div><div className="compact-plan-list">{data.plans.map((plan) => <a key={plan.id} href={`#${planUrl(plan.id)}`}><span className={`plan-icon ${plan.type.toLowerCase()}`}><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={18} /></span><span><strong>{plan.shortName}</strong><small>{plan.name}</small></span><span>Etapas concluídas: {executionProgress({ actions: plan.items.flatMap((item) => item.actions) }).percent}%</span><Icon name="chevron" size={14} /></a>)}</div></section>
     {!!data.plans.length && <PlanTargetsSummary plans={data.plans} />}
@@ -295,10 +335,22 @@ function Models({ templates, onEdit, onUse }) {
 
 function ImportacaoPlanilha({ planId, onImport }) {
   const [importando, setImportando] = useState(false);
+  const [exportando, setExportando] = useState(false);
   const [erro, setErro] = useState('');
   const [avisos, setAvisos] = useState([]);
   const inputRef = React.useRef(null);
   const escolherArquivo = () => { setErro(''); setAvisos([]); inputRef.current?.click(); };
+  const exportar = async () => {
+    setExportando(true);
+    setErro('');
+    try {
+      await exportarPlano(planId);
+    } catch (err) {
+      setErro(err.message || 'Não foi possível exportar a planilha.');
+    } finally {
+      setExportando(false);
+    }
+  };
   const arquivoSelecionado = async (event) => {
     const arquivo = event.target.files?.[0];
     event.target.value = '';
@@ -322,7 +374,7 @@ function ImportacaoPlanilha({ planId, onImport }) {
   };
   return <div className="import-tools">
     <Button icon="download" onClick={baixarModeloPlanilha}>Baixar modelo</Button>
-    <Button icon="download" onClick={() => exportarPlano(planId)}>Exportar planilha</Button>
+    <Button icon="download" onClick={exportar} disabled={exportando}>{exportando ? 'Exportando…' : 'Exportar planilha'}</Button>
     <Button icon="upload" onClick={escolherArquivo} disabled={importando}>{importando ? 'Importando…' : 'Importar planilha'}</Button>
     <input ref={inputRef} type="file" accept=".xlsx" hidden onChange={arquivoSelecionado} aria-label="Selecionar planilha para importar" />
     {erro && <p role="alert" className="form-error">{erro}</p>}

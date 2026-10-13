@@ -429,16 +429,23 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     itensParaGravar.push({ row: itensAtuaisPorId.get(item.id), item });
   }
 
-  for (const { row: atual, item } of itensParaGravar) {
-    await salvarItem(sessao, plano, atual, item, contadorItensPorObjetivo, {
+  // Paralelo, não sequencial: cada salvarItem já faz uma dezena de
+  // idas-e-voltas ao banco por item, e um workspace com muitos itens
+  // (ex.: importação de planilha) levava tempo demais nesse somatório
+  // sequencial — o suficiente para estourar o timeout do proxy antes da
+  // resposta chegar ao cliente, mesmo com a gravação em si concluindo com
+  // sucesso. contadorItensPorObjetivo é seguro mesmo em paralelo: a leitura
+  // e o incremento do contador de cada item acontecem de forma síncrona,
+  // antes do primeiro await de salvarItem, então Promise.all(...map(...))
+  // os executa na mesma ordem determinística que o loop sequencial fazia.
+  await Promise.all(itensParaGravar.map(({ row: atual, item }) => salvarItem(sessao, plano, atual, item, contadorItensPorObjetivo, {
       indicadorAntigo: estadoAntigo.indicadorPorItem.get(item.id),
       acoesAntigas: estadoAntigo.acoesPorItem.get(item.id) ?? [],
       etapasAntigasPorAcao: estadoAntigo.etapasPorAcao,
       resultadosAntigos: estadoAntigo.resultadosPorItem.get(item.id) ?? [],
       riscosAntigos: estadoAntigo.riscosPorItem.get(item.id) ?? [],
       historicoAntigo: estadoAntigo.historicoPorItem.get(item.id) ?? [],
-    });
-  }
+    })));
 
   const idsNovos = new Set(plano.items.map((item) => item.id));
   const itensRemovidos = itensAtuais.filter((no) => !idsNovos.has(no.id));

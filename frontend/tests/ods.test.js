@@ -35,3 +35,10 @@ test('não atribui ODS a outros planos, vigências ou objetivos sem correspondê
   assert.deepEqual(odsForObjective(pdi, null), []);
   assert.deepEqual(ids(odsForObjective(pdi, { ...objective, title: '  aperfeiçoar práticas de GOVERNANÇA pública. ' })), [16]);
 });
+
+test('cadastro explícito tem prioridade sobre a documentação e atende objetivos novos', () => {
+  const pdi = plan();
+  assert.deepEqual(ids(odsForObjective(pdi, { ...pdi.objectives[0], ods: [4, 8] })), [4, 8]);
+  assert.deepEqual(ids(odsForObjective(pdi, { ...pdi.objectives[0], ods: [] })), []);
+  assert.deepEqual(ids(odsForObjective({ ...pdi, start: 2031, end: 2035 }, { title: 'Novo objetivo', ods: [17, 4, 4] })), [4, 17]);
+});

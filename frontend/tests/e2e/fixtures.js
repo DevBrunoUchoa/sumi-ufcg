@@ -10,6 +10,8 @@ export const test = base.extend({
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     // Regressões usam a base pública estável, independente dos documentos privados.
     await page.route('**/__dev/planning/workspace', (route) => route.fulfill({ json: initialState() }));
+    await page.route('**/api/v1/planning/eixos/*/versoes', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/v1/planning/itens/*/anexos', (route) => route.fulfill({ json: [] }));
     await use(page);
     expect(errors, 'Erros JavaScript no navegador').toEqual([]);
   },

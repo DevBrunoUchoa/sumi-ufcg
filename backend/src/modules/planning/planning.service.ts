@@ -375,7 +375,9 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     plano.objectives.some((objective) => {
       const atual = objetivosAtuaisPorId.get(objective.id);
       const dadosNovos = objectiveData(objective, atual?.dados);
-      return !atual || atual.no_pai_id !== objective.axisId || diferente(atual.dados, dadosNovos);
+      const odsAtuais = normalizeObjectiveOds(atual?.dados.ods);
+      const dadosAtuais = atual && { ...atual.dados, ...(odsAtuais === undefined ? {} : { ods: odsAtuais }) };
+      return !atual || atual.no_pai_id !== objective.axisId || diferente(dadosAtuais, dadosNovos);
     });
   if (objetivoMudou) {
     exigir(pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");

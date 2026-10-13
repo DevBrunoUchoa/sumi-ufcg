@@ -1,6 +1,6 @@
 # ADR 0010 — ODS na identificação dos objetivos
 
-Status: implementado localmente para validação, em 12/10/2026.
+Status: integrado ao cadastro persistido de ODS, em 12/10/2026.
 
 A comparação visual avaliou ícones ao lado do título, abaixo da identificação
 e em um cartão próprio. A linha abaixo da unidade responsável preserva a
@@ -40,11 +40,21 @@ O objetivo 6.4 também aceita a variação exata do título encontrada na API
 durante a validação Docker (“se constitua como princípio transversal”),
 registrada explicitamente como alias da referência, sem correspondência difusa.
 
-Essa referência é leitura documental, não um cadastro editável de ODS. O
-componente funciona tanto com a API quanto com a prévia local; não depende de
-IDs locais, não exige alteração no backend e não faz gravações na API. Um
-cadastro futuro de vínculos arbitrários deve definir um campo persistido e
-suas permissões, em vez de usar o código de objetivo como associação implícita.
+O cadastro editável do main foi incorporado: `Objective.ods` guarda a seleção
+explícita no JSONB do objetivo. A lista cadastrada tem prioridade sobre a
+referência documental, inclusive quando vazia. Objetivos legados sem o campo
+continuam usando os vínculos documentados; novos objetivos podem receber ODS
+arbitrárias pelo formulário Estrutura, com a permissão `plan.manage`.
+
+O formulário mostra a seleção efetiva e oferece aplicar os vínculos do PDI
+quando existe correspondência documental. Essa aplicação só é persistida ao
+salvar a estrutura. Navegação e consulta não fazem gravações automáticas.
+
+O backend mantém o campo opcional para clientes antigos: omissão preserva o
+cadastro existente; uma lista vazia representa remoção explícita. A validação
+aceita apenas inteiros de 1 a 17 e normaliza repetições e ordenação. Objetivos
+novos importados não recebem lista vazia artificialmente. A ausência do campo
+em registros antigos não é tratada como mudança de estrutura.
 
 Os SVGs oficiais e a procedência dos ativos estão em
 `frontend/public/images/ods/README.md`. O estudo visual e as capturas de

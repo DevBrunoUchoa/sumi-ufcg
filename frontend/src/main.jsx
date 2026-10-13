@@ -296,16 +296,24 @@ function Models({ templates, onEdit, onUse }) {
 function ImportacaoPlanilha({ planId, onImport }) {
   const [importando, setImportando] = useState(false);
   const [erro, setErro] = useState('');
+  const [avisos, setAvisos] = useState([]);
   const inputRef = React.useRef(null);
-  const escolherArquivo = () => { setErro(''); inputRef.current?.click(); };
+  const escolherArquivo = () => { setErro(''); setAvisos([]); inputRef.current?.click(); };
   const arquivoSelecionado = async (event) => {
     const arquivo = event.target.files?.[0];
     event.target.value = '';
     if (!arquivo) return;
     setImportando(true);
     setErro('');
+    setAvisos([]);
     try {
-      await onImport(planId, arquivo);
+      const resumo = await onImport(planId, arquivo);
+      // O toast de sucesso já mostra as contagens e some sozinho em alguns
+      // segundos — avisos (ex.: um risco ignorado por falta de ação
+      // correspondente) ficam aqui, numa caixa que não desaparece, porque
+      // sumiam de vez sem isso: o usuário via "importado com sucesso" e não
+      // tinha como saber que parte do conteúdo foi silenciosamente ignorada.
+      if (resumo?.avisos?.length) setAvisos(resumo.avisos);
     } catch (err) {
       setErro(err.message || 'Não foi possível importar a planilha.');
     } finally {
@@ -318,6 +326,11 @@ function ImportacaoPlanilha({ planId, onImport }) {
     <Button icon="upload" onClick={escolherArquivo} disabled={importando}>{importando ? 'Importando…' : 'Importar planilha'}</Button>
     <input ref={inputRef} type="file" accept=".xlsx" hidden onChange={arquivoSelecionado} aria-label="Selecionar planilha para importar" />
     {erro && <p role="alert" className="form-error">{erro}</p>}
+    {!!avisos.length && <div role="status" className="import-avisos">
+      <p><strong>Importação concluída com {avisos.length} aviso{avisos.length === 1 ? '' : 's'}:</strong></p>
+      <ul>{avisos.map((aviso, index) => <li key={index}>{aviso}</li>)}</ul>
+      <button type="button" className="text-button" onClick={() => setAvisos([])}>Dispensar</button>
+    </div>}
   </div>;
 }
 

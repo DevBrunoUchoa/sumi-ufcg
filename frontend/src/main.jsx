@@ -390,7 +390,21 @@ function PlanPage(props) {
   const { plan, can, onModal, onImportPlanilha, route } = props;
   if (isDashboardRoute(route)) return plan.type === 'PDI' ? <PlanDashboard {...props} /> : <NotFoundPage onGoHome={() => navigate(planUrl(plan.id))} />;
   if (plan.type !== 'PDI') return <PlanExplorer {...props} />;
-  return <PdiWorkspace {...props} actions={({ axis, objective, item }) => !item && can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>} renderDetail={(context) => <PlanItemDetail {...props} {...context} />} />;
+  return <PdiWorkspace {...props} actions={({ axis, objective, item }) => {
+    if (item) return null;
+    const canManagePlan = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
+    // Gestor do Eixo não tem plan.manage (Estrutura é administrativa, cobre
+    // todos os eixos do plano), mas pode importar/exportar a planilha do
+    // próprio eixo — a mesma permissão (item.edit) que a importação exige
+    // no backend para gravar as iniciativas desse eixo.
+    const canImportAxis = Boolean(axis) && can(PERMISSIONS.EDIT_ITEM, { planId: plan.id, axisId: axis.id });
+    if (!canManagePlan && !canImportAxis) return null;
+    return <div className="heading-actions">
+      {canManagePlan && <Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button>}
+      {(canManagePlan || canImportAxis) && <ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />}
+      {canManagePlan && plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}
+    </div>;
+  }} renderDetail={(context) => <PlanItemDetail {...props} {...context} />} />;
 }
 
 function PlanItemDetail({ plan, item, action, stage, view, route, actor, can, onModal, changeItem }) {

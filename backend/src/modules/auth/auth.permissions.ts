@@ -31,12 +31,26 @@ export const PERMISSOES = Object.freeze({
 /** O administrador recebe, em escopo global, todo o vocabulário do contrato. */
 export const TODAS_PERMISSOES_ADMIN = PERMISSION_CODES;
 
-/** Concedidas por eixo a quem está em `managerIds` (Gestor do Eixo). */
+/**
+ * Concedidas por eixo a quem está em `managerIds` (Gestor do Eixo).
+ *
+ * EDIT_ITEM, MANAGE_ACTION, EDIT_TARGET e MANAGE_RISK foram incluídas para
+ * que o Gestor consiga importar a planilha de monitoramento do seu próprio
+ * eixo: a importação (importarPlanilha) delega toda a gravação para
+ * salvarWorkspace, que exige essas permissões para criar/atualizar
+ * iniciativas, ações, metas e riscos — sem elas o Gestor via a importação
+ * falhar no meio do caminho com 403 em itens que a própria planilha precisa
+ * tocar.
+ */
 export const PERMISSOES_GESTOR_EIXO = Object.freeze([
   PERMISSOES.VIEW_INTERNAL_PLAN,
+  PERMISSOES.EDIT_ITEM,
+  PERMISSOES.MANAGE_ACTION,
   PERMISSOES.UPDATE_STAGE,
+  PERMISSOES.EDIT_TARGET,
   PERMISSOES.RECORD_RESULT,
   PERMISSOES.VIEW_RISK,
+  PERMISSOES.MANAGE_RISK,
   PERMISSOES.VIEW_HISTORY,
   PERMISSOES.COMMENT_HISTORY,
   PERMISSOES.SUBMIT_ITEM,

@@ -10,7 +10,7 @@ import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, Unauthorized
 import { Attachments, AttachmentsProvider } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
-import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
+import { baixarModeloPlanilha, exportarPlano, importarPlanilha } from './importacao-client.js';
 import { AxisIcon } from './AxisIcon.jsx';
 import { PdiWorkspace } from './planning/PdiWorkspace.jsx';
 import { PlanDashboard } from './planning/PlanDashboard.jsx';
@@ -22,7 +22,7 @@ import './planning/planning.css';
 import './planning/charts.css';
 import './planning/dashboard.css';
 import { AppShell } from './layout/AppShell.jsx';
-import { PublicHome, InformationPage } from './layout/PublicPages.jsx';
+import { PublicHome, PlanTargetsSummary, InformationPage } from './layout/PublicPages.jsx';
 import { loginUrl, safeReturnPath } from './auth/navigation.js';
 import './layout/layout.css';
 import './layout/theme.css';
@@ -257,6 +257,7 @@ function Home({ data, session, can }) {
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">VISÃO GERAL</p><h1>{session.authenticated ? `Olá, ${session.user?.name?.split(' ')[0] || 'usuário'}` : 'Planejamento institucional'}</h1><p>{session.authenticated ? 'Acompanhe suas responsabilidades e os resultados dos planos institucionais.' : 'Consulte os planos e resultados publicados pela UFCG.'}</p></div></div>
     <div className="overview-grid"><article><span>Planejamentos disponíveis</span><strong>{data.plans.length}</strong><a href="#/planejamentos">Consultar planos <Icon name="arrow" size={14} /></a></article><article><span>Itens acompanhados</span><strong>{items.length}</strong><small>Iniciativas e metas</small></article>{session.authenticated && internalItems.length > 0 ? <article className={overdue ? 'has-overdue' : undefined}><span>Etapas atrasadas</span><strong>{overdue}</strong><small>Nos seus escopos de acesso</small></article> : <article><span>Planos publicados</span><strong>{data.plans.filter((plan) => plan.status === 'published').length}</strong><small>Consulta disponível</small></article>}{can(PERMISSIONS.VIEW_REVIEW_QUEUE) && <article><span>Aguardando validação</span><strong>{awaiting}</strong><a href="#/validacoes">Abrir fila <Icon name="arrow" size={14} /></a></article>}</div>
     <section className="home-section"><div className="section-heading"><div><h2>Planejamentos em acompanhamento</h2><p className="hint">Visão consolidada dos ciclos institucionais.</p></div><a className="text-button" href="#/planejamentos">Ver todos</a></div><div className="compact-plan-list">{data.plans.map((plan) => <a key={plan.id} href={`#${planUrl(plan.id)}`}><span className={`plan-icon ${plan.type.toLowerCase()}`}><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={18} /></span><span><strong>{plan.shortName}</strong><small>{plan.name}</small></span><span>Etapas concluídas: {executionProgress({ actions: plan.items.flatMap((item) => item.actions) }).percent}%</span><Icon name="chevron" size={14} /></a>)}</div></section>
+    {!!data.plans.length && <PlanTargetsSummary plans={data.plans} />}
   </div>;
 }
 
@@ -309,6 +310,7 @@ function ImportacaoPlanilha({ planId, onImport }) {
   };
   return <div className="import-tools">
     <Button icon="download" onClick={baixarModeloPlanilha}>Baixar modelo</Button>
+    <Button icon="download" onClick={() => exportarPlano(planId)}>Exportar planilha</Button>
     <Button icon="upload" onClick={escolherArquivo} disabled={importando}>{importando ? 'Importando…' : 'Importar planilha'}</Button>
     <input ref={inputRef} type="file" accept=".xlsx" hidden onChange={arquivoSelecionado} aria-label="Selecionar planilha para importar" />
     {erro && <p role="alert" className="form-error">{erro}</p>}

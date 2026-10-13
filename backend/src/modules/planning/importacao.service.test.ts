@@ -1,6 +1,7 @@
+import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
-import { descreverAtualizacao } from "./importacao.service.js";
-import type { Item } from "./planning.types.js";
+import { descreverAtualizacao, exportarPlanoXlsx } from "./importacao.service.js";
+import type { Item, Plan } from "./planning.types.js";
 
 function itemBase(overrides: Partial<Item> = {}): Item {
   return {
@@ -92,5 +93,61 @@ describe("descreverAtualizacao", () => {
     const depois = itemBase({ risks: [risco("r1"), risco("r2")] });
     const mudancas = descreverAtualizacao(itemBase(), depois);
     expect(mudancas).toContain("riscos: 0 → 2");
+  });
+});
+
+function planoBase(overrides: Partial<Plan> = {}): Plan {
+  return {
+    id: "p1",
+    type: "PDI",
+    shortName: "PDI",
+    name: "Plano de Desenvolvimento Institucional",
+    start: 2026,
+    end: 2027,
+    status: "published",
+    template: { id: "t1", type: "PDI", name: "PDI", version: 1, description: "", labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" }, defaultPeriodicity: "annual", fields: [] },
+    axes: [{ id: "a1", code: "8", name: "Governança", color: "#2f78a5", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: [], customGrants: [] }],
+    objectives: [{ id: "o1", axisId: "a1", code: "8.1", title: "Aperfeiçoar governança", ods: [] }],
+    items: [],
+    ...overrides,
+  };
+}
+
+describe("exportarPlanoXlsx", () => {
+  it("gera as duas abas com uma linha por etapa e uma por risco", async () => {
+    const plano = planoBase({ items: [itemBase({ actions: [{ id: "ac1", code: "8.1.1.1", title: "Ação", owner: "", deadline: "", tasks: [{ id: "e1", title: "Etapa 1", status: "completed", deadline: "", justification: "", partners: "" }, { id: "e2", title: "Etapa 2", status: "not_started", deadline: "", justification: "", partners: "" }] }], risks: [{ id: "r1", actionId: "ac1", stage: "Etapa 1", title: "Risco de teste", probability: 3, impact: 3, owner: "", strategicRisk: "", cause: "", consequence: "", category: "", controls: "", controlType: "", maturity: "", response: "", treatment: "", treatmentOwner: "", deadline: "", execution: 0, situation: "", review: "", status: "" }] })] });
+
+    const buffer = await exportarPlanoXlsx(plano);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+
+    const abaPdi = workbook.getWorksheet("MONITORAMENTO PDI");
+    expect(abaPdi?.rowCount).toBe(3); // cabeçalho + 2 etapas
+    expect(abaPdi?.getRow(1).getCell(1).value).toBe("Eixo");
+    expect(abaPdi?.getRow(2).getCell(1).value).toBe("8"); // primeira linha do item leva o código do eixo
+    expect(abaPdi?.getRow(3).getCell(1).value).toBe(""); // linhas seguintes do mesmo item não repetem
+
+    const abaRiscos = workbook.getWorksheet("GERENCIAMENTO DE RISCOS");
+    expect(abaRiscos?.rowCount).toBe(2); // cabeçalho + 1 risco
+    expect(abaRiscos?.getRow(2).getCell(10).value).toBe("Risco de teste");
+  });
+
+  it("gera uma linha mesmo para item sem ações", async () => {
+    const plano = planoBase({ items: [itemBase({ actions: [] })] });
+    const buffer = await exportarPlanoXlsx(plano);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    expect(workbook.getWorksheet("MONITORAMENTO PDI")?.rowCount).toBe(2);
+  });
+
+  it("inclui uma coluna de Meta e Execução por ano da vigência do plano", async () => {
+    const plano = planoBase({ start: 2026, end: 2028, items: [] });
+    const buffer = await exportarPlanoXlsx(plano);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    const cabecalhos = workbook.getWorksheet("MONITORAMENTO PDI")!.getRow(1).values as string[];
+    expect(cabecalhos).toContain("Meta 2026");
+    expect(cabecalhos).toContain("Meta 2028");
+    expect(cabecalhos).toContain("Execução 2027");
   });
 });

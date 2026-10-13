@@ -29,7 +29,7 @@ import { HttpError } from "../../lib/http-error.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import { montarWorkspace, salvarWorkspace } from "./planning.service.js";
 import { parseOrLancar, workspaceSchema } from "./planning.schema.js";
-import type { ActionItem, HistoryEntry, Item, Objective, Risk } from "./planning.types.js";
+import type { ActionItem, HistoryEntry, Item, Objective, Plan, Risk, Stage } from "./planning.types.js";
 import { coberturaExecucao, eixoVersoesService, periodoAtual } from "./eixoVersoes.service.js";
 
 import { lerAbaPdi, lerAbaRiscos } from "./importacao.leitura.js";
@@ -382,6 +382,92 @@ export async function gerarModeloXlsx(): Promise<Buffer> {
   ].forEach((linha) => instrucoes.addRow([linha]));
   instrucoes.getRow(1).font = { bold: true, size: 14 };
   instrucoes.getRow(9).font = { bold: true };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
+// ---------------------------------------------------------------------------
+// Exportação dos dados reais do plano, nas mesmas abas/colunas do modelo —
+// mesmo formato que a importação lê, então o arquivo exportado pode ser
+// reimportado depois de editado (round-trip).
+// ---------------------------------------------------------------------------
+
+function anosDoPlano(plano: Pick<Plan, "start" | "end">): number[] {
+  const anos: number[] = [];
+  for (let ano = plano.start; ano <= plano.end; ano++) anos.push(ano);
+  return anos;
+}
+
+export async function exportarPlanoXlsx(plano: Plan): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "SUMI · UFCG";
+  workbook.created = new Date();
+  const anos = anosDoPlano(plano);
+  const objetivoPorId = new Map(plano.objectives.map((objetivo) => [objetivo.id, objetivo]));
+  const eixoPorId = new Map(plano.axes.map((eixo) => [eixo.id, eixo]));
+  const colunasAno = (prefixo: string) => anos.map((ano) => `${prefixo} ${ano}`);
+  const cabecalhosPdi = [
+    "Eixo", "Objetivo do PDI", "Ref. Iniciativa", "Iniciativa", "Indicador da Iniciativa", "Linha de Base",
+    ...colunasAno("Meta"),
+    "Ref. Ação", "Ação Estratégica", "Etapa (Tarefa)", "Parceiro na etapa", "Etapa concluída (sim/não)?",
+    ...colunasAno("Execução"),
+    "Justificativas",
+  ];
+
+  const abaPdi = workbook.addWorksheet("MONITORAMENTO PDI");
+  abaPdi.addRow(cabecalhosPdi);
+  estilizarCabecalho(abaPdi, 1, cabecalhosPdi.length);
+  abaPdi.views = [{ state: "frozen", ySplit: 1 }];
+
+  for (const item of plano.items) {
+    const eixo = eixoPorId.get(item.axisId);
+    const objetivo = objetivoPorId.get(item.objectiveId);
+    const linhas = item.actions.length ? item.actions.flatMap((acao) => (acao.tasks.length ? acao.tasks : [null]).map((etapa) => ({ acao, etapa }))) : [{ acao: null as ActionItem | null, etapa: null as Stage | null }];
+    linhas.forEach(({ acao, etapa }, indice) => {
+      const primeiraLinhaDoItem = indice === 0;
+      abaPdi.addRow([
+        primeiraLinhaDoItem ? eixo?.code ?? "" : "",
+        primeiraLinhaDoItem && objetivo ? `${objetivo.code}: ${objetivo.title}` : "",
+        primeiraLinhaDoItem ? item.code : "",
+        primeiraLinhaDoItem ? item.title : "",
+        primeiraLinhaDoItem ? item.metric.name : "",
+        primeiraLinhaDoItem ? item.metric.baseline ?? "" : "",
+        ...(primeiraLinhaDoItem ? anos.map((ano) => item.metric.targets[ano] ?? "") : anos.map(() => "")),
+        acao?.code ?? "",
+        acao?.title ?? "",
+        etapa?.title ?? "",
+        etapa?.partners ?? "",
+        etapa ? (etapa.status === "completed" ? "sim" : "não") : "",
+        ...anos.map((ano) => item.measurements.find((medicao) => medicao.year === ano)?.value ?? ""),
+        etapa?.justification ?? "",
+      ]);
+    });
+  }
+
+  const abaRiscos = workbook.addWorksheet("GERENCIAMENTO DE RISCOS");
+  abaRiscos.addRow(RISCO_CABECALHOS);
+  estilizarCabecalho(abaRiscos, 1, RISCO_CABECALHOS.length);
+  abaRiscos.views = [{ state: "frozen", ySplit: 1 }];
+
+  for (const item of plano.items) {
+    const eixo = eixoPorId.get(item.axisId);
+    const objetivo = objetivoPorId.get(item.objectiveId);
+    for (const risco of item.risks) {
+      const acao = item.actions.find((candidata) => candidata.id === risco.actionId);
+      abaRiscos.addRow([
+        eixo?.code ?? "", objetivo ? `${objetivo.code}: ${objetivo.title}` : "", item.code, item.title,
+        acao?.code ?? "", acao?.title ?? "", risco.stage,
+        risco.strategicRisk, "", risco.title, risco.cause, risco.consequence, risco.category,
+        risco.probability, risco.impact, "", "",
+        risco.controls, risco.controlType, risco.maturity, "", "", "",
+        risco.response, risco.treatment, risco.treatmentOwner, "", risco.deadline, "",
+        risco.execution, "", "", "", risco.situation,
+        "", risco.status, risco.review, "",
+        "", "", "", "",
+      ]);
+    }
+  }
 
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);

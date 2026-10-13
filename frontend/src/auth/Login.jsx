@@ -51,6 +51,7 @@ export function LoginPage({ onSuccess, authenticated = false, returnTo = '/inici
             <input type="email" name="email" required autoComplete="username" autoCapitalize="none" spellCheck={false} disabled={loading} value={email} onChange={(event) => setEmail(event.target.value)} />
           </Field>
           <div className="field"><label htmlFor="login-password">Senha</label><div className="login-password"><input id="login-password" type={showPassword ? 'text' : 'password'} name="senha" required autoComplete="current-password" disabled={loading} value={senha} onChange={(event) => setSenha(event.target.value)} /><button className="br-button circle" type="button" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={showPassword} aria-controls="login-password" onClick={() => setShowPassword(!showPassword)}><Icon name="eye" size={16} /></button></div></div>
+          <a className="login-forgot-password" href="#/esqueci-senha">Esqueci minha senha</a>
           {error && <p role="alert" className="form-error">{error}</p>}
         </div>
         <div className="form-end">

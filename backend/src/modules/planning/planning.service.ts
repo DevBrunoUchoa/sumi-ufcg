@@ -1,8 +1,12 @@
 import { isDeepStrictEqual } from "node:util";
 import { HttpError } from "../../lib/http-error.js";
+import { logger } from "../../lib/logger.js";
+import { env } from "../../config/env.js";
+import { mailer } from "../../lib/mailer.js";
 import { prepareRiskWrite } from "./risk-write-policy.js";
 import { normalizeObjectiveOds, objectiveData } from "./objective-ods.js";
 import { pode } from "../auth/auth.can.js";
+import { usuarioRepository } from "../auth/auth.repository.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import {
   acaoRepo,
@@ -429,6 +433,15 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     itensParaGravar.push({ row: itensAtuaisPorId.get(item.id), item });
   }
 
+  // Itens recém-enviados para validação neste save — calculado ANTES de
+  // gravar (compara o reviewStatus antigo, já em mãos, com o novo) para
+  // poder notificar os responsáveis do eixo por e-mail depois que a
+  // gravação terminar, sem atrasar nem arriscar o salvamento em si (envio
+  // de e-mail é melhor esforço, nunca motivo de falha do save).
+  const itensRecemEnviados = itensParaGravar.filter(
+    ({ row: atual, item }) => (atual?.dados as { reviewStatus?: string } | undefined)?.reviewStatus !== "submitted" && item.reviewStatus === "submitted",
+  );
+
   // Paralelo, não sequencial: cada salvarItem já faz uma dezena de
   // idas-e-voltas ao banco por item, e um workspace com muitos itens
   // (ex.: importação de planilha) levava tempo demais nesse somatório
@@ -447,12 +460,62 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
       historicoAntigo: estadoAntigo.historicoPorItem.get(item.id) ?? [],
     })));
 
+  if (itensRecemEnviados.length > 0) {
+    notificarResponsaveisDeSubmissao(plano, itensRecemEnviados.map(({ item }) => item)).catch((err) =>
+      logger.error({ err }, "Falha ao notificar responsáveis de itens enviados para validação"),
+    );
+  }
+
   const idsNovos = new Set(plano.items.map((item) => item.id));
   const itensRemovidos = itensAtuais.filter((no) => !idsNovos.has(no.id));
   if (itensRemovidos.length > 0) {
     exigir(pode(sessao, "item.edit", { planId: plano.id }), "Sem permissão para remover itens deste planejamento");
     await noPlanoRepo.removerLote(itensRemovidos.map((no) => no.id));
   }
+}
+
+/**
+ * Notificação por e-mail (melhor esforço) para os Responsáveis de cada eixo
+ * envolvido, quando um save deixa um ou mais itens com reviewStatus
+ * "submitted" pela primeira vez — pedido explícito ao lado da recuperação
+ * de senha: avisar quem precisa agir, sem depender de a pessoa entrar no
+ * SUMI e conferir "Minhas pendências"/"Validações" por conta própria.
+ */
+async function notificarResponsaveisDeSubmissao(plano: Plan, itens: Item[]): Promise<void> {
+  const porEixo = new Map<string, Item[]>();
+  for (const item of itens) {
+    const lista = porEixo.get(item.axisId) ?? [];
+    lista.push(item);
+    porEixo.set(item.axisId, lista);
+  }
+
+  await Promise.all(
+    [...porEixo.entries()].map(async ([axisId, itensDoEixo]) => {
+      const eixo = plano.axes.find((axis) => axis.id === axisId);
+      if (!eixo || eixo.reviewerIds.length === 0) return;
+      const responsaveis = await usuarioRepository.listarPorIds(eixo.reviewerIds);
+      if (responsaveis.length === 0) return;
+
+      const link = `${env.FRONTEND_URL}/#/validacoes`;
+      const plural = itensDoEixo.length > 1;
+      const listaHtml = itensDoEixo.map((item) => `<li>${item.code} — ${item.title}</li>`).join("");
+      const listaTexto = itensDoEixo.map((item) => `- ${item.code} — ${item.title}`).join("\n");
+      const assunto = `SUMI — ${itensDoEixo.length} iniciativa${plural ? "s" : ""} aguardando validação no eixo ${eixo.code}`;
+
+      await Promise.all(
+        responsaveis.map((responsavel) =>
+          mailer
+            .enviar({
+              to: responsavel.email,
+              subject: assunto,
+              html: `<p>Olá, ${responsavel.nome}.</p><p>${plural ? `${itensDoEixo.length} iniciativas foram enviadas` : "Uma iniciativa foi enviada"} para validação no eixo ${eixo.code} · ${eixo.name}:</p><ul>${listaHtml}</ul><p><a href="${link}">Ver validações pendentes</a></p>`,
+              text: `${plural ? `${itensDoEixo.length} iniciativas foram enviadas` : "Uma iniciativa foi enviada"} para validação no eixo ${eixo.code} · ${eixo.name}:\n${listaTexto}\n\nVer validações pendentes: ${link}`,
+            })
+            .catch((err) => logger.error({ err, usuarioId: responsavel.id }, "Falha ao enviar e-mail de notificação de submissão")),
+        ),
+      );
+    }),
+  );
 }
 
 async function salvarItem(

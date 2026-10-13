@@ -2,7 +2,7 @@ import { Router } from "express";
 import { definirCookieSessao, lerCookie, limparCookieSessao } from "../../lib/cookies.js";
 import { AUTH_SESSION_PATH, type UnauthenticatedSessionError } from "./auth.contract.js";
 import { authService, DURACAO_SESSAO_MS, NOME_COOKIE_SESSAO } from "./auth.service.js";
-import { loginSchema, parseOrLancar } from "./auth.schema.js";
+import { esqueciSenhaSchema, loginSchema, parseOrLancar, redefinirSenhaSchema } from "./auth.schema.js";
 
 export const authRouter = Router();
 
@@ -26,6 +26,28 @@ authRouter.post("/api/v1/auth/logout", async (req, res, next) => {
     const token = lerCookie(req, NOME_COOKIE_SESSAO);
     await authService.encerrar(token);
     limparCookieSessao(res, NOME_COOKIE_SESSAO);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+authRouter.post("/api/v1/auth/esqueci-senha", async (req, res, next) => {
+  try {
+    const input = parseOrLancar(esqueciSenhaSchema, req.body);
+    await authService.solicitarRedefinicaoSenha(input.email);
+    // 204 sempre, exista ou não o e-mail — não dá pra confirmar/negar
+    // cadastro por essa rota (ver authService.solicitarRedefinicaoSenha).
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+authRouter.post("/api/v1/auth/redefinir-senha", async (req, res, next) => {
+  try {
+    const input = parseOrLancar(redefinirSenhaSchema, req.body);
+    await authService.redefinirSenha(input.token, input.novaSenha);
     res.status(204).send();
   } catch (err) {
     next(err);

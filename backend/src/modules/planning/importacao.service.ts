@@ -100,6 +100,7 @@ export async function importarPlanilha(
   planId: string,
   arquivo: { originalname: string; mimetype: string; size: number; buffer: Buffer },
 ): Promise<ResumoImportacao> {
+  const t0 = Date.now();
   const { buffer } = arquivo;
   const workbook = new ExcelJS.Workbook();
   try {
@@ -107,6 +108,7 @@ export async function importarPlanilha(
   } catch {
     throw new HttpError(400, "Não foi possível ler o arquivo enviado — envie um .xlsx válido.");
   }
+  console.error("[debug-timing] xlsx.load", Date.now() - t0, "ms");
 
   const abaPdi = workbook.worksheets.find((ws) => /monitoramento/i.test(ws.name) && !/risco/i.test(ws.name));
   if (!abaPdi) throw new HttpError(400, 'Não encontrei uma aba de monitoramento do PDI (nome esperado: "<UNIDADE> - MONITORAMENTO PDI").');
@@ -118,6 +120,7 @@ export async function importarPlanilha(
   if (eixoImportado.itens.size === 0) throw new HttpError(400, "Nenhuma iniciativa reconhecida na planilha — confira se a linha de cabeçalho está intacta.");
 
   const workspace = await montarWorkspace(sessao);
+  console.error("[debug-timing] montarWorkspace", Date.now() - t0, "ms");
   const plano = workspace.plans.find((p) => p.id === planId);
   if (!plano) throw new HttpError(404, `Plano "${planId}" não encontrado.`);
   const eixo = plano.axes.find((axis) => axis.code === eixoImportado.eixoCodigo);
@@ -272,8 +275,11 @@ export async function importarPlanilha(
     }
   }
 
+  console.error("[debug-timing] antes de parseOrLancar+salvarWorkspace", Date.now() - t0, "ms");
   const workspaceValidado = parseOrLancar(workspaceSchema, workspace);
+  console.error("[debug-timing] parseOrLancar", Date.now() - t0, "ms");
   await salvarWorkspace(sessao, workspaceValidado);
+  console.error("[debug-timing] salvarWorkspace", Date.now() - t0, "ms");
 
   // Retrato do eixo logo após a importação — registrado best-effort: se a
   // retenção do arquivo falhar (ex.: bucket de storage não provisionado),
@@ -289,9 +295,12 @@ export async function importarPlanilha(
       coberturaExecucaoPercentual: coberturaExecucao(itensDoEixoFinal),
       riscosTotal,
     });
+    console.error("[debug-timing] eixoVersoesService.registrar", Date.now() - t0, "ms");
   } catch (err) {
+    console.error("[debug-timing] eixoVersoesService.registrar FALHOU em", Date.now() - t0, "ms —", err instanceof Error ? err.message : err);
     avisos.push(`Não foi possível reter esta versão no histórico do eixo: ${err instanceof Error ? err.message : "erro desconhecido"}.`);
   }
+  console.error("[debug-timing] fim, retornando resposta em", Date.now() - t0, "ms");
 
   return {
     eixo: `${eixo.code} · ${eixo.name}`,

@@ -26,6 +26,8 @@
 import { randomUUID } from "node:crypto";
 import ExcelJS from "exceljs";
 import { HttpError } from "../../lib/http-error.js";
+import { pode } from "../auth/auth.can.js";
+import { PERMISSOES } from "../auth/auth.permissions.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import { montarWorkspace, salvarWorkspace } from "./planning.service.js";
 import { parseOrLancar, workspaceSchema } from "./planning.schema.js";
@@ -121,6 +123,17 @@ export async function importarPlanilha(
   const eixo = plano.axes.find((axis) => axis.code === eixoImportado.eixoCodigo);
   if (!eixo) {
     throw new HttpError(400, `O eixo "${eixoImportado.eixoCodigo}" (identificado na planilha) não existe neste plano — cadastre o eixo pela tela de Estrutura antes de importar.`);
+  }
+
+  // Checagem explícita de autorização: embora a gravação em salvarWorkspace
+  // já exija item.edit por item alterado, essa checagem só dispara quando
+  // há diferença de conteúdo — uma reimportação sem mudanças (ou que só
+  // afete riscos/metas) passaria pelo resto da função sem nunca confirmar
+  // permissão. item.edit é a permissão-base de quem pode tocar iniciativas
+  // deste eixo, por isso é exigida aqui, de uma vez, antes de qualquer
+  // leitura/gravação.
+  if (!pode(sessao, PERMISSOES.EDIT_ITEM, { planId, axisId: eixo.id })) {
+    throw new HttpError(403, `Sem permissão para importar planilha no eixo "${eixo.code}".`);
   }
 
   const avisos: string[] = [];

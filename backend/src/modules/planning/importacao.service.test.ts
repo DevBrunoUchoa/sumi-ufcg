@@ -1,7 +1,23 @@
 import ExcelJS from "exceljs";
-import { describe, expect, it } from "vitest";
-import { descreverAtualizacao, exportarPlanoXlsx } from "./importacao.service.js";
-import type { Item, Plan } from "./planning.types.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Item, Plan, Workspace } from "./planning.types.js";
+import type { SessaoUsuario } from "../auth/auth.types.js";
+
+const salvarWorkspaceMock = vi.fn(async (..._args: unknown[]) => {});
+const montarWorkspaceMock = vi.fn(async (..._args: unknown[]): Promise<Workspace> => {
+  throw new Error("montarWorkspaceMock não configurado para este teste");
+});
+
+vi.mock("./planning.service.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./planning.service.js")>();
+  return {
+    ...actual,
+    salvarWorkspace: (...args: Parameters<typeof actual.salvarWorkspace>) => salvarWorkspaceMock(...args),
+    montarWorkspace: (...args: Parameters<typeof actual.montarWorkspace>) => montarWorkspaceMock(...args),
+  };
+});
+
+const { descreverAtualizacao, exportarPlanoXlsx, importarPlanilha } = await import("./importacao.service.js");
 
 function itemBase(overrides: Partial<Item> = {}): Item {
   return {
@@ -149,5 +165,62 @@ describe("exportarPlanoXlsx", () => {
     expect(cabecalhos).toContain("Meta 2026");
     expect(cabecalhos).toContain("Meta 2028");
     expect(cabecalhos).toContain("Execução 2027");
+  });
+});
+
+describe("importarPlanilha — autorização por eixo", () => {
+  beforeEach(() => {
+    salvarWorkspaceMock.mockClear();
+    montarWorkspaceMock.mockReset();
+  });
+
+  function sessaoComGrants(grants: SessaoUsuario["grants"]): SessaoUsuario {
+    return { authenticated: true, user: { id: "u1", name: "Teste", email: null }, roles: [], grants };
+  }
+
+  async function arquivoDoEixo(plano: Plan) {
+    const buffer = await exportarPlanoXlsx(plano);
+    return { originalname: "planilha.xlsx", mimetype: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", size: buffer.length, buffer };
+  }
+
+  it("rejeita quem não tem item.edit no eixo identificado na planilha", async () => {
+    const plano = planoBase({ items: [itemBase({ actions: [{ id: "ac1", code: "8.1.1.1", title: "Ação", owner: "", deadline: "", tasks: [] }] })] });
+    montarWorkspaceMock.mockResolvedValueOnce({ version: 2, templates: [plano.template], plans: [plano] });
+
+    const sessaoSemPermissao = sessaoComGrants([
+      { permission: "plan.read_internal", scope: { type: "axis", planId: "p1", axisId: "a1" } },
+    ]);
+
+    await expect(importarPlanilha(sessaoSemPermissao, "p1", await arquivoDoEixo(plano))).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(salvarWorkspaceMock).not.toHaveBeenCalled();
+  });
+
+  it("permite quem tem item.edit escopado ao eixo da planilha (Gestor do Eixo)", async () => {
+    const plano = planoBase({ items: [itemBase({ actions: [{ id: "ac1", code: "8.1.1.1", title: "Ação", owner: "", deadline: "", tasks: [] }] })] });
+    montarWorkspaceMock.mockResolvedValueOnce({ version: 2, templates: [plano.template], plans: [plano] });
+
+    const sessaoGestor = sessaoComGrants([
+      { permission: "item.edit", scope: { type: "axis", planId: "p1", axisId: "a1" } },
+    ]);
+
+    const resumo = await importarPlanilha(sessaoGestor, "p1", await arquivoDoEixo(plano));
+    expect(resumo.eixo).toContain("8");
+    expect(salvarWorkspaceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejeita quem tem item.edit em outro eixo (não no eixo da planilha)", async () => {
+    const plano = planoBase({ items: [itemBase({ actions: [{ id: "ac1", code: "8.1.1.1", title: "Ação", owner: "", deadline: "", tasks: [] }] })] });
+    montarWorkspaceMock.mockResolvedValueOnce({ version: 2, templates: [plano.template], plans: [plano] });
+
+    const sessaoOutroEixo = sessaoComGrants([
+      { permission: "item.edit", scope: { type: "axis", planId: "p1", axisId: "outro-eixo" } },
+    ]);
+
+    await expect(importarPlanilha(sessaoOutroEixo, "p1", await arquivoDoEixo(plano))).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(salvarWorkspaceMock).not.toHaveBeenCalled();
   });
 });

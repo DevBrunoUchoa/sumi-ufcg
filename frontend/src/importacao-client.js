@@ -16,16 +16,26 @@ export function baixarModeloPlanilha() {
   link.remove();
 }
 
-// Navegação direta (não fetch): o cookie de sessão viaja normalmente numa
-// navegação same-origin, e assim o navegador decide o nome do arquivo a
-// partir do Content-Disposition da resposta sem precisar ler o corpo aqui.
-export function exportarPlano(planId) {
-  const url = `${API_BASE_URL}/api/v1/planning/planos/${planId}/exportacao`;
+// Via fetch (não navegação direta) para poder mostrar "Exportando…" enquanto
+// o backend gera o arquivo — um plano grande pode levar alguns segundos, e
+// sem isso o botão ficava sem nenhum retorno visual até o download começar.
+export async function exportarPlano(planId) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/planning/planos/${planId}/exportacao`, { credentials: 'include', cache: 'no-store' });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error || `Falha ao exportar a planilha (${response.status}).`);
+  }
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const nomeArquivo = disposition.match(/filename="([^"]+)"/)?.[1] || 'planejamento-sumi.xlsx';
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
+  link.download = nomeArquivo;
   document.body.appendChild(link);
   link.click();
   link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export async function importarPlanilha(planId, arquivo) {

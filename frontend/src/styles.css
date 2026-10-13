@@ -173,6 +173,12 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 .page { max-width: 1400px; padding: var(--spacing-scale-4x) var(--spacing-scale-5x) var(--spacing-scale-7x); margin: auto; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); margin-bottom: var(--spacing-scale-4x); }
 .page-heading > div > p:last-child { margin-top: var(--spacing-scale-base); color: var(--text-muted); font-size: var(--font-size-scale-base); }
+.onboarding-card { margin-bottom: var(--spacing-scale-4x); border: 1px solid var(--border); }
+.onboarding-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-2x); margin-bottom: var(--spacing-scale-base); }
+.onboarding-heading h2 { margin: 0; font-size: var(--font-size-scale-up-02); }
+.onboarding-steps { list-style: none; margin: var(--spacing-scale-3x) 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-scale-2x); }
+.onboarding-steps li { display: flex; align-items: flex-start; gap: var(--spacing-scale-base); }
+.onboarding-steps li svg { flex-shrink: 0; margin-top: 3px; color: var(--primary); }
 .overview-grid { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-3x) var(--spacing-scale-5x); padding: var(--spacing-scale-3x); margin-bottom: var(--spacing-scale-4x); background: var(--surface-soft); border-radius: 5px; }
 .overview-grid article { flex: 1 1 152px; display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-scale-base); }
 .overview-grid article > span { color: var(--text-muted); font-size: var(--font-size-scale-base); }
@@ -606,7 +612,13 @@ br-select::part(option):hover {
 .view-switch { display: flex; gap: var(--spacing-scale-baseh); }
 .view-switch button { font-size: var(--font-size-scale-base); padding: var(--spacing-scale-base) 0; border-bottom: 2px solid transparent; color: var(--text-muted); }
 .view-switch button[aria-pressed="true"] { color: var(--text-strong); font-weight: var(--font-weight-semi-bold); border-bottom-color: var(--text-strong); }
-.table-scroll { overflow-x: auto; }
+/* Em telas estreitas a tabela rola lateralmente (overflow-x: auto já
+   permitia), mas nada avisava que havia mais colunas fora da vista — a
+   última coluna ficava cortada sem nenhum indício de que dava pra arrastar.
+   O degradê na borda direita é só um indício visual; some sozinho quando a
+   tabela cabe inteira (max-width limita a faixa ao conteúdo real). */
+.table-scroll { overflow-x: auto; position: relative; }
+.table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 24px; max-width: 8%; background: linear-gradient(to right, transparent, color-mix(in srgb, var(--surface) 90%, transparent)); pointer-events: none; }
 .annual-table { width: 100%; border-collapse: collapse; text-align: center; font-size: var(--font-size-scale-base); font-variant-numeric: tabular-nums; }
 .annual-table th, .annual-table td { padding: var(--spacing-scale-2x); border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
 .annual-table thead th { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-medium); color: var(--text-muted); border-bottom-color: var(--border-strong); background: var(--surface-soft); }

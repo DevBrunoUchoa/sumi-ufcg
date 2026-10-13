@@ -350,19 +350,17 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     plano.axes.some((axis, index) => {
       const atual = eixosAtuaisPorId.get(axis.id);
       const dadosNovos = { code: axis.code, name: axis.name, color: axis.color, ownerUnit: axis.ownerUnit, managerIds: axis.managerIds, reviewerIds: axis.reviewerIds, customGrants: axis.customGrants };
-      return !atual || atual.ordem !== index || diferente(atual.dados, dadosNovos);
+      // customGrants foi adicionado depois (PR #17) e nunca foi retroagido
+      // nas linhas já gravadas — "ausente" ali é equivalente a "[]" aqui, não
+      // uma mudança real. Sem essa normalização, diferente() via JSON.stringify
+      // via comparar chave ausente com [] presente, e eixoMudou fica sempre
+      // true para qualquer eixo antigo (mascarado até agora porque só quem
+      // já tinha plan.manage gravava no workspace).
+      const customGrantsAtuais = Array.isArray(atual?.dados.customGrants) ? atual.dados.customGrants : [];
+      const dadosAtuais = atual && { ...atual.dados, customGrants: customGrantsAtuais };
+      return !atual || atual.ordem !== index || diferente(dadosAtuais, dadosNovos);
     });
   if (eixoMudou) {
-    if (!pode(sessao, "plan.manage", { planId: plano.id })) {
-      console.error("[debug-eixoMudou]", JSON.stringify({
-        comprimentos: { atual: eixosAtuais.length, novo: plano.axes.length },
-        diffs: plano.axes.map((axis, index) => {
-          const atual = eixosAtuaisPorId.get(axis.id);
-          const dadosNovos = { code: axis.code, name: axis.name, color: axis.color, ownerUnit: axis.ownerUnit, managerIds: axis.managerIds, reviewerIds: axis.reviewerIds, customGrants: axis.customGrants };
-          return { axisId: axis.id, index, ordemAtual: atual?.ordem, existe: Boolean(atual), ordemBate: atual?.ordem === index, mudou: atual ? diferente(atual.dados, dadosNovos) : "sem-atual", dadosAtuais: atual?.dados, dadosNovos };
-        }),
-      }));
-    }
     exigir(pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
     await noPlanoRepo.upsertLote(
       plano.axes.map((axis, index) => ({
@@ -401,13 +399,6 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
       ...objetivosRemovidos.map((no) => no.no_pai_id).filter((id): id is string => Boolean(id)),
     ]);
     const temPermissaoPorEixo = [...eixosEnvolvidos].every((axisId) => pode(sessao, "item.edit", { planId: plano.id, axisId }));
-    if (!temPermissaoPorEixo && !pode(sessao, "plan.manage", { planId: plano.id })) {
-      console.error("[debug-objetivoMudou]", JSON.stringify({
-        eixosEnvolvidos: [...eixosEnvolvidos],
-        alterados: objetivosAlterados.map((o) => ({ id: o.id, axisId: o.axisId, code: o.code, existiaAntes: objetivosAtuaisPorId.has(o.id) })),
-        removidos: objetivosRemovidos.map((no) => ({ id: no.id, axisId: no.no_pai_id })),
-      }));
-    }
     exigir(temPermissaoPorEixo || pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
     const contadorPorEixo = new Map<string, number>();
     await noPlanoRepo.upsertLote(

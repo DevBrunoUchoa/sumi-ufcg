@@ -245,9 +245,10 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 
 /* Plan workspace */
 .plan-page { padding: var(--spacing-scale-3x) var(--spacing-scale-4x) var(--spacing-scale-6x); max-width: 1680px; margin: auto; }
-.plan-page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-3x); }
-.heading-actions { display: flex; align-items: center; gap: var(--spacing-scale-baseh); }
-.import-tools { display: flex; align-items: center; gap: var(--spacing-scale-base); position: relative; }
+.plan-page-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-3x); }
+.plan-page-heading > div:first-child { flex: 1 1 280px; min-width: 0; }
+.heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-scale-baseh); min-width: 0; max-width: 100%; }
+.import-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-scale-base); position: relative; min-width: 0; max-width: 100%; }
 .import-tools .form-error { position: absolute; top: 100%; right: 0; white-space: nowrap; margin-top: var(--spacing-scale-half); }
 .back-link { font-size: var(--font-size-scale-base); color: var(--text-muted); display: inline-block; margin-bottom: var(--spacing-scale-base); }
 .back-link:hover { color: var(--primary); text-decoration: underline; }

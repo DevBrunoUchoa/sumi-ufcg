@@ -237,7 +237,7 @@ function AxisPermissionPicker({ usuarios, customGrants, onTogglePermission }) {
 }
 
 // ODS (Objetivos de Desenvolvimento Sustentável, Agenda 2030) vinculados a
-// este objetivo do PDI — ver frontend/src/ods.js.
+// este objetivo do PDI — ver frontend/src/planning/ods.js.
 function OdsPicker({ objective, selected, documented, onToggle, onApplyDocumented }) {
   return <details className="axis-user-picker ods-picker">
     <summary>ODS vinculadas ao objetivo {objective.code || 'novo'} <span className="picker-count">({selected.length})</span></summary>

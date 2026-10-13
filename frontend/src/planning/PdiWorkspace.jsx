@@ -9,6 +9,7 @@ import { loginUrl } from '../auth/navigation.js';
 import { filterAxes, filterAxisItems, itemsForAxis, ordered, summarizeScope, targetState, targetStates } from './selectors.js';
 import { ScopeDashboard } from './ScopeDashboard.jsx';
 import { OdsBadges } from '../OdsBadges.jsx';
+import { AxisVersionHistory } from './AxisVersionHistory.jsx';
 
 const go = (path) => { window.location.hash = path; };
 
@@ -25,7 +26,7 @@ export function PdiWorkspace({ plan, route, can, authenticated, actions, renderD
   const editable = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
   return <div className="plan-page pdi-workspace" style={{ '--axis-color': axis?.color }}>
     <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}{objective && !item && <OdsBadges ods={objective.ods} />}</div></div>{actions(context)}</div>
-    {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} /> : <>
+    {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} canViewInternal={can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan))} /> : <>
       <section className="planning-context" aria-label="Contexto do planejamento"><p><a href={`#${objectiveUrl(plan, objective)}`}><strong>{plan.template.labels.objective} {objectiveCode(objective)}</strong> · {objective.title}</a></p>{action && <p><a href={`#${itemUrl(plan, item)}`}><strong>{plan.template.labels.item} {item.code}</strong> · {item.title}</a></p>}</section>
       <section className="detail pdi-detail" aria-label="Detalhe do item">{renderDetail(context)}</section>
     </>}
@@ -50,7 +51,7 @@ function PlanOverview({ plan, editable }) {
   </>;
 }
 
-function AxisOverview({ plan, axis, objective, route, editable }) {
+function AxisOverview({ plan, axis, objective, route, editable, canViewInternal }) {
   const [search, setSearch] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState('');
@@ -68,6 +69,7 @@ function AxisOverview({ plan, axis, objective, route, editable }) {
     : objectives.map((entry) => ({ id: entry.id, label: `${objectiveCode(entry)}${objectiveCode(entry) ? ' · ' : ''}${entry.title}`, url: objectiveUrl(plan, entry), execution: summarizeScope(items.filter((item) => item.objectiveId === entry.id), 0).execution }));
   return <>
     {!!objectives.length && <ScopeDashboard plan={plan} items={items} level={objective ? 'objective' : 'axis'} rows={comparison} period={period} onPeriodChange={setPeriod} />}
+    {!objective && canViewInternal && <AxisVersionHistory axisId={axis.id} />}
     {objective && !!items.length && <IndicatorTable plan={plan} items={items} period={period} />}
     {!objectives.length ? <Empty title="Nenhum objetivo cadastrado neste eixo">{editable ? 'Configure os objetivos deste eixo na opção Estrutura.' : 'Os objetivos e suas iniciativas aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty> : <>
       <div className="section-heading"><div><h2>{objective ? 'Iniciativas deste objetivo' : `${plan.template.labels.objective}s e ${plan.template.labels.item.toLowerCase()}s`} <span className="section-count">{filtered.length} {plan.template.labels.item.toLowerCase()}s</span></h2><p className="hint">{objective ? 'Consulte os indicadores e as ações de cada iniciativa.' : `Cada ${plan.template.labels.item.toLowerCase()} pertence a um ${plan.template.labels.objective.toLowerCase()} deste ${plan.template.labels.axis.toLowerCase()}.`}</p></div></div>

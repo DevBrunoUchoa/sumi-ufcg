@@ -24,7 +24,7 @@ importacaoRouter.post("/api/v1/planning/planos/:planId/importacao", upload.singl
       res.status(400).json({ error: "Nenhum arquivo enviado (campo 'arquivo')" });
       return;
     }
-    const resumo = await importarPlanilha(req.sumiSession, String(req.params.planId), req.file.buffer);
+    const resumo = await importarPlanilha(req.sumiSession, String(req.params.planId), req.file);
     res.status(200).json(resumo);
   } catch (err) {
     next(err);

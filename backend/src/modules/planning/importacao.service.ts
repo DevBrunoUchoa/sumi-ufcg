@@ -30,6 +30,7 @@ import type { SessaoUsuario } from "../auth/auth.types.js";
 import { montarWorkspace, salvarWorkspace } from "./planning.service.js";
 import { parseOrLancar, workspaceSchema } from "./planning.schema.js";
 import type { ActionItem, HistoryEntry, Item, Objective, Risk } from "./planning.types.js";
+import { coberturaExecucao, eixoVersoesService, periodoAtual } from "./eixoVersoes.service.js";
 
 import { lerAbaPdi, lerAbaRiscos } from "./importacao.leitura.js";
 export { lerAbaPdi, lerAbaRiscos } from "./importacao.leitura.js";
@@ -92,7 +93,12 @@ export interface ResumoImportacao {
   avisos: string[];
 }
 
-export async function importarPlanilha(sessao: SessaoUsuario, planId: string, buffer: Buffer): Promise<ResumoImportacao> {
+export async function importarPlanilha(
+  sessao: SessaoUsuario,
+  planId: string,
+  arquivo: { originalname: string; mimetype: string; size: number; buffer: Buffer },
+): Promise<ResumoImportacao> {
+  const { buffer } = arquivo;
   const workbook = new ExcelJS.Workbook();
   try {
     await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
@@ -255,6 +261,24 @@ export async function importarPlanilha(sessao: SessaoUsuario, planId: string, bu
 
   const workspaceValidado = parseOrLancar(workspaceSchema, workspace);
   await salvarWorkspace(sessao, workspaceValidado);
+
+  // Retrato do eixo logo após a importação — registrado best-effort: se a
+  // retenção do arquivo falhar (ex.: bucket de storage não provisionado),
+  // a importação em si já foi concluída e salva, então não derruba a
+  // resposta por causa disso.
+  try {
+    const itensDoEixoFinal = plano.items.filter((i) => i.axisId === eixo.id);
+    const riscosTotal = itensDoEixoFinal.reduce((total, i) => total + i.risks.length, 0);
+    await eixoVersoesService.registrar(sessao, eixo.id, arquivo, {
+      periodo: periodoAtual(plano),
+      itensCriados,
+      itensAtualizados,
+      coberturaExecucaoPercentual: coberturaExecucao(itensDoEixoFinal),
+      riscosTotal,
+    });
+  } catch (err) {
+    avisos.push(`Não foi possível reter esta versão no histórico do eixo: ${err instanceof Error ? err.message : "erro desconhecido"}.`);
+  }
 
   return {
     eixo: `${eixo.code} · ${eixo.name}`,

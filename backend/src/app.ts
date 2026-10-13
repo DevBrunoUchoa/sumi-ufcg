@@ -14,6 +14,7 @@ import { sessionMiddleware } from "./modules/auth/auth.middleware.js";
 import { planningRouter } from "./modules/planning/planning.routes.js";
 import { anexosRouter } from "./modules/planning/anexos.routes.js";
 import { importacaoRouter } from "./modules/planning/importacao.routes.js";
+import { eixoVersoesRouter } from "./modules/planning/eixoVersoes.routes.js";
 import { usuariosAdminRouter } from "./modules/auth/usuarios-admin.routes.js";
 
 export function createApp() {
@@ -70,6 +71,7 @@ export function createApp() {
   app.use(planningRouter);
   app.use(anexosRouter);
   app.use(importacaoRouter);
+  app.use(eixoVersoesRouter);
   app.use(planosRouter);
   // app.use(indicadoresRouter); app.use(riscosRouter);
 

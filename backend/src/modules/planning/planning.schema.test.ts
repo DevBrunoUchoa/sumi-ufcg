@@ -102,4 +102,33 @@ describe("workspaceSchema", () => {
     const resultado = workspaceSchema.safeParse(workspace);
     expect(resultado.success).toBe(false);
   });
+
+  it("aceita objetivo com ODS válidos (1 a 17)", () => {
+    const workspace = workspaceValido();
+    (workspace.plans[0]!.objectives[0] as { ods?: number[] }).ods = [4, 8, 16];
+    const resultado = workspaceSchema.safeParse(workspace);
+    expect(resultado.success).toBe(true);
+  });
+
+  it("rejeita objetivo com número de ODS fora do intervalo 1–17", () => {
+    const workspace = workspaceValido();
+    (workspace.plans[0]!.objectives[0] as { ods?: number[] }).ods = [18];
+    const resultado = workspaceSchema.safeParse(workspace);
+    expect(resultado.success).toBe(false);
+  });
+
+  it("preserva ausência de ODS quando o campo não é enviado por cliente antigo", () => {
+    const workspace = workspaceValido();
+    const resultado = workspaceSchema.safeParse(workspace);
+    expect(resultado.success).toBe(true);
+    if (resultado.success) expect(resultado.data.plans[0]!.objectives[0]).not.toHaveProperty("ods");
+  });
+
+  it("normaliza ODS repetidas e preserva remoção explícita", () => {
+    const workspace = workspaceValido();
+    (workspace.plans[0]!.objectives[0] as { ods?: number[] }).ods = [16, 4, 4];
+    expect(workspaceSchema.parse(workspace).plans[0]!.objectives[0]!.ods).toEqual([4, 16]);
+    (workspace.plans[0]!.objectives[0] as { ods?: number[] }).ods = [];
+    expect(workspaceSchema.parse(workspace).plans[0]!.objectives[0]!.ods).toEqual([]);
+  });
 });

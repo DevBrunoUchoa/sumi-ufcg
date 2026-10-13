@@ -173,6 +173,12 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 .page { max-width: 1400px; padding: var(--spacing-scale-4x) var(--spacing-scale-5x) var(--spacing-scale-7x); margin: auto; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); margin-bottom: var(--spacing-scale-4x); }
 .page-heading > div > p:last-child { margin-top: var(--spacing-scale-base); color: var(--text-muted); font-size: var(--font-size-scale-base); }
+.onboarding-card { margin-bottom: var(--spacing-scale-4x); border: 1px solid var(--border); }
+.onboarding-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-2x); margin-bottom: var(--spacing-scale-base); }
+.onboarding-heading h2 { margin: 0; font-size: var(--font-size-scale-up-02); }
+.onboarding-steps { list-style: none; margin: var(--spacing-scale-3x) 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-scale-2x); }
+.onboarding-steps li { display: flex; align-items: flex-start; gap: var(--spacing-scale-base); }
+.onboarding-steps li svg { flex-shrink: 0; margin-top: 3px; color: var(--primary); }
 .overview-grid { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-3x) var(--spacing-scale-5x); padding: var(--spacing-scale-3x); margin-bottom: var(--spacing-scale-4x); background: var(--surface-soft); border-radius: 5px; }
 .overview-grid article { flex: 1 1 152px; display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-scale-base); }
 .overview-grid article > span { color: var(--text-muted); font-size: var(--font-size-scale-base); }
@@ -245,10 +251,16 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 
 /* Plan workspace */
 .plan-page { padding: var(--spacing-scale-3x) var(--spacing-scale-4x) var(--spacing-scale-6x); max-width: 1680px; margin: auto; }
-.plan-page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-3x); }
-.heading-actions { display: flex; align-items: center; gap: var(--spacing-scale-baseh); }
-.import-tools { display: flex; align-items: center; gap: var(--spacing-scale-base); position: relative; }
+.plan-page-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-3x); }
+.plan-page-heading > div:first-child { flex: 1 1 280px; min-width: 0; }
+.heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-scale-baseh); min-width: 0; max-width: 100%; }
+.import-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-scale-base); position: relative; min-width: 0; max-width: 100%; }
 .import-tools .form-error { position: absolute; top: 100%; right: 0; white-space: nowrap; margin-top: var(--spacing-scale-half); }
+.import-avisos { flex-basis: 100%; background: var(--warning-surface); color: var(--text-body); border: 1px solid var(--warning); border-radius: 4px; padding: var(--spacing-scale-2x) var(--spacing-scale-3x); font-size: var(--font-size-scale-base); }
+.import-avisos strong { color: var(--warning); }
+.import-avisos ul { margin: var(--spacing-scale-base) 0; padding-left: var(--spacing-scale-3x); }
+.import-avisos li { margin-bottom: calc(var(--spacing-scale-base) / 2); }
+.import-avisos .text-button { text-decoration: underline; }
 .back-link { font-size: var(--font-size-scale-base); color: var(--text-muted); display: inline-block; margin-bottom: var(--spacing-scale-base); }
 .back-link:hover { color: var(--primary); text-decoration: underline; }
 .title-line { display: flex; align-items: center; gap: var(--spacing-scale-2x); }
@@ -600,7 +612,13 @@ br-select::part(option):hover {
 .view-switch { display: flex; gap: var(--spacing-scale-baseh); }
 .view-switch button { font-size: var(--font-size-scale-base); padding: var(--spacing-scale-base) 0; border-bottom: 2px solid transparent; color: var(--text-muted); }
 .view-switch button[aria-pressed="true"] { color: var(--text-strong); font-weight: var(--font-weight-semi-bold); border-bottom-color: var(--text-strong); }
-.table-scroll { overflow-x: auto; }
+/* Em telas estreitas a tabela rola lateralmente (overflow-x: auto já
+   permitia), mas nada avisava que havia mais colunas fora da vista — a
+   última coluna ficava cortada sem nenhum indício de que dava pra arrastar.
+   O degradê na borda direita é só um indício visual; some sozinho quando a
+   tabela cabe inteira (max-width limita a faixa ao conteúdo real). */
+.table-scroll { overflow-x: auto; position: relative; }
+.table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 24px; max-width: 8%; background: linear-gradient(to right, transparent, color-mix(in srgb, var(--surface) 90%, transparent)); pointer-events: none; }
 .annual-table { width: 100%; border-collapse: collapse; text-align: center; font-size: var(--font-size-scale-base); font-variant-numeric: tabular-nums; }
 .annual-table th, .annual-table td { padding: var(--spacing-scale-2x); border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
 .annual-table thead th { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-medium); color: var(--text-muted); border-bottom-color: var(--border-strong); background: var(--surface-soft); }
@@ -926,8 +944,8 @@ br-select::part(option):hover {
   .workspace { margin-left: 0; }
   .topbar { min-height: 56px; padding: var(--spacing-scale-2x); gap: var(--spacing-scale-base); }
   .breadcrumb { font-size: var(--font-size-scale-base); gap: var(--spacing-scale-base); }
-  .topbar-actions { width: 100%; justify-content: space-between; gap: var(--spacing-scale-base); }
-  .account-summary { flex: 1; justify-content: flex-end; gap: var(--spacing-scale-base); padding-left: var(--spacing-scale-base); }
+  .topbar-actions { width: 100%; flex-wrap: wrap; justify-content: space-between; gap: var(--spacing-scale-base); }
+  .account-summary { flex: 1 1 100%; justify-content: flex-start; gap: var(--spacing-scale-base); padding-left: 0; padding-top: var(--spacing-scale-base); border-left: 0; border-top: 1px solid var(--border); }
   .account-identity { flex: 1; max-width: none; }
   .account-identity small { display: none; }
   .page, .plan-page { padding: var(--spacing-scale-3x) var(--spacing-scale-2x) var(--spacing-scale-5x); }
@@ -1050,6 +1068,28 @@ br-select::part(option):hover {
 .permission-user-list > li > details { border-top: 1px solid var(--border); padding-top: var(--spacing-scale-base); }
 .permission-user-list > li:first-child > details { border-top: none; padding-top: 0; }
 .permission-checklist { list-style: none; margin: var(--spacing-scale-base) 0 0 var(--spacing-scale-3x); padding: 0; display: flex; flex-direction: column; gap: calc(var(--spacing-scale-base) / 2); }
+
+/* Utilitário de acessibilidade: esconde visualmente mantendo leitura por leitor de tela. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Desativa o VLibras por completo — cobre tanto o container original
+   (div[vw], presente desde o carregamento) quanto o #vlibras-access-wrapper
+   que o próprio script cria direto em document.body na primeira ativação
+   (fora de div[vw], então nunca coberto só por esconder o container). Regra
+   em CSS em vez de JS porque se aplica mesmo a elementos que o VLibras ainda
+   vai criar depois que a classe já foi marcada. */
+html.vlibras-off div[vw],
+html.vlibras-off #vlibras-access-wrapper { display: none !important; }
+
+/* Histórico de versões do eixo (importações retidas por período) */
+.axis-version-history { margin-top: var(--spacing-scale-3x); font-size: var(--font-size-scale-base); border: 1px solid var(--border); border-radius: 4px; padding: var(--spacing-scale-base) var(--spacing-scale-2x); background: var(--surface); }
+.axis-version-history summary { cursor: pointer; color: var(--text-body); font-weight: var(--font-weight-medium); }
+.axis-version-period { margin-top: var(--spacing-scale-2x); }
+.axis-version-period h4 { margin: 0 0 var(--spacing-scale-base); color: var(--text-muted); font-size: var(--font-size-scale-base); text-transform: uppercase; letter-spacing: .03em; }
+.axis-version-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-scale-2x); }
+.axis-version-list > li { border-top: 1px solid var(--border-soft); padding-top: var(--spacing-scale-base); }
+.axis-version-list > li:first-child { border-top: none; padding-top: 0; }
+.axis-version-summary { display: flex; align-items: center; gap: var(--spacing-scale-base); flex-wrap: wrap; margin-bottom: calc(var(--spacing-scale-base) / 2); }
 .searchbar { max-width: '320px'; width: '100%' }
 .empty {
   display: flex;

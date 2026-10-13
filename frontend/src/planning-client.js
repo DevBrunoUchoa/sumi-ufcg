@@ -1,56 +1,8 @@
-import { validateWorkspace, WORKSPACE_VERSION } from './domain.js';
+import { validateWorkspace } from './domain.js';
 
 const env = import.meta.env || {};
 const API_BASE_URL = (env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const WORKSPACE_PATH = env.VITE_PLANNING_WORKSPACE_PATH || '/api/v1/planning/workspace';
-const MOCK_STORAGE_KEY = `sumi.frontend.workspace.v${WORKSPACE_VERSION}`;
-const LOCAL_PDI_AXES_MIGRATION_KEY = 'sumi.frontend.pdi-axes-preview.v1';
-
-function migrateLocalPdiAxes(workspace, fallback) {
-  const currentPdi = workspace.plans.find((plan) => plan.id === 'pdi' && plan.type === 'PDI');
-  const examplePdi = fallback.plans.find((plan) => plan.id === 'pdi' && plan.type === 'PDI');
-  if (!currentPdi || !examplePdi) return workspace;
-  const existingCodes = new Set(currentPdi.axes.map((axis) => String(axis.code).trim().replace(/^0+(?=\d)/, '')));
-  currentPdi.axes = [
-    ...examplePdi.axes.filter((axis) => !existingCodes.has(axis.code)),
-    ...currentPdi.axes,
-  ];
-  const axis8 = currentPdi.axes.find((axis) => String(axis.code).trim() === '8');
-  if (axis8?.color?.toLowerCase() === '#2f78a5') axis8.color = '#b5336f';
-  return workspace;
-}
-
-async function loadDevelopmentData(signal) {
-  const response = await fetch('/__dev/planning/workspace', { signal, headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error('Não foi possível carregar os dados de desenvolvimento.');
-  return response.json();
-}
-
-function createDevelopmentClient() {
-  return {
-    async load({ signal } = {}) {
-      const fallback = await loadDevelopmentData(signal);
-      try {
-        const raw = localStorage.getItem(MOCK_STORAGE_KEY);
-        if (!raw) return fallback;
-        const parsed = JSON.parse(raw);
-        if (!validateWorkspace(parsed)) return fallback;
-        if (localStorage.getItem(LOCAL_PDI_AXES_MIGRATION_KEY)) return parsed;
-        const migrated = migrateLocalPdiAxes(parsed, fallback);
-        localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(migrated));
-        localStorage.setItem(LOCAL_PDI_AXES_MIGRATION_KEY, 'done');
-        return migrated;
-      } catch {
-        return fallback;
-      }
-    },
-    async save(workspace) {
-      localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(workspace));
-      return workspace;
-    },
-  };
-}
-
 function createHttpClient() {
   let saveQueue = Promise.resolve();
   const request = async (path, options = {}) => {
@@ -77,6 +29,13 @@ function createHttpClient() {
 }
 
 export function createPlanningClient() {
-  const source = env.VITE_DATA_SOURCE || (env.DEV ? 'local' : 'http');
-  return source === 'local' ? createDevelopmentClient() : createHttpClient();
+  // Vite removes this development-only import from production builds.
+  if (import.meta.env.DEV && import.meta.env.VITE_DATA_SOURCE !== 'http') {
+    const client = import('../dev/planning-client.js').then((module) => module.createDevelopmentClient());
+    return {
+      load: (options) => client.then((adapter) => adapter.load(options)),
+      save: (workspace, options) => client.then((adapter) => adapter.save(workspace, options)),
+    };
+  }
+  return createHttpClient();
 }

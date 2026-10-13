@@ -48,6 +48,8 @@ Variáveis disponíveis (ver `.env.example`):
 - `VITE_AUTH_SESSION_PATH`: caminho do endpoint de sessão;
 - `VITE_PLANNING_WORKSPACE_PATH`: caminho do endpoint agregado de planejamento;
 - `VITE_DATA_SOURCE`: `local` para dados de desenvolvimento ou `http` para a API.
+  Builds de produção sempre usam HTTP; o adaptador em `dev/planning-client.js`
+  e os exemplos locais são eliminados do bundle.
 
 ## Erros e SEO
 
@@ -66,6 +68,7 @@ Variáveis disponíveis (ver `.env.example`):
 ```sh
 pnpm --filter frontend test
 pnpm --filter frontend test:e2e
+pnpm --filter frontend test:http
 pnpm --filter frontend build
 ```
 
@@ -79,6 +82,15 @@ src/domain.js         Regras de apresentação e cálculo
 src/forms.jsx         Formulários de domínio
 src/planning-client.js Adaptador da fonte de planejamentos
 src/main.jsx          Navegação e fluxos de tela
+src/planning/         Navegação por eixo do PDI, seletores e resumos por escopo
 src/styles.css        Sistema visual responsivo
 tests/                Testes de regras e fluxos no navegador
 ```
+
+O PDI abre pelos eixos e oferece páginas próprias para seus objetivos e iniciativas.
+As URLs anteriores com `?item=...` continuam funcionando. O PLS mantém o explorador
+atual. Ver [ADR 0006](../docs/adr/0006-navegacao-pdi-por-eixo.md).
+
+`test:http` inicia um frontend separado em modo HTTP na porta 4322 e intercepta
+as respostas da API para verificar o contrato com UUIDs, gravação de etapas e
+importação. Esse teste não usa credenciais nem um banco real.

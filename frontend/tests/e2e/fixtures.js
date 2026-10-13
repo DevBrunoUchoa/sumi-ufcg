@@ -1,10 +1,17 @@
 import { test as base, expect } from '@playwright/test';
+import { initialState } from '../../src/data.js';
 
 export const test = base.extend({
   page: async ({ page }, use) => {
+    // Cada regressão define seu perfil, independente da sessão inicial pública.
+    await page.context().addCookies([{ name: 'sumi_dev_session', value: 'administrator', url: 'http://127.0.0.1:4317' }]);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+    // Regressões usam a base pública estável, independente dos documentos privados.
+    await page.route('**/__dev/planning/workspace', (route) => route.fulfill({ json: initialState() }));
+    await page.route('**/api/v1/planning/eixos/*/versoes', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/v1/planning/itens/*/anexos', (route) => route.fulfill({ json: [] }));
     await use(page);
     expect(errors, 'Erros JavaScript no navegador').toEqual([]);
   },
@@ -23,11 +30,16 @@ export async function openPlan(page, shortName) {
   await expect(page.getByRole('heading', { name: new RegExp(`^${shortName}`) })).toBeVisible();
 }
 
-export const openPdi = (page) => openPlan(page, 'PDI');
+export async function openPdi(page) {
+  await openPlan(page, 'PDI');
+  await page.getByRole('link', { name: 'Explorar eixo 8: Governança e Gestão Institucional' }).click();
+  await page.locator('.pdi-initiative-link').filter({ hasText: 'Iniciativa 8.1.3' }).click();
+}
 export const openPls = (page) => openPlan(page, 'PLS');
 export const detail = (page) => page.getByRole('region', { name: 'Detalhe do item' });
 
 export async function expandFirstAction(page) {
+  await expect(detail(page)).toBeVisible();
   const overview = page.locator('.action-overview-link').first();
   if (await overview.count()) await overview.click();
   const heading = page.locator('.action-card').first().locator('.action-heading');
@@ -50,6 +62,11 @@ export async function chooseOption(scope, field, label) {
 }
 
 export async function selectItem(page, code) {
+  if (await page.locator('.pdi-workspace').count()) {
+    await page.getByRole('navigation', { name: 'Hierarquia do planejamento' }).getByRole('link', { name: /^Eixo / }).click();
+    await page.locator('.pdi-initiative-link').filter({ hasText: `Iniciativa ${code}` }).click();
+    return;
+  }
   await expandTree(page);
   await page.getByRole('navigation', { name: 'Itens do planejamento' }).getByRole('link', { name: new RegExp(code.replaceAll('.', '\\.')) }).click();
 }

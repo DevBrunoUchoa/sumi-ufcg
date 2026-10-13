@@ -52,6 +52,9 @@ const objectiveSchema = z.object({
   axisId: presente,
   code: presente,
   title: presente,
+  // Ausência em clientes antigos não significa exclusão. [] é uma escolha explícita.
+  ods: z.array(z.number().int().min(1).max(17))
+    .transform((values) => [...new Set(values)].sort((a, b) => a - b)).optional(),
 });
 
 const metricSchema = z.object({

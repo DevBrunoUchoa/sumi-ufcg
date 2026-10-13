@@ -48,6 +48,8 @@ export interface Objective {
   axisId: string;
   code: string;
   title: string;
+  /** Ausente mantém referência documental/valor existente; [] remove os vínculos. */
+  ods?: number[];
 }
 
 export interface Metric {

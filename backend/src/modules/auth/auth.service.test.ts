@@ -38,12 +38,16 @@ describe("montarSessao", () => {
     expect(pode(sessao, "stage.update", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "result.create", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "item.submit", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
-    // Não delegado ao gestor (só ao administrador):
-    expect(pode(sessao, "item.edit", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
-    expect(pode(sessao, "action.manage", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
-    expect(pode(sessao, "risk.manage", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
+    // Concedido para permitir a importação da planilha do próprio eixo:
+    expect(pode(sessao, "item.edit", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
+    expect(pode(sessao, "action.manage", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
+    expect(pode(sessao, "indicator.edit_target", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
+    expect(pode(sessao, "risk.manage", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
+    // Ainda não delegado ao gestor (só ao administrador): estrutura do plano.
+    expect(pode(sessao, "plan.manage", { planId: "plano-1" })).toBe(false);
     // Fora do eixo, nada:
     expect(pode(sessao, "stage.update", { planId: "plano-1", axisId: "outro-eixo" })).toBe(false);
+    expect(pode(sessao, "item.edit", { planId: "plano-1", axisId: "outro-eixo" })).toBe(false);
     expect(pode(sessao, "work_queue.read")).toBe(true);
   });
 
@@ -54,6 +58,8 @@ describe("montarSessao", () => {
     expect(pode(sessao, "item.review", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "stage.update", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
     expect(pode(sessao, "item.submit", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
+    // Pode anexar documentos mesmo sem permissão de execução:
+    expect(pode(sessao, "item.attach", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "review_queue.read")).toBe(true);
   });
 

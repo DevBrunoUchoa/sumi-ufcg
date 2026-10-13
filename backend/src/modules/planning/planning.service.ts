@@ -1,4 +1,7 @@
+import { isDeepStrictEqual } from "node:util";
 import { HttpError } from "../../lib/http-error.js";
+import { prepareRiskWrite } from "./risk-write-policy.js";
+import { normalizeObjectiveOds, objectiveData } from "./objective-ods.js";
 import { pode } from "../auth/auth.can.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import {
@@ -120,7 +123,8 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
       const objetivosRows = nosPorPai.get(eixo.id) ?? [];
       for (const objetivo of objetivosRows) {
         const od = objetivo.dados as Partial<Objective>;
-        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? "") });
+        const ods = normalizeObjectiveOds(od.ods);
+        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? ""), ...(ods === undefined ? {} : { ods }) });
 
         const itensRows = nosPorPai.get(objetivo.id) ?? [];
         for (const itemRow of itensRows) {
@@ -277,7 +281,13 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
 // ---------------------------------------------------------------------------
 
 function diferente(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) !== JSON.stringify(b);
+  // JSONB reorders keys; undefined properties are also used below to exclude
+  // protected fields from a comparison. Preserve both JSON semantics.
+  const asJson = (value: unknown): unknown => {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? undefined : JSON.parse(serialized);
+  };
+  return !isDeepStrictEqual(asJson(a), asJson(b));
 }
 
 function exigir(autorizado: boolean, mensagem: string): void {
@@ -358,7 +368,15 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     plano.axes.some((axis, index) => {
       const atual = eixosAtuaisPorId.get(axis.id);
       const dadosNovos = { code: axis.code, name: axis.name, color: axis.color, ownerUnit: axis.ownerUnit, managerIds: axis.managerIds, reviewerIds: axis.reviewerIds, customGrants: axis.customGrants };
-      return !atual || atual.ordem !== index || diferente(atual.dados, dadosNovos);
+      // customGrants foi adicionado depois (PR #17) e nunca foi retroagido
+      // nas linhas já gravadas — "ausente" ali é equivalente a "[]" aqui, não
+      // uma mudança real. Sem essa normalização, diferente() via JSON.stringify
+      // via comparar chave ausente com [] presente, e eixoMudou fica sempre
+      // true para qualquer eixo antigo (mascarado até agora porque só quem
+      // já tinha plan.manage gravava no workspace).
+      const customGrantsAtuais = Array.isArray(atual?.dados.customGrants) ? atual.dados.customGrants : [];
+      const dadosAtuais = atual && { ...atual.dados, customGrants: customGrantsAtuais };
+      return !atual || atual.ordem !== index || diferente(dadosAtuais, dadosNovos);
     });
   if (eixoMudou) {
     exigir(pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
@@ -378,15 +396,28 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
 
   const objetivosAtuais = [...noPorId.values()].filter((no) => no.nivel === 1 && eixosAtuaisPorId.has(no.no_pai_id ?? ""));
   const objetivosAtuaisPorId = new Map(objetivosAtuais.map((no) => [no.id, no]));
-  const objetivoMudou =
-    objetivosAtuais.length !== plano.objectives.length ||
-    plano.objectives.some((objective) => {
-      const atual = objetivosAtuaisPorId.get(objective.id);
-      const dadosNovos = { code: objective.code, title: objective.title };
-      return !atual || atual.no_pai_id !== objective.axisId || diferente(atual.dados, dadosNovos);
-    });
+  const objetivosAlterados = plano.objectives.filter((objective) => {
+    const atual = objetivosAtuaisPorId.get(objective.id);
+    const dadosNovos = objectiveData(objective, atual?.dados);
+    const odsAtuais = normalizeObjectiveOds(atual?.dados.ods);
+    const dadosAtuais = atual && { ...atual.dados, ...(odsAtuais === undefined ? {} : { ods: odsAtuais }) };
+    return !atual || atual.no_pai_id !== objective.axisId || diferente(dadosAtuais, dadosNovos);
+  });
+  const idsObjetivosNovos = new Set(plano.objectives.map((objective) => objective.id));
+  const objetivosRemovidos = objetivosAtuais.filter((no) => !idsObjetivosNovos.has(no.id));
+  const objetivoMudou = objetivosAlterados.length > 0 || objetivosRemovidos.length > 0;
   if (objetivoMudou) {
-    exigir(pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
+    // Criar/atualizar/remover objetivo normalmente exige plan.manage (tela de
+    // Estrutura, administrativa) — mas quando todo objetivo tocado pertence a
+    // um eixo onde a sessão já tem item.edit, basta essa permissão de eixo:
+    // é o caso da importação de planilha do Gestor do Eixo, que pode
+    // introduzir um objetivo ainda não cadastrado dentro do seu próprio eixo.
+    const eixosEnvolvidos = new Set([
+      ...objetivosAlterados.map((objective) => objective.axisId),
+      ...objetivosRemovidos.map((no) => no.no_pai_id).filter((id): id is string => Boolean(id)),
+    ]);
+    const temPermissaoPorEixo = [...eixosEnvolvidos].every((axisId) => pode(sessao, "item.edit", { planId: plano.id, axisId }));
+    exigir(temPermissaoPorEixo || pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
     const contadorPorEixo = new Map<string, number>();
     await noPlanoRepo.upsertLote(
       plano.objectives.map((objective) => {
@@ -398,12 +429,11 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
           noPaiId: objective.axisId,
           nivel: 1,
           ordem,
-          dados: { code: objective.code, title: objective.title },
+          dados: objectiveData(objective, objetivosAtuaisPorId.get(objective.id)?.dados),
         };
       }),
     );
-    const idsNovos = new Set(plano.objectives.map((objective) => objective.id));
-    await noPlanoRepo.removerLote(objetivosAtuais.filter((no) => !idsNovos.has(no.id)).map((no) => no.id));
+    await noPlanoRepo.removerLote(objetivosRemovidos.map((no) => no.id));
   }
 
   const objetivosValidosPorId = new Set(plano.objectives.map((objective) => objective.id));
@@ -417,16 +447,23 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     itensParaGravar.push({ row: itensAtuaisPorId.get(item.id), item });
   }
 
-  for (const { row: atual, item } of itensParaGravar) {
-    await salvarItem(sessao, plano, atual, item, contadorItensPorObjetivo, {
+  // Paralelo, não sequencial: cada salvarItem já faz uma dezena de
+  // idas-e-voltas ao banco por item, e um workspace com muitos itens
+  // (ex.: importação de planilha) levava tempo demais nesse somatório
+  // sequencial — o suficiente para estourar o timeout do proxy antes da
+  // resposta chegar ao cliente, mesmo com a gravação em si concluindo com
+  // sucesso. contadorItensPorObjetivo é seguro mesmo em paralelo: a leitura
+  // e o incremento do contador de cada item acontecem de forma síncrona,
+  // antes do primeiro await de salvarItem, então Promise.all(...map(...))
+  // os executa na mesma ordem determinística que o loop sequencial fazia.
+  await Promise.all(itensParaGravar.map(({ row: atual, item }) => salvarItem(sessao, plano, atual, item, contadorItensPorObjetivo, {
       indicadorAntigo: estadoAntigo.indicadorPorItem.get(item.id),
       acoesAntigas: estadoAntigo.acoesPorItem.get(item.id) ?? [],
       etapasAntigasPorAcao: estadoAntigo.etapasPorAcao,
       resultadosAntigos: estadoAntigo.resultadosPorItem.get(item.id) ?? [],
       riscosAntigos: estadoAntigo.riscosPorItem.get(item.id) ?? [],
       historicoAntigo: estadoAntigo.historicoPorItem.get(item.id) ?? [],
-    });
-  }
+    })));
 
   const idsNovos = new Set(plano.items.map((item) => item.id));
   const itensRemovidos = itensAtuais.filter((no) => !idsNovos.has(no.id));
@@ -589,15 +626,45 @@ async function salvarItem(
     licoesAprendidas: row.licoes_aprendidas,
     status: row.status,
   }));
-  const riscosNovosComparaveis = item.risks.map((risk) => ({ ...risk, deadline: risk.deadline || null }));
-  if (diferente(riscosAntigosComparaveis, riscosNovosComparaveis)) {
-    exigir(pode(sessao, "risk.manage", recurso), `Sem permissão para alterar riscos do item "${item.code}"`);
-  }
+  const riscosNovosComparaveis = item.risks.map((risk) => ({
+    ...risk,
+    eixo: risk.eixo ?? "",
+    objetivo: risk.objetivo ?? "",
+    refIniciativa: risk.refIniciativa ?? "",
+    iniciativa: risk.iniciativa ?? "",
+    refAcao: risk.refAcao ?? "",
+    acao: risk.acao ?? "",
+    idRisco: risk.idRisco ?? "",
+    prazoInicio: risk.prazoInicio ?? "",
+    deadline: risk.deadline || null,
+    custoPrevisto: risk.custoPrevisto ?? null,
+    etapaConcluida: risk.etapaConcluida ?? "",
+    dataInicioReal: risk.dataInicioReal ?? "",
+    dataConclusaoReal: risk.dataConclusaoReal ?? "",
+    justificativa: risk.justificativa ?? "",
+    dataProximaRevisao: risk.dataProximaRevisao ?? "",
+    mudancaProcesso: risk.mudancaProcesso ?? "",
+    novosRiscos: risk.novosRiscos ?? "",
+    acoesCorretivas: risk.acoesCorretivas ?? "",
+    licoesAprendidas: risk.licoesAprendidas ?? "",
+  }));
+  const riscosParaPersistir = prepareRiskWrite({
+    existing: riscosAntigosComparaveis, submitted: riscosNovosComparaveis,
+    canRead: pode(sessao, "risk.read", recurso), canManage: pode(sessao, "risk.manage", recurso),
+    changed: diferente(riscosAntigosComparaveis, riscosNovosComparaveis),
+    actionIds: new Set(item.actions.map((action) => action.id)), itemCode: item.code,
+  });
 
   // Histórico: só é possível adicionar (frontend nunca edita/remove entradas existentes) — exige history.comment.
-  if (item.history.length > contexto.historicoAntigo.length) {
+  const historicoIdsExistentes = new Set(contexto.historicoAntigo.map((entry) => entry.id));
+  const novasEntradasHistorico = item.history.filter((entry) => !historicoIdsExistentes.has(entry.id));
+  if (novasEntradasHistorico.length > 0) {
     exigir(pode(sessao, "history.comment", recurso), `Sem permissão para comentar no histórico do item "${item.code}"`);
   }
+  const historicoParaPersistir = pode(sessao, "history.read", recurso) ? item.history : [
+    ...contexto.historicoAntigo.map((entry) => ({ id: entry.id, at: entry.em, text: entry.texto, actor: entry.autor })),
+    ...novasEntradasHistorico,
+  ];
 
   if (dadosAntigos.reviewStatus !== item.reviewStatus) {
     if (item.reviewStatus === "submitted") {
@@ -686,7 +753,7 @@ async function salvarItem(
 
   await riscoRepo.removerPorItens([item.id]);
   await riscoRepo.inserirLote(
-    item.risks.map((risk) => ({
+    riscosParaPersistir.map((risk) => ({
       id: risk.id,
       no_plano_id: item.id,
       eixo: risk.eixo,
@@ -733,6 +800,6 @@ async function salvarItem(
 
   await historicoRepo.removerPorItens([item.id]);
   await historicoRepo.inserirLote(
-    item.history.map((entry) => ({ id: entry.id, no_plano_id: item.id, em: entry.at, texto: entry.text, autor: entry.actor })),
+    historicoParaPersistir.map((entry) => ({ id: entry.id, no_plano_id: item.id, em: entry.at, texto: entry.text, autor: entry.actor })),
   );
 }

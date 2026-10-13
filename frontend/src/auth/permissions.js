@@ -16,6 +16,7 @@ export const PERMISSIONS = Object.freeze({
   REVIEW_ITEM: 'item.review',
   VIEW_WORK_QUEUE: 'work_queue.read',
   VIEW_REVIEW_QUEUE: 'review_queue.read',
+  ATTACH_FILE: 'item.attach',
 });
 
 export const ALL_PERMISSIONS = Object.freeze(Object.values(PERMISSIONS));

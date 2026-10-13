@@ -59,14 +59,36 @@ async function resolverRecursoDoItem(itemId: string): Promise<{ planId: string; 
   return { planId: eixo.no_pai_id, axisId: eixo.id, itemId };
 }
 
+/**
+ * Anexos de um plano publicado são públicos (mesmo critério de "publicado"
+ * usado em montarWorkspace para liberar o plano inteiro à consulta pública) —
+ * mesma lógica já aplicada à evidência de resultados, que nunca foi
+ * restrita a `plan.read_internal`. Planos em rascunho continuam internos.
+ */
+async function planoPublicado(planId: string): Promise<boolean> {
+  const raiz = await noPlanoRepo.buscarPorId(planId);
+  const dados = raiz?.dados as { status?: string } | undefined;
+  return dados?.status === "published";
+}
+
+async function podeVerAnexos(sessao: SessaoUsuario, recurso: { planId: string; axisId: string; itemId: string }): Promise<boolean> {
+  if (pode(sessao, "plan.read_internal", recurso)) return true;
+  return (await planoPublicado(recurso.planId)) && pode(sessao, "plan.read_published", recurso);
+}
+
 function podeGerenciarAnexos(sessao: SessaoUsuario, recurso: { planId: string; axisId: string; itemId: string }): boolean {
-  return pode(sessao, "stage.update", recurso) || pode(sessao, "result.create", recurso) || pode(sessao, "item.edit", recurso);
+  return (
+    pode(sessao, "stage.update", recurso) ||
+    pode(sessao, "result.create", recurso) ||
+    pode(sessao, "item.edit", recurso) ||
+    pode(sessao, "item.attach", recurso)
+  );
 }
 
 export const anexosService = {
   async listar(sessao: SessaoUsuario, itemId: string): Promise<Anexo[]> {
     const recurso = await resolverRecursoDoItem(itemId);
-    if (!pode(sessao, "plan.read_internal", recurso)) throw new HttpError(403, "Sem permissão para ver os anexos deste item");
+    if (!(await podeVerAnexos(sessao, recurso))) throw new HttpError(403, "Sem permissão para ver os anexos deste item");
     const linhas = await anexoRepo.listarPorItem(itemId);
     return linhas.map(paraAnexo);
   },
@@ -111,7 +133,7 @@ export const anexosService = {
     const anexo = await anexoRepo.buscarPorId(anexoId);
     if (!anexo) throw new HttpError(404, "Anexo não encontrado");
     const recurso = await resolverRecursoDoItem(anexo.no_plano_id);
-    if (!pode(sessao, "plan.read_internal", recurso)) throw new HttpError(403, "Sem permissão para baixar este anexo");
+    if (!(await podeVerAnexos(sessao, recurso))) throw new HttpError(403, "Sem permissão para baixar este anexo");
     const { data, error } = await supabase.storage.from(BUCKET_ANEXOS).createSignedUrl(anexo.caminho_storage, 60);
     if (error || !data) throw new HttpError(500, `Falha ao gerar link do anexo: ${error?.message}`);
     return { url: data.signedUrl, nomeArquivo: anexo.nome_arquivo };

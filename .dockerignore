@@ -13,6 +13,8 @@
 .vscode
 .tools
 docs_locais
+.analysis-pdi
+.local-preview
 frontend/test-results
 frontend/playwright-report
 

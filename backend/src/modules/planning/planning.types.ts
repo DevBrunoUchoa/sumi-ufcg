@@ -95,6 +95,13 @@ export interface ActionItem {
 
 export interface Risk {
   id: string;
+  eixo?: string;
+  objetivo?: string;
+  refIniciativa?: string;
+  iniciativa?: string;
+  refAcao?: string;
+  acao?: string;
+  idRisco?: string;
   actionId: string;
   stage: string;
   title: string;
@@ -111,10 +118,21 @@ export interface Risk {
   response: string;
   treatment: string;
   treatmentOwner: string;
+  prazoInicio?: string;
   deadline: string;
+  custoPrevisto?: number | null;
   execution: number;
+  etapaConcluida?: string;
+  dataInicioReal?: string;
+  dataConclusaoReal?: string;
   situation: string;
+  justificativa?: string;
   review: string;
+  dataProximaRevisao?: string;
+  mudancaProcesso?: string;
+  novosRiscos?: string;
+  acoesCorretivas?: string;
+  licoesAprendidas?: string;
   status: string;
 }
 

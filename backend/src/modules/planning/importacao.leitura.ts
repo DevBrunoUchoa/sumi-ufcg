@@ -267,10 +267,19 @@ const RISCO_COLUNAS = [
 ] as const;
 
 interface RiscoImportado {
+  eixo: string;
+  objetivo: string;
   itemCodigo: string;
+  itemTitulo: string;
   acaoCodigo: string;
+  acaoTitulo: string;
   etapa: string;
   riscoEstrategico: string;
+  idRisco: string;
+  refIniciativa: string;
+  iniciativa: string;
+  refAcao: string;
+  acao: string;
   titulo: string;
   causa: string;
   consequencia: string;
@@ -283,10 +292,21 @@ interface RiscoImportado {
   resposta: string;
   tratamento: string;
   treatmentOwner: string;
+  prazoInicio: string;
   prazo: string;
+  custoPrevisto: number | null;
   execucao: number;
+  etapaConcluida: string;
+  dataInicioReal: string;
+  dataConclusaoReal: string;
   situacao: string;
+  justificativa: string;
   review: string;
+  dataProximaRevisao: string;
+  mudancaProcesso: string;
+  novosRiscos: string;
+  acoesCorretivas: string;
+  licoesAprendidas: string;
   status: string;
 }
 
@@ -315,10 +335,19 @@ export function lerAbaRiscos(planilha: ExcelJS.Worksheet): RiscoImportado[] {
     if (probabilidade < 1 || probabilidade > 5 || impacto < 1 || impacto > 5) continue; // linha sem avaliação válida
 
     riscos.push({
+      eixo: valores("eixo"),
+      objetivo: valores("objetivo"),
       itemCodigo: contexto.itemCodigo,
+      itemTitulo: valores("itemTitulo"),
       acaoCodigo: contexto.acaoCodigo,
+      acaoTitulo: valores("acaoTitulo"),
       etapa: contexto.etapa,
       riscoEstrategico: valores("riscoEstrategico"),
+      idRisco: valores("idRisco"),
+      refIniciativa: valores("itemCodigo"),
+      iniciativa: valores("itemTitulo"),
+      refAcao: valores("acaoCodigo"),
+      acao: valores("acaoTitulo"),
       titulo: valores("titulo") || valores("idRisco") || "Risco sem título",
       causa: valores("causa"),
       consequencia: valores("consequencia"),
@@ -331,14 +360,31 @@ export function lerAbaRiscos(planilha: ExcelJS.Worksheet): RiscoImportado[] {
       resposta: valores("resposta"),
       tratamento: valores("tratamento"),
       treatmentOwner: valores("treatmentOwner"),
+      prazoInicio: converterDataBr(valores("_prazoInicio")),
       prazo: converterDataBr(valores("prazo")),
+      custoPrevisto: converterNumeroOpcional(valores("_custo")),
       execucao: Number(valores("execucao").replace(",", ".").replace("%", "")) || 0,
+      etapaConcluida: valores("_etapaConcluida"),
+      dataInicioReal: converterDataBr(valores("_dataInicioReal")),
+      dataConclusaoReal: converterDataBr(valores("_dataConclusaoReal")),
       situacao: valores("situacao"),
+      justificativa: valores("_justificativaObs"),
       review: valores("review"),
+      dataProximaRevisao: converterDataBr(valores("_dataProximaRevisao")),
+      mudancaProcesso: valores("_mudancaProcesso"),
+      novosRiscos: valores("_novosRiscos"),
+      acoesCorretivas: valores("_acoesCorretivas"),
+      licoesAprendidas: valores("_licoesAprendidas"),
       status: valores("status"),
     });
   }
   return riscos;
+}
+
+function converterNumeroOpcional(texto: string): number | null {
+  if (!texto) return null;
+  const numero = Number(texto.replace(",", ".").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(numero) ? numero : null;
 }
 
 function converterDataBr(texto: string): string {

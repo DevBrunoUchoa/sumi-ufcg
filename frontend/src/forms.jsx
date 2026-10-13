@@ -287,16 +287,26 @@ export function StageForm({ plan, onClose, onSave }) {
   </Modal>;
 }
 
-export function RiskForm({ item, action, stage, risk, onClose, onSave }) {
+export function RiskForm({ plan, item, action, stage, risk, onClose, onSave }) {
   const [probability, setProbability] = useState(risk?.probability || 3);
   const [impact, setImpact] = useState(risk?.impact || 3);
   const [maturity, setMaturity] = useState(risk?.maturity || 'Fraco');
   const [error, setError] = useState('');
   const [deadline, setDeadline] = useState(risk?.deadline || '');
+  const [startDeadline, setStartDeadline] = useState(risk?.prazoInicio || '');
+  const [realStartDate, setRealStartDate] = useState(risk?.dataInicioReal || '');
+  const [realEndDate, setRealEndDate] = useState(risk?.dataConclusaoReal || '');
+  const [nextReviewDate, setNextReviewDate] = useState(risk?.dataProximaRevisao || '');
   const level = riskLevel(probability, impact);
   const score = riskScore(probability, impact);
   const residual = residualRisk(probability, impact, maturity);
   const field = (name) => risk?.[name] || '';
+  const stageIndex = Math.max(0, action.tasks.findIndex((task) => task.title === (stage?.title || risk?.stage))) + 1;
+  const generatedRiskId = `R-${action.code}.${String(stageIndex).padStart(2, '0')}`;
+  const axis = plan.axes.find((candidate) => candidate.id === item.axisId);
+  const objective = plan.objectives.find((candidate) => candidate.id === item.objectiveId);
+  const axisLabel = axis ? `${axis.code} · ${axis.name}` : item.axisId;
+  const objectiveLabel = objective ? `${objective.code} · ${objective.title}` : item.objectiveId;
   function submit(event) {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
@@ -304,44 +314,80 @@ export function RiskForm({ item, action, stage, risk, onClose, onSave }) {
     if (required.some((name) => !values[name].trim())) return setError('Preencha os campos principais do risco.');
     const selectedDeadline = event.currentTarget.querySelector('br-datetime-picker')?.serializedValue || deadline;
     if (!selectedDeadline) return setError('Informe o prazo de conclusão do risco.');
-    onSave({ ...(risk || {}), id: risk?.id || uid(), actionId: action.id, stage: stage?.title || values.stage.trim(), title: values.title.trim(), strategicRisk: values.strategicRisk.trim(), cause: values.cause.trim(), consequence: values.consequence.trim(), category: values.category, probability, impact, controls: values.controls.trim(), controlType: values.controlType, maturity, response: values.response, treatment: values.treatment.trim(), treatmentOwner: values.treatmentOwner.trim(), deadline: selectedDeadline, execution: Number(values.execution || 0), situation: values.situation, review: values.review, status: values.status });
+    onSave({
+      ...(risk || {}),
+      id: risk?.id || uid(),
+      eixo: item.axisId,
+      objetivo: item.objectiveId,
+      refIniciativa: item.code,
+      iniciativa: item.title,
+      refAcao: action.code,
+      acao: action.title,
+      idRisco: values.idRisco.trim() || generatedRiskId,
+      actionId: action.id,
+      stage: stage?.title || values.stage.trim(),
+      title: values.title.trim(),
+      strategicRisk: values.strategicRisk.trim(),
+      cause: values.cause.trim(),
+      consequence: values.consequence.trim(),
+      category: values.category,
+      probability,
+      impact,
+      controls: values.controls.trim(),
+      controlType: values.controlType,
+      maturity,
+      response: values.response,
+      treatment: values.treatment.trim(),
+      treatmentOwner: values.treatmentOwner.trim(),
+      prazoInicio: values.prazoInicio,
+      deadline: selectedDeadline,
+      custoPrevisto: values.custoPrevisto === '' ? null : Number(values.custoPrevisto),
+      execution: Number(values.execution || 0),
+      etapaConcluida: values.etapaConcluida,
+      dataInicioReal: values.dataInicioReal,
+      dataConclusaoReal: values.dataConclusaoReal,
+      situation: values.situation,
+      justificativa: values.justificativa.trim(),
+      review: values.review,
+      dataProximaRevisao: values.dataProximaRevisao,
+      mudancaProcesso: values.mudancaProcesso,
+      novosRiscos: values.novosRiscos,
+      acoesCorretivas: values.acoesCorretivas.trim(),
+      licoesAprendidas: values.licoesAprendidas.trim(),
+      status: values.status,
+    });
   }
-  return <Modal title={risk ? 'Editar risco' : 'Adicionar risco'} subtitle={`${item.code} · ${action.title}`} onClose={onClose} wide><form onSubmit={submit}><div className="form-body">
-    <div className="risk-form-context"><span><b>Ação:</b> {action.title}</span><span><b>Etapa:</b> {stage?.title || risk?.stage || 'Será definida no formulário'}</span></div>
-    <h3>Identificação do risco</h3><Field label="Etapa" help="Associe o risco à etapa específica em que ele foi identificado."><Select name="stage" defaultValue={stage?.title || field('stage') || action.tasks[0]?.title || ''} options={[{ value: '', label: 'Ação sem etapa específica' }, ...action.tasks.map((task) => ({ value: task.title, label: task.title }))]} disabled={Boolean(stage)} /></Field>
-    <Field label="Risco do processo"><Textarea name="title" rows="2" required maxLength={240} defaultValue={field('title')} placeholder="Ex.: Dados institucionais incompletos para a inscrição" /></Field>
-    <Field label="Risco estratégico da iniciativa"><Textarea name="strategicRisk" rows="2" maxLength={240} defaultValue={field('strategicRisk')} placeholder="Ex.: Não cumprir a meta institucional no prazo" /></Field>
-    <div className="form-grid"><Field label="Causa do risco"><Textarea name="cause" rows="2" required maxLength={300} defaultValue={field('cause')} /></Field><Field label="Efeito / consequência"><Textarea name="consequence" rows="2" required maxLength={300} defaultValue={field('consequence')} /></Field></div>
-    <Field label="Categoria do risco"><Select name="category" defaultValue={field('category') || 'Operacional'} options={[{ value: '', label: 'Selecione' }, 'Operacional', 'Imagem/Reputação', 'Político-legal', 'Financeiro/Orçamentário', 'Ambiental', 'Estratégico', 'Conformidade']} /></Field>
-    <h3>Avaliação e controles</h3><div className="form-grid three"><Field label="Probabilidade (P)"><Select value={probability} onChange={(event) => setProbability(Number(event.target.value))} options={[{ value: '', label: 'Selecione' }, 1, 2, 3, 4, 5]} /></Field><Field label="Impacto (I)"><Select value={impact} onChange={(event) => setImpact(Number(event.target.value))} options={[{ value: '', label: 'Selecione' }, 1, 2, 3, 4, 5]} /></Field><Field label="Tipo de controle"><Select name="controlType" defaultValue={field('controlType') || 'Preventivo'} options={[{ value: '', label: 'Selecione' }, 'Preventivo', 'Detectivo', 'Corretivo']} /></Field></div>
-    <Field label="Controles existentes"><Textarea name="controls" rows="2" required maxLength={300} defaultValue={field('controls')} placeholder="Descreva os controles já existentes" /></Field><Field label="Maturidade do controle"><Select value={maturity} onChange={(event) => setMaturity(event.target.value)} options={[{ value: '', label: 'Selecione' }, ...[['Inexistente', '1,0'], ['Fraco', '0,8'], ['Mediano', '0,6'], ['Satisfatório', '0,4'], ['Forte', '0,2']].map(([name, factor]) => ({ value: name, label: `${name} · FC ${factor}` }))]} /></Field>
-    <div className="risk-calculation"><div className={`risk-calculation-value ${level}`}><span>Risco inerente (RI)</span><strong>{score}</strong><b>{riskLevelLabel(level)}</b><small>P × I = {probability} × {impact}</small></div><div className={`risk-calculation-value ${riskLevelFromScore(residual)}`}><span>Risco residual (RR)</span><strong>{residual.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</strong><b>{riskLevelLabel(riskLevelFromScore(residual))}</b><small>RI × FC = {score} × {controlFactor(maturity)}</small></div></div>
-    <h3>Resposta e acompanhamento</h3>
+  return <Modal title={risk ? 'Editar risco' : 'Adicionar risco'} onClose={onClose} wide><form onSubmit={submit}><div className="form-body">
+    <h3>1. Identificação da ação</h3><div className="risk-identification">
+      <div><span>Eixo</span><strong>{axisLabel}</strong></div>
+      <div><span>Objetivo</span><strong>{objectiveLabel}</strong></div>
+      <div><span>Iniciativa</span><strong>{item.code} · {item.title}</strong></div>
+      <div><span>Ação estratégica</span><strong>{action.code} · {action.title}</strong></div>
+      <div><span>Etapa (tarefa)</span><strong>{stage?.title || risk?.stage || 'Ação sem etapa específica'}</strong></div>
+    </div>
+    <h3>2. Identificação do risco</h3><Field label="Risco Estratégico (da iniciativa)"><Textarea name="strategicRisk" rows="2" maxLength={240} defaultValue={field('strategicRisk')} /></Field><div className="form-grid"><Field label="ID Risco (etapa)"><Input name="idRisco" defaultValue={field('idRisco') || generatedRiskId} readOnly /></Field><Field label="Risco do Processo (da etapa)"><Textarea name="title" rows="2" required maxLength={240} defaultValue={field('title')} /></Field></div><div className="form-grid"><Field label="Causa do Risco"><Textarea name="cause" rows="2" required maxLength={300} defaultValue={field('cause')} /></Field><Field label="Efeito / Consequência"><Textarea name="consequence" rows="2" required maxLength={300} defaultValue={field('consequence')} /></Field></div><Field label="Categoria do Risco"><Select name="category" defaultValue={field('category') || 'Operacional'} options={[{ value: '', label: 'Selecione' }, 'Operacional', 'Imagem/Reputação', 'Político-legal', 'Financeiro/Orçamentário', 'Ambiental', 'Estratégico', 'Conformidade']} /></Field>
+    <h3>3. Avaliação do risco inerente</h3><div className="risk-evaluation"><div className="form-grid"><Field label="Probabilidade (P) 1 a 5"><Select value={probability} onChange={(event) => setProbability(Number(event.target.value))} options={[{ value: '', label: 'Selecione' }, 1, 2, 3, 4, 5]} /></Field><Field label="Impacto (I) 1 a 5"><Select value={impact} onChange={(event) => setImpact(Number(event.target.value))} options={[{ value: '', label: 'Selecione' }, 1, 2, 3, 4, 5]} /></Field></div>
+    <div className={`risk-calculation-value risk-inherent ${level}`}><span>Risco inerente (RI)</span><strong>{score}</strong><b>Nível: {riskLevelLabel(level)}</b><small>P × I = {probability} × {impact}</small></div></div>
+    <h3>4. Controles e risco residual</h3><Field label="Controles Existentes"><Textarea name="controls" rows="2" required maxLength={300} defaultValue={field('controls')} /></Field>
+    <div className="risk-evaluation"><div className="form-grid"><Field label="Tipo de Controle"><Select name="controlType" defaultValue={field('controlType') || 'Preventivo'} options={[{ value: '', label: 'Selecione' }, 'Preventivo', 'Detectivo', 'Corretivo']} /></Field><Field label="Maturidade e Fator de Controle"><Select value={maturity} onChange={(event) => setMaturity(event.target.value)} options={[{ value: '', label: 'Selecione' }, ...[['Inexistente', '1,0'], ['Fraco', '0,8'], ['Mediano', '0,6'], ['Satisfatório', '0,4'], ['Forte', '0,2']].map(([name, factor]) => ({ value: name, label: `${name} · FC ${factor}` }))]} /></Field></div>
+    <div className={`risk-calculation-value risk-residual ${riskLevelFromScore(residual)}`}><span>Risco residual (RR)</span><strong>{residual.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</strong><b>Nível: {riskLevelLabel(riskLevelFromScore(residual))}</b><small>RI × FC = {score} × {controlFactor(maturity)}</small></div></div>
+    <h3>5. Resposta e tratamento</h3>
       <div className="form-grid">
         <Field label="Resposta ao risco"><Select name="response" defaultValue={field('response') || 'Mitigar'} options={[{ value: '', label: 'Selecione' }, 'Aceitar', 'Mitigar', 'Compartilhar', 'Evitar']} /></Field>
         <Field label="Responsável pelo tratamento"><Input name="treatmentOwner" required maxLength={100} defaultValue={field('treatmentOwner') || item.owner} /></Field>
       </div>
       <Field label="Plano de tratamento"><Textarea name="treatment" rows="2" required maxLength={400} defaultValue={field('treatment')} placeholder="Controles propostos para reduzir o risco" /></Field>
-    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '16px', marginBottom: '1rem' }}>
-      <Field label="Prazo de conclusão">
-        <DatePicker
-          required
-          placeholder="Selecione o prazo"
-          aria-label="Prazo de conclusão"
-          value={deadline}
-          onChange={setDeadline}
-          style={{ display: 'block', marginTop: '-12px' }}
-        />
-      </Field>
-      <Field label="Execução (%)">
-        <Input name="execution" type="number" min="0" max="100" defaultValue={risk?.execution ?? 0} />
-      </Field>
-    </div>
-    <div className="form-grid three">
-      <Field label="Frequência de revisão"><Select name="review" defaultValue={field('review') || 'Trimestral'} options={[{ value: '', label: 'Selecione' }, 'Mensal', 'Trimestral', 'Semestral', 'Anual']} /></Field>
-      <Field label="Situação"><Select name="situation" defaultValue={field('situation') || 'Não iniciada'} options={[{ value: '', label: 'Selecione' }, 'Não iniciada', 'Em andamento', 'Concluída']} /></Field>
-      <Field label="Status do risco"><Select name="status" defaultValue={field('status') || 'Ativo'} options={[{ value: '', label: 'Selecione' }, 'Ativo', 'Mitigado', 'Encerrado', 'Reclassificado']} /></Field>
-    </div>
+    <div className="form-grid three"><Field label="Prazo Início"><DatePicker name="prazoInicio" placeholder="Selecione a data" aria-label="Prazo de início" value={startDeadline} onChange={setStartDeadline} /></Field><Field label="Prazo Conclusão"><DatePicker name="deadline" required placeholder="Selecione o prazo" aria-label="Prazo de conclusão" value={deadline} onChange={setDeadline} /></Field><Field label="Custo Previsto"><Input name="custoPrevisto" type="number" min="0" step="0.01" defaultValue={field('custoPrevisto') ?? ''} /></Field></div>
+    <h3>6. Monitoramento da execução</h3><div className="form-grid three">
+      <Field label="% Execução"><Input name="execution" type="number" min="0" max="100" defaultValue={risk?.execution ?? 0} /></Field>
+      <Field label="Etapa Concluída?"><Select name="etapaConcluida" defaultValue={field('etapaConcluida')} options={[{ value: '', label: 'Selecione' }, 'Sim', 'Não', 'Parcial']} /></Field>
+      <Field label="Situação"><Select name="situation" defaultValue={field('situation') || 'Não iniciado'} options={[{ value: '', label: 'Selecione' }, 'Não iniciado', 'Em andamento', 'Atrasado', 'Concluído no prazo', 'Concluído fora do prazo', 'Cancelado']} /></Field>
+    </div><div className="form-grid three"><Field label="Data de Início Real"><DatePicker name="dataInicioReal" placeholder="Selecione a data" aria-label="Data de início real" value={realStartDate} onChange={setRealStartDate} /></Field><Field label="Data de Conclusão Real"><DatePicker name="dataConclusaoReal" placeholder="Selecione a data" aria-label="Data de conclusão real" value={realEndDate} onChange={setRealEndDate} /></Field><Field label="Justificativa / Observações"><Input name="justificativa" defaultValue={field('justificativa')} maxLength={500} /></Field></div>
+    <h3>7. Revisão do risco</h3><div className="form-grid three">
+      <Field label="Status do Risco"><Select name="status" defaultValue={field('status') || 'Ativo'} options={[{ value: '', label: 'Selecione' }, 'Ativo', 'Materializado', 'Mitigado', 'Encerrado']} /></Field>
+      <Field label="Frequência de Revisão"><Select name="review" defaultValue={field('review') || 'Trimestral'} options={[{ value: '', label: 'Selecione' }, 'Por evento', 'Mensal', 'Trimestal', 'Semestral', 'Anual', 'Aleatório']} /></Field>
+      <Field label="Data da Próxima Revisão"><DatePicker name="dataProximaRevisao" placeholder="Selecione a data" aria-label="Data da próxima revisão" value={nextReviewDate} onChange={setNextReviewDate} /></Field>
+    </div><div className="form-grid"><Field label="Houve mudança no processo?"><Select name="mudancaProcesso" defaultValue={field('mudancaProcesso')} options={[{ value: '', label: 'Selecione' }, 'Sim', 'Não']} /></Field><Field label="Novos riscos identificados?"><Select name="novosRiscos" defaultValue={field('novosRiscos')} options={[{ value: '', label: 'Selecione' }, 'Sim', 'Não']} /></Field></div><div className="form-grid"><Field label="Ações Corretivas"><Textarea name="acoesCorretivas" rows="2" defaultValue={field('acoesCorretivas')} /></Field><Field label="Lições Aprendidas"><Textarea name="licoesAprendidas" rows="2" defaultValue={field('licoesAprendidas')} /></Field></div>
   </div><FormEnd onClose={onClose} submit={risk ? 'Salvar alterações' : 'Adicionar risco'} error={error} /></form></Modal>;
 }
 

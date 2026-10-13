@@ -131,10 +131,14 @@ function App({ auth }) {
     document.documentElement.style.removeProperty('color-scheme');
   }, [darkMode]);
   useEffect(() => {
-    // O widget é injetado pelo script do index.html (fora da árvore React) —
-    // desligar aqui só esconde o container, sem reinicializar o plugin.
-    const container = document.querySelector('div[vw]');
-    if (container) container.style.display = vlibrasAtivo ? '' : 'none';
+    // O widget é injetado pelo script do index.html (fora da árvore React) e,
+    // ao ser clicado, cria um segundo elemento (#vlibras-access-wrapper)
+    // direto em document.body — fora do container original — que ficava
+    // visível mesmo com o container escondido. Por isso a regra que some com
+    // os dois vive em CSS (.vlibras-off em styles.css), não aqui: uma classe
+    // no <html> cobre qualquer elemento que o VLibras crie depois, inclusive
+    // esse segundo wrapper que só existe após a primeira ativação.
+    document.documentElement.classList.toggle('vlibras-off', !vlibrasAtivo);
   }, [vlibrasAtivo]);
   useEffect(() => {
     if (data === savedData.current) return;

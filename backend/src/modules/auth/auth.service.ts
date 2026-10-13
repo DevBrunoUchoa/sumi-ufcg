@@ -1,11 +1,15 @@
 import { gerarHashSenha, verificarSenha } from "../../lib/password.js";
 import { HttpError } from "../../lib/http-error.js";
+import { logger } from "../../lib/logger.js";
+import { env } from "../../config/env.js";
+import { mailer } from "../../lib/mailer.js";
 import { authenticatedSessionSchema, type PermissionCode } from "./auth.contract.js";
 import { PERMISSOES_CONCEDIVEIS_POR_EIXO, PERMISSOES, PERMISSOES_GESTOR_EIXO, PERMISSOES_RESPONSAVEL_EIXO, TODAS_PERMISSOES_ADMIN } from "./auth.permissions.js";
-import { eixoRepository, sessaoRepository, usuarioRepository } from "./auth.repository.js";
+import { eixoRepository, redefinicaoSenhaRepository, sessaoRepository, usuarioRepository } from "./auth.repository.js";
 import type { Concessao, EixoParaConcessoes, Papel, SessaoUsuario, Usuario } from "./auth.types.js";
 
 export const DURACAO_SESSAO_MS = 12 * 60 * 60 * 1000; // 12h
+export const DURACAO_REDEFINICAO_SENHA_MS = 60 * 60 * 1000; // 1h
 export const NOME_COOKIE_SESSAO = "sumi_session";
 
 function idsDaLista(valor: unknown): string[] {
@@ -127,6 +131,34 @@ export const authService = {
     const sessao = montarSessao(usuario, eixos);
     authenticatedSessionSchema.parse(sessao);
     return sessao;
+  },
+
+  /**
+   * Não revela se o e-mail existe ou não: a resposta HTTP é sempre a mesma
+   * (204) tanto no login.service.ts como no front, pra não virar uma forma
+   * de enumerar e-mails cadastrados. Só dispara o e-mail quando o usuário
+   * existe de fato.
+   */
+  async solicitarRedefinicaoSenha(email: string): Promise<void> {
+    const usuario = await usuarioRepository.buscarPorEmail(email);
+    if (!usuario) return;
+    const token = await redefinicaoSenhaRepository.criar({ usuarioId: usuario.id, expiraEm: new Date(Date.now() + DURACAO_REDEFINICAO_SENHA_MS) });
+    const link = `${env.FRONTEND_URL}/#/redefinir-senha?token=${token}`;
+    await mailer
+      .enviar({
+        to: usuario.email,
+        subject: "Redefinição de senha — SUMI",
+        html: `<p>Olá, ${usuario.nome}.</p><p>Recebemos um pedido para redefinir a senha da sua conta no SUMI. Clique no link abaixo para criar uma nova senha — ele expira em 1 hora.</p><p><a href="${link}">${link}</a></p><p>Se você não pediu essa redefinição, pode ignorar este e-mail.</p>`,
+        text: `Redefinição de senha do SUMI.\n\nAcesse para criar uma nova senha (expira em 1 hora): ${link}\n\nSe você não pediu essa redefinição, ignore este e-mail.`,
+      })
+      .catch((err) => logger.error({ err, usuarioId: usuario.id }, "Falha ao enviar e-mail de redefinição de senha"));
+  },
+
+  async redefinirSenha(token: string, novaSenha: string): Promise<void> {
+    const resultado = await redefinicaoSenhaRepository.buscarValido(token);
+    if (!resultado) throw new HttpError(400, "Link de redefinição inválido ou expirado — solicite um novo.");
+    await usuarioRepository.atualizar(resultado.usuarioId, { senhaHash: gerarHashSenha(novaSenha) });
+    await redefinicaoSenhaRepository.marcarUsado(token);
   },
 
   /** Usado pelo seed e por uma futura administração de usuários. */

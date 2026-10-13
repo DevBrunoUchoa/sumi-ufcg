@@ -6,6 +6,7 @@ import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, 
 import { SessionProvider, useSession } from './auth/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
 import { LoginPage } from './auth/Login.jsx';
+import { ForgotPasswordPage, ResetPasswordPage } from './auth/PasswordReset.jsx';
 import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, UnauthorizedPage } from './error-pages.jsx';
 import { Attachments, AttachmentsProvider } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
@@ -40,6 +41,8 @@ const PAGE_DESCRIPTIONS = {
   '/modelos': 'Modelos de plano institucional — estrutura e campos adicionais.',
   '/usuarios': 'Gerenciamento de usuários e permissões do SUMI.',
   '/login': 'Acesso à área de trabalho do Sistema Unificado de Monitoramento Institucional.',
+  '/esqueci-senha': 'Solicite um link por e-mail para redefinir a senha da sua conta no SUMI.',
+  '/redefinir-senha': 'Defina uma nova senha para sua conta no SUMI.',
   '/sobre': 'Conheça o SUMI e a consulta pública aos planos institucionais.',
   '/ajuda': 'Orientações de navegação, acesso e acessibilidade do SUMI.',
   '/privacidade': 'Informações sobre sessão e preferências armazenadas pelo SUMI.',
@@ -137,7 +140,7 @@ function App({ auth }) {
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
-  const needsWorkspace = !['/login', '/sobre', '/ajuda', '/privacidade'].includes(route.path);
+  const needsWorkspace = !['/login', '/esqueci-senha', '/redefinir-senha', '/sobre', '/ajuda', '/privacidade'].includes(route.path);
   const sessionKey = session.authenticated ? session.user.id : 'public';
   const replaceData = (next) => { savedData.current = next; setData(next); };
   const loadWorkspace = () => {
@@ -241,7 +244,7 @@ function App({ auth }) {
   const planningContext = plan?.type === 'PDI' ? resolvePlanRoute(plan, route) : null;
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
   useEffect(() => {
-    const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.objective ? `${planningContext.objective.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade' })[route.path] || 'SUMI';
+    const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.objective ? `${planningContext.objective.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/esqueci-senha': 'Esqueci minha senha', '/redefinir-senha': 'Redefinir senha', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade' })[route.path] || 'SUMI';
     document.title = `SUMI · ${isDashboardRoute(route) ? `Painel de acompanhamento · ${plan?.shortName || 'Plano'}` : label}`;
     setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
   }, [plan?.shortName, plan?.name, planningContext?.axis?.name, planningContext?.objective?.title, planningContext?.item?.title, planningContext?.action?.title, planningContext?.stage?.title, route.path]);
@@ -256,9 +259,11 @@ function App({ auth }) {
   if (can(PERMISSIONS.VIEW_REVIEW_QUEUE)) links.push({ path: '/validacoes', icon: 'check', text: 'Validações' });
   if (can(PERMISSIONS.MANAGE_MODEL)) links.push({ path: '/modelos', icon: 'layers', text: 'Modelos de plano' }, { path: '/usuarios', icon: 'user', text: 'Usuários' });
   const loading = needsWorkspace && auth.status !== 'error' && (auth.status === 'loading' || workspaceState.status === 'loading' || workspaceState.sessionKey !== sessionKey);
-  return <AppShell route={route} plan={plan} session={session} mode={route.path === '/login' ? 'access' : session.authenticated ? 'work' : 'public'} links={links} altoContraste={altoContraste} darkMode={darkMode} vlibrasAtivo={vlibrasAtivo} toggleAltoContraste={toggleAltoContraste} toggleDarkMode={toggleDarkMode} toggleVlibras={toggleVlibras} onLogout={leaveSession} loading={loading}>
+  return <AppShell route={route} plan={plan} session={session} mode={['/login', '/esqueci-senha', '/redefinir-senha'].includes(route.path) ? 'access' : session.authenticated ? 'work' : 'public'} links={links} altoContraste={altoContraste} darkMode={darkMode} vlibrasAtivo={vlibrasAtivo} toggleAltoContraste={toggleAltoContraste} toggleDarkMode={toggleDarkMode} toggleVlibras={toggleVlibras} onLogout={leaveSession} loading={loading}>
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
         {route.path === '/login' ? <LoginPage authenticated={session.authenticated} returnTo={safeReturnPath(route.query.get('returnTo'))} onSuccess={async () => { await auth.reload(); navigate(safeReturnPath(route.query.get('returnTo'))); }} />
+          : route.path === '/esqueci-senha' ? <ForgotPasswordPage />
+          : route.path === '/redefinir-senha' ? <ResetPasswordPage token={route.query.get('token')} />
           : ['/sobre', '/ajuda', '/privacidade'].includes(route.path) ? <InformationPage path={route.path} />
           : loading ? <LoadingState />
           : auth.status === 'error' ? (isOfflineError(auth.error) ? <OfflinePage onRetry={() => auth.reload().catch(() => {})} /> : <ServerErrorPage onRetry={() => auth.reload().catch(() => {})} />)

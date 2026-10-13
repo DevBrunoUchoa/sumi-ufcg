@@ -55,6 +55,14 @@ export const usuarioRepository = {
     return (data as UsuarioRow[]).map(paraUsuario);
   },
 
+  /** Usado para notificações por e-mail (ex.: responsáveis de um eixo) — devolve só os usuários existentes dentre os ids. */
+  async listarPorIds(ids: string[]): Promise<Usuario[]> {
+    if (!ids.length) return [];
+    const { data, error } = await supabase.from("usuario").select("*").in("id", ids);
+    tratarErro(error, "Falha ao buscar usuários");
+    return (data as UsuarioRow[]).map(paraUsuario);
+  },
+
   async criar(input: { nome: string; email: string; senhaHash: string; papelAdmin: boolean }): Promise<Usuario> {
     const { data, error } = await supabase
       .from("usuario")
@@ -111,6 +119,37 @@ export const sessaoRepository = {
   async remover(token: string): Promise<void> {
     const { error } = await supabase.from("sessao").delete().eq("token", token);
     tratarErro(error, "Falha ao encerrar sessão");
+  },
+};
+
+export const redefinicaoSenhaRepository = {
+  async criar(input: { usuarioId: string; expiraEm: Date }): Promise<string> {
+    const { data, error } = await supabase
+      .from("redefinicao_senha")
+      .insert({ usuario_id: input.usuarioId, expira_em: input.expiraEm.toISOString() })
+      .select("token")
+      .single();
+    tratarErro(error, "Falha ao criar token de redefinição de senha");
+    return (data as { token: string }).token;
+  },
+
+  /** null se o token não existe, já foi usado ou expirou. */
+  async buscarValido(token: string): Promise<{ usuarioId: string } | null> {
+    const { data, error } = await supabase
+      .from("redefinicao_senha")
+      .select("usuario_id, expira_em, usado_em")
+      .eq("token", token)
+      .maybeSingle();
+    tratarErro(error, "Falha ao carregar token de redefinição de senha");
+    if (!data) return null;
+    const row = data as { usuario_id: string; expira_em: string; usado_em: string | null };
+    if (row.usado_em || new Date(row.expira_em).getTime() <= Date.now()) return null;
+    return { usuarioId: row.usuario_id };
+  },
+
+  async marcarUsado(token: string): Promise<void> {
+    const { error } = await supabase.from("redefinicao_senha").update({ usado_em: new Date().toISOString() }).eq("token", token);
+    tratarErro(error, "Falha ao marcar token de redefinição de senha como usado");
   },
 };
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessaoUsuario } from "../auth/auth.types.js";
-import type { Workspace } from "./planning.types.js";
+import type { SituacaoValidacao, Workspace } from "./planning.types.js";
 
 const mocks = vi.hoisted(() => ({ listar: vi.fn(), atualizar: vi.fn() }));
 vi.mock("./planning.repository.js", () => ({
@@ -14,6 +14,10 @@ vi.mock("./planning.repository.js", () => ({
   }])),
   anexoRepo: { listarTodos: vi.fn().mockResolvedValue([]), listarPorItem: vi.fn().mockResolvedValue([]), recriarLote: vi.fn().mockResolvedValue(undefined) },
 }));
+const authMocks = vi.hoisted(() => ({ listarPorIds: vi.fn().mockResolvedValue([]) }));
+vi.mock("../auth/auth.repository.js", () => ({ usuarioRepository: { listarPorIds: authMocks.listarPorIds } }));
+const mailerMocks = vi.hoisted(() => ({ enviar: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("../../lib/mailer.js", () => ({ mailer: { enviar: mailerMocks.enviar } }));
 import { salvarWorkspace } from "./planning.service.js";
 import { noPlanoRepo } from "./planning.repository.js";
 
@@ -181,5 +185,75 @@ describe("salvarWorkspace — itens de um workspace grande são gravados em para
       .filter((linha) => linha.nivel === 2);
     const ordemPorId = Object.fromEntries(chamadasDeItem.map((linha) => [linha.id, linha.ordem]));
     expect(ordemPorId).toEqual({ i1: 0, i2: 1, i3: 2 });
+  });
+});
+
+describe("salvarWorkspace — notifica responsáveis quando um item é enviado para validação", () => {
+  const planoId = "p1";
+  const axisId = "a1";
+  const objectiveId = "o1";
+  const itemId = "i1";
+  const now = new Date().toISOString();
+  const gestor: SessaoUsuario = {
+    authenticated: true,
+    user: { id: "gestor-1", name: "Gestor", email: "gestor@example.test" }, roles: [],
+    grants: [{ permission: "plan.read_published", scope: { type: "global" } }, { permission: "item.submit", scope: { type: "axis", planId: planoId, axisId } }, { permission: "item.edit", scope: { type: "axis", planId: planoId, axisId } }],
+  };
+
+  function itemRow(reviewStatus: SituacaoValidacao) {
+    return { id: itemId, tipo_plano_id: "pdi", no_pai_id: objectiveId, nivel: 2, ordem: 0, dados: { code: "8.1.1", title: "Iniciativa", owner: "", partners: "", description: "", source: "", reviewStatus, reviewNote: "" }, criado_em: now, atualizado_em: now };
+  }
+
+  function workspaceComItem(reviewStatus: SituacaoValidacao): Workspace {
+    return {
+      version: 2,
+      templates: [{ id: "pdi", type: "PDI", name: "PDI", version: 1, description: "", labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" }, defaultPeriodicity: "annual", fields: [] }],
+      plans: [{
+        id: planoId, type: "PDI", shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "published",
+        template: { id: "pdi", type: "PDI", name: "PDI", version: 1, description: "", labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" }, defaultPeriodicity: "annual", fields: [] },
+        axes: [{ id: axisId, code: "8", name: "Governança", color: "#000", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: ["responsavel-1"], customGrants: [] }],
+        objectives: [{ id: objectiveId, axisId, code: "8.1", title: "Objetivo" }],
+        items: [{
+          id: itemId, code: "8.1.1", axisId, objectiveId, title: "Iniciativa", owner: "", partners: "", description: "", source: "",
+          reviewStatus, reviewNote: "",
+          metric: { name: "", measurementMode: "manual", valueType: "number", unit: "", periodicity: "annual", baseline: null, reference: "", direction: "up", targets: {}, formula: "" },
+          measurements: [], extras: {}, actions: [], history: [], risks: [],
+        }],
+      }],
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.listar.mockResolvedValue([{ id: "pdi", versao: 1, rotulos: { item: "Iniciativa", axis: "Eixo", objective: "Objetivo" }, campos_extras: [] }]);
+    (noPlanoRepo.listarTodos as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: planoId, tipo_plano_id: "pdi", no_pai_id: null, nivel: -1, ordem: 0, dados: { shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "published" }, criado_em: now, atualizado_em: now },
+      { id: axisId, tipo_plano_id: "pdi", no_pai_id: planoId, nivel: 0, ordem: 0, dados: { code: "8", name: "Governança", color: "#000", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: ["responsavel-1"], customGrants: [] }, criado_em: now, atualizado_em: now },
+      { id: objectiveId, tipo_plano_id: "pdi", no_pai_id: axisId, nivel: 1, ordem: 0, dados: { code: "8.1", title: "Objetivo" }, criado_em: now, atualizado_em: now },
+      itemRow("draft"),
+    ]);
+    authMocks.listarPorIds.mockResolvedValue([{ id: "responsavel-1", nome: "Responsável", email: "responsavel@example.test", senhaHash: "x", papelAdmin: false, criadoEm: now, atualizadoEm: now }]);
+  });
+
+  it("envia e-mail ao(s) responsável(is) do eixo quando o item passa a 'submitted'", async () => {
+    await salvarWorkspace(gestor, workspaceComItem("submitted"));
+
+    await vi.waitFor(() => expect(mailerMocks.enviar).toHaveBeenCalledTimes(1));
+    expect(authMocks.listarPorIds).toHaveBeenCalledWith(["responsavel-1"]);
+    const email = mailerMocks.enviar.mock.calls[0]![0];
+    expect(email.to).toBe("responsavel@example.test");
+    expect(email.html).toContain("8.1.1");
+  });
+
+  it("não notifica quando o item não muda de reviewStatus", async () => {
+    (noPlanoRepo.listarTodos as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: planoId, tipo_plano_id: "pdi", no_pai_id: null, nivel: -1, ordem: 0, dados: { shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "published" }, criado_em: now, atualizado_em: now },
+      { id: axisId, tipo_plano_id: "pdi", no_pai_id: planoId, nivel: 0, ordem: 0, dados: { code: "8", name: "Governança", color: "#000", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: ["responsavel-1"], customGrants: [] }, criado_em: now, atualizado_em: now },
+      { id: objectiveId, tipo_plano_id: "pdi", no_pai_id: axisId, nivel: 1, ordem: 0, dados: { code: "8.1", title: "Objetivo" }, criado_em: now, atualizado_em: now },
+      itemRow("submitted"),
+    ]);
+    await salvarWorkspace(gestor, workspaceComItem("submitted"));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(mailerMocks.enviar).not.toHaveBeenCalled();
   });
 });

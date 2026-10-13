@@ -112,6 +112,8 @@
 .login-password { position: relative; }
 .login-password input { padding-right: 48px; }
 .login-password button { position: absolute; top: 0; right: 0; }
+.login-forgot-password { display: inline-block; margin-top: calc(var(--spacing-scale-base) * -1); font-size: var(--font-size-scale-down-01); color: var(--interactive); text-decoration: none; }
+.login-forgot-password:hover { text-decoration: underline; }
 .pdi-scope-caption { color: var(--text-subtle); font-size: var(--font-size-scale-base); margin-top: var(--spacing-scale-base); }
 .sumi-shell .pdi-heading { padding-bottom: var(--spacing-scale-3x); }
 .sumi-shell .planning-context { background: var(--surface-soft); border-left-color: var(--axis-color, var(--primary)); }

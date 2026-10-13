@@ -1,4 +1,6 @@
+import { isDeepStrictEqual } from "node:util";
 import { HttpError } from "../../lib/http-error.js";
+import { prepareRiskWrite } from "./risk-write-policy.js";
 import { pode } from "../auth/auth.can.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import {
@@ -259,7 +261,13 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
 // ---------------------------------------------------------------------------
 
 function diferente(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) !== JSON.stringify(b);
+  // JSONB reorders keys; undefined properties are also used below to exclude
+  // protected fields from a comparison. Preserve both JSON semantics.
+  const asJson = (value: unknown): unknown => {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? undefined : JSON.parse(serialized);
+  };
+  return !isDeepStrictEqual(asJson(a), asJson(b));
 }
 
 function exigir(autorizado: boolean, mensagem: string): void {
@@ -554,14 +562,23 @@ async function salvarItem(
     status: row.status,
   }));
   const riscosNovosComparaveis = item.risks.map((risk) => ({ ...risk, deadline: risk.deadline || null }));
-  if (diferente(riscosAntigosComparaveis, riscosNovosComparaveis)) {
-    exigir(pode(sessao, "risk.manage", recurso), `Sem permissão para alterar riscos do item "${item.code}"`);
-  }
+  const riscosParaPersistir = prepareRiskWrite({
+    existing: riscosAntigosComparaveis, submitted: riscosNovosComparaveis,
+    canRead: pode(sessao, "risk.read", recurso), canManage: pode(sessao, "risk.manage", recurso),
+    changed: diferente(riscosAntigosComparaveis, riscosNovosComparaveis),
+    actionIds: new Set(item.actions.map((action) => action.id)), itemCode: item.code,
+  });
 
   // Histórico: só é possível adicionar (frontend nunca edita/remove entradas existentes) — exige history.comment.
-  if (item.history.length > contexto.historicoAntigo.length) {
+  const historicoIdsExistentes = new Set(contexto.historicoAntigo.map((entry) => entry.id));
+  const novasEntradasHistorico = item.history.filter((entry) => !historicoIdsExistentes.has(entry.id));
+  if (novasEntradasHistorico.length > 0) {
     exigir(pode(sessao, "history.comment", recurso), `Sem permissão para comentar no histórico do item "${item.code}"`);
   }
+  const historicoParaPersistir = pode(sessao, "history.read", recurso) ? item.history : [
+    ...contexto.historicoAntigo.map((entry) => ({ id: entry.id, at: entry.em, text: entry.texto, actor: entry.autor })),
+    ...novasEntradasHistorico,
+  ];
 
   if (dadosAntigos.reviewStatus !== item.reviewStatus) {
     if (item.reviewStatus === "submitted") {
@@ -650,7 +667,7 @@ async function salvarItem(
 
   await riscoRepo.removerPorItens([item.id]);
   await riscoRepo.inserirLote(
-    item.risks.map((risk) => ({
+    riscosParaPersistir.map((risk) => ({
       id: risk.id,
       no_plano_id: item.id,
       acao_id: risk.actionId,
@@ -679,6 +696,6 @@ async function salvarItem(
 
   await historicoRepo.removerPorItens([item.id]);
   await historicoRepo.inserirLote(
-    item.history.map((entry) => ({ id: entry.id, no_plano_id: item.id, em: entry.at, texto: entry.text, autor: entry.actor })),
+    historicoParaPersistir.map((entry) => ({ id: entry.id, no_plano_id: item.id, em: entry.at, texto: entry.text, autor: entry.actor })),
   );
 }

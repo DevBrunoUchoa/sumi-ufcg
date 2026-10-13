@@ -1,0 +1,410 @@
+{
+  "source": {
+    "title": "PDI UFCG 2026–2030 — Resolução nº 09/2025 do Colegiado Pleno",
+    "section": "3.1 Objetivos, iniciativas, indicadores, metas e ações",
+    "document": "Elaboração do PDI (2026-2030) - RES_09.2025-COLPLENO.pdf",
+    "note": "Vínculos escritos por objetivo; pdfPage é a página do arquivo, incluindo páginas iniciais."
+  },
+  "icons": [
+    {
+      "id": 1,
+      "title": "Erradicação da pobreza",
+      "path": "/images/ods/ods-01.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/1"
+    },
+    {
+      "id": 2,
+      "title": "Fome zero e agricultura sustentável",
+      "path": "/images/ods/ods-02.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/2"
+    },
+    {
+      "id": 3,
+      "title": "Saúde e Bem-Estar",
+      "path": "/images/ods/ods-03.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/3"
+    },
+    {
+      "id": 4,
+      "title": "Educação de qualidade",
+      "path": "/images/ods/ods-04.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/4"
+    },
+    {
+      "id": 5,
+      "title": "Igualdade de gênero",
+      "path": "/images/ods/ods-05.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/5"
+    },
+    {
+      "id": 6,
+      "title": "Água potável e saneamento",
+      "path": "/images/ods/ods-06.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/6"
+    },
+    {
+      "id": 7,
+      "title": "Energia limpa e acessível",
+      "path": "/images/ods/ods-07.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/7"
+    },
+    {
+      "id": 8,
+      "title": "Trabalho decente e crescimento econômico",
+      "path": "/images/ods/ods-08.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/8"
+    },
+    {
+      "id": 9,
+      "title": "Indústria, inovação e infraestrutura",
+      "path": "/images/ods/ods-09.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/9"
+    },
+    {
+      "id": 10,
+      "title": "Redução das desigualdades",
+      "path": "/images/ods/ods-10.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/10"
+    },
+    {
+      "id": 11,
+      "title": "Cidades e comunidades sustentáveis",
+      "path": "/images/ods/ods-11.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/11"
+    },
+    {
+      "id": 12,
+      "title": "Consumo e produção responsáveis",
+      "path": "/images/ods/ods-12.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/12"
+    },
+    {
+      "id": 13,
+      "title": "Ação contra a mudança global do clima",
+      "path": "/images/ods/ods-13.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/13"
+    },
+    {
+      "id": 14,
+      "title": "Vida na água",
+      "path": "/images/ods/ods-14.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/14"
+    },
+    {
+      "id": 15,
+      "title": "Vida terrestre",
+      "path": "/images/ods/ods-15.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/15"
+    },
+    {
+      "id": 16,
+      "title": "Paz, Justiça e Instituições Eficazes",
+      "path": "/images/ods/ods-16.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/16"
+    },
+    {
+      "id": 17,
+      "title": "Parcerias e meios de implementação",
+      "path": "/images/ods/ods-17.svg",
+      "page": "https://brasil.un.org/pt-br/sdgs/17"
+    }
+  ],
+  "objectives": [
+    {
+      "code": "1.1",
+      "title": "Fortalecer a qualidade e a eficiência do ensino",
+      "ods": [
+        4
+      ],
+      "pdfPage": 37
+    },
+    {
+      "code": "1.2",
+      "title": "Melhorar os indicadores de desempenho",
+      "ods": [
+        4
+      ],
+      "pdfPage": 40
+    },
+    {
+      "code": "1.3",
+      "title": "Potencializar perspectivas acadêmicas e profissionais",
+      "ods": [
+        4
+      ],
+      "pdfPage": 41
+    },
+    {
+      "code": "2.1",
+      "title": "Fortalecer as iniciativas de inovação",
+      "ods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "pdfPage": 42
+    },
+    {
+      "code": "2.2",
+      "title": "Fortalecer e consolidar programas de pós-graduação",
+      "ods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "pdfPage": 43
+    },
+    {
+      "code": "2.3",
+      "title": "Fortalecer a produção científica e tecnológica, promovendo a transferência de tecnologia para o setor produtivo",
+      "ods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "pdfPage": 44
+    },
+    {
+      "code": "3.1",
+      "title": "Aperfeiçoar as ações de extensão",
+      "ods": [
+        3,
+        4,
+        8,
+        10,
+        17
+      ],
+      "pdfPage": 46
+    },
+    {
+      "code": "3.2",
+      "title": "Aperfeiçoar as ações de arte e cultura",
+      "ods": [
+        3,
+        4,
+        8,
+        10,
+        17
+      ],
+      "pdfPage": 47
+    },
+    {
+      "code": "3.3",
+      "title": "Apoiar programas e projetos Institucionais estratégicos",
+      "ods": [
+        4,
+        9,
+        16,
+        17
+      ],
+      "pdfPage": 49
+    },
+    {
+      "code": "3.4",
+      "title": "Aprimorar a gestão Integrada das Atividades de Extensão com uso de TIC's",
+      "ods": [
+        16,
+        17
+      ],
+      "pdfPage": 50
+    },
+    {
+      "code": "3.5",
+      "title": "Expandir a Editora da UFCG - EDUFCG",
+      "ods": [
+        4,
+        9,
+        16,
+        17
+      ],
+      "pdfPage": 51
+    },
+    {
+      "code": "4.1",
+      "title": "Fortalecer Programas e Auxílios",
+      "ods": [
+        4,
+        10
+      ],
+      "pdfPage": 53
+    },
+    {
+      "code": "4.2",
+      "title": "Aprimorar a oferta de serviços de saúde e bem-estar",
+      "ods": [
+        3,
+        4
+      ],
+      "pdfPage": 54
+    },
+    {
+      "code": "5.1",
+      "title": "Fortalecer a Cooperação Internacional e a Visibilidade Global da UFCG",
+      "ods": [
+        4,
+        17
+      ],
+      "pdfPage": 55
+    },
+    {
+      "code": "5.2",
+      "title": "Internacionalizar o Ensino, a Pesquisa e a Extensão",
+      "ods": [
+        4,
+        10,
+        9
+      ],
+      "pdfPage": 56
+    },
+    {
+      "code": "5.3",
+      "title": "Promover a Competência Plurilíngue e Intercultural",
+      "ods": [
+        4,
+        10,
+        16
+      ],
+      "pdfPage": 57
+    },
+    {
+      "code": "6.1",
+      "title": "Melhorar infraestrutura física e urbana",
+      "ods": [
+        9,
+        16
+      ],
+      "pdfPage": 59
+    },
+    {
+      "code": "6.2",
+      "title": "Aprimorar serviços e processos de infraestrutura tecnológica",
+      "ods": [
+        9
+      ],
+      "pdfPage": 63
+    },
+    {
+      "code": "6.3",
+      "title": "Fortalecer a acessibilidade e inclusão como princípios transversais na UFCG",
+      "ods": [
+        4,
+        10,
+        16
+      ],
+      "pdfPage": 67
+    },
+    {
+      "code": "6.4",
+      "title": "Promover assessoramento aos setores da UFCG para que a cultura da inclusão e acessibilidade se constitua como intrínseca na instituição.",
+      "ods": [
+        4,
+        8,
+        10
+      ],
+      "pdfPage": 68,
+      "aliases": [
+        "Promover assessoramento aos setores da UFCG para que a cultura da inclusão e acessibilidade se constitua como princípio transversal"
+      ]
+    },
+    {
+      "code": "7.1",
+      "title": "Dimensionar e Otimizar a Força de Trabalho",
+      "ods": [
+        8
+      ],
+      "pdfPage": 70
+    },
+    {
+      "code": "7.2",
+      "title": "Desenvolver e Qualificar os servidores da UFCG",
+      "ods": [
+        4
+      ],
+      "pdfPage": 71
+    },
+    {
+      "code": "7.3",
+      "title": "Promover a Qualidade de Vida, Saúde e Segurança no Trabalho",
+      "ods": [
+        3
+      ],
+      "pdfPage": 72
+    },
+    {
+      "code": "7.4",
+      "title": "Promover a Racionalidade e Eficiência Administrativa",
+      "ods": [
+        16
+      ],
+      "pdfPage": 73
+    },
+    {
+      "code": "8.1",
+      "title": "Aperfeiçoar Práticas de Governança Pública",
+      "ods": [
+        16
+      ],
+      "pdfPage": 74
+    },
+    {
+      "code": "8.2",
+      "title": "Aperfeiçoar Práticas de Gestão Institucional",
+      "ods": [
+        10,
+        16
+      ],
+      "pdfPage": 76
+    },
+    {
+      "code": "8.3",
+      "title": "Aprimorar a Gestão Orçamentária, Financeira, Patrimonial e Arquivística",
+      "ods": [
+        12,
+        16
+      ],
+      "pdfPage": 78
+    }
+  ]
+}

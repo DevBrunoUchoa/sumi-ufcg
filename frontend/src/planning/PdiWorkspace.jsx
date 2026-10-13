@@ -4,10 +4,12 @@ import { Badge, Button, Empty, Icon, Input, Select } from '../ui.jsx';
 import { currentPeriod, executionStatus, formatMetricValue, metricResult, periodLabel, years } from '../domain.js';
 import { PERMISSIONS, resourceFor } from '../auth/permissions.js';
 import { ForbiddenPage, NotFoundPage, UnauthorizedPage } from '../error-pages.jsx';
-import { axisUrl, itemUrl, objectiveCode, objectiveUrl, planUrl, resolvePlanRoute } from './navigation.js';
+import { axisUrl, dashboardUrl, itemUrl, objectiveCode, objectiveUrl, planUrl, resolvePlanRoute } from './navigation.js';
 import { loginUrl } from '../auth/navigation.js';
 import { filterAxes, filterAxisItems, itemsForAxis, ordered, summarizeScope, targetState, targetStates } from './selectors.js';
 import { ScopeDashboard } from './ScopeDashboard.jsx';
+import { ObjectiveOds } from './ObjectiveOds.jsx';
+import './ods.css';
 
 const go = (path) => { window.location.hash = path; };
 
@@ -23,7 +25,7 @@ export function PdiWorkspace({ plan, route, can, authenticated, actions, renderD
   const eyebrow = view === 'riscos' ? stage ? 'RISCOS DA ETAPA' : `RISCOS DA AÇÃO ${action.code}` : action ? `AÇÃO ${action.code}` : item ? `${plan.template.labels.item.toUpperCase()} ${item.code}` : objective ? `${plan.shortName} · ${plan.template.labels.objective.toUpperCase()} ${objectiveCode(objective)}` : axis ? `${plan.shortName} ${plan.start}–${plan.end} · EIXO ${axis.code}` : 'PLANEJAMENTO INSTITUCIONAL';
   const editable = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
   return <div className="plan-page pdi-workspace" style={{ '--axis-color': axis?.color }}>
-    <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}</div></div>{actions(context)}</div>
+    <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && plan.status !== 'published' && <Badge tone="neutral">Rascunho</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}{objective && !item && <ObjectiveOds key={objective.id} plan={plan} objective={objective} />}</div></div>{!item && <a className="br-button secondary dashboard-entry" href={`#${dashboardUrl(plan, { axis: axis?.id, objective: objective?.id, period: route.query.get('period') })}`}><Icon name="chart" size={16} />Painel de acompanhamento</a>}{actions(context)}</div>
     {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} /> : <>
       <section className="planning-context" aria-label="Contexto do planejamento"><p><a href={`#${objectiveUrl(plan, objective)}`}><strong>{plan.template.labels.objective} {objectiveCode(objective)}</strong> · {objective.title}</a></p>{action && <p><a href={`#${itemUrl(plan, item)}`}><strong>{plan.template.labels.item} {item.code}</strong> · {item.title}</a></p>}</section>
       <section className="detail pdi-detail" aria-label="Detalhe do item">{renderDetail(context)}</section>
@@ -35,7 +37,6 @@ function PlanOverview({ plan, editable }) {
   const [search, setSearch] = useState('');
   const axes = filterAxes(plan, search);
   return <>
-    {!!plan.axes.length && <ScopeDashboard plan={plan} items={plan.items} level="plan" rows={ordered(plan.axes).map((axis) => ({ id: axis.id, label: `${axis.code} · ${axis.name}`, url: axisUrl(plan, axis), execution: summarizeScope(itemsForAxis(plan, axis.id), 0).execution }))} />}
     {!plan.axes.length ? <Empty title={editable ? 'Estrutura pronta para receber conteúdo' : 'Eixos ainda não disponíveis'}>{editable ? 'Configure os eixos e objetivos na opção Estrutura para começar o acompanhamento.' : 'Os eixos aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty> : <>
       <div className="section-heading pdi-section-heading"><div><h2>Eixos temáticos</h2><p className="hint">Escolha um eixo para explorar seus objetivos e iniciativas.</p></div><Input id="search-pdi-axes" label="Buscar no PDI" type="search" placeholder="Eixo, objetivo ou iniciativa…" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
       <p className="sr-only" role="status">{axes.length} eixos encontrados</p>

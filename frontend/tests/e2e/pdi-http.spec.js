@@ -95,3 +95,26 @@ test('objetivo e gráficos usam UUIDs e a API HTTP sem gravações de navegaçã
   expect(writes).toBe(0);
   expect(developmentRequests).toBe(0);
 });
+
+test('painel independente filtra dados da API e não grava o workspace', async ({ page }) => {
+  const workspace = serverWorkspace();
+  const plan = workspace.plans[0];
+  let writes = 0;
+  let developmentRequests = 0;
+  page.on('request', (request) => { if (request.url().includes('/__dev/')) developmentRequests += 1; });
+  await page.route('**/api/v1/auth/session', (route) => route.fulfill({ json: developmentSessions.public }));
+  await page.route('**/api/v1/planning/workspace', (route) => {
+    if (route.request().method() !== 'GET') writes += 1;
+    return route.fulfill({ json: workspace });
+  });
+  await page.goto(`/#/plano/${plan.id}/painel?period=2027`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Painel de acompanhamento');
+  await page.getByRole('region', { name: 'Execução por eixo', exact: true }).getByRole('link', { name: '8 · Governança e Gestão Institucional', exact: true }).click();
+  await expect(page.locator('.dashboard-scope')).toContainText('3 iniciativas');
+  await page.getByRole('link', { name: /indicadores sem resultado/ }).click();
+  await expect(page.locator('.attention-row')).toHaveCount(3);
+  await page.reload();
+  await expect(page.locator('.attention-row')).toHaveCount(3);
+  expect(writes).toBe(0);
+  expect(developmentRequests).toBe(0);
+});

@@ -13,12 +13,14 @@ import { createPlanningClient } from './planning-client.js';
 import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
 import { AxisIcon } from './AxisIcon.jsx';
 import { PdiWorkspace } from './planning/PdiWorkspace.jsx';
+import { PlanDashboard } from './planning/PlanDashboard.jsx';
 import { MetricTrend } from './planning/Charts.jsx';
-import { itemUrl, planUrl, resolvePlanRoute } from './planning/navigation.js';
+import { isDashboardRoute, itemUrl, planUrl, resolvePlanRoute } from './planning/navigation.js';
 import '@govbr-ds/core/dist/core.css';
 import './styles.css';
 import './planning/planning.css';
 import './planning/charts.css';
+import './planning/dashboard.css';
 import { AppShell } from './layout/AppShell.jsx';
 import { PublicHome, InformationPage } from './layout/PublicPages.jsx';
 import { loginUrl, safeReturnPath } from './auth/navigation.js';
@@ -197,7 +199,7 @@ function App({ auth }) {
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
   useEffect(() => {
     const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.objective ? `${planningContext.objective.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade' })[route.path] || 'SUMI';
-    document.title = `SUMI · ${label}`;
+    document.title = `SUMI · ${isDashboardRoute(route) ? `Painel de acompanhamento · ${plan?.shortName || 'Plano'}` : label}`;
     setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
   }, [plan?.shortName, plan?.name, planningContext?.axis?.name, planningContext?.objective?.title, planningContext?.item?.title, planningContext?.action?.title, planningContext?.stage?.title, route.path]);
 
@@ -278,7 +280,7 @@ function PlanList({ data, can, onCreate }) {
   const filtered = data.plans.filter((plan) => (filter === 'Todos' || plan.type === filter) && normalize(`${plan.shortName} ${plan.name}`).includes(normalize(search)));
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">PLANEJAMENTOS</p><h1>Planos institucionais</h1><p>Acompanhe estrutura, execução e resultados em um único lugar.</p></div>{can(PERMISSIONS.MANAGE_PLAN) && <Button icon="plus" variant="primary" onClick={onCreate}>Novo planejamento</Button>}</div>
     <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className='searchbar'><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>
-    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress">{progress.total ? <><p className="hint">Execução das etapas</p><Progress {...progress} /><small>{progress.done} de {progress.total} etapas ativas concluídas</small></> : <p className="hint">Sem etapas ativas</p>}</div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title={data.plans.length ? "Nenhum planejamento encontrado" : "Nenhum plano disponível no momento"} action={data.plans.length ? <Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button> : undefined}>{data.plans.length ? 'Tente outro nome ou tipo.' : 'Os planos aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty>}
+    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div>{!(plan.type === 'PDI' && plan.status === 'published') && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress">{progress.total ? <><p className="hint">Execução das etapas</p><Progress {...progress} /><small>{progress.done} de {progress.total} etapas ativas concluídas</small></> : <p className="hint">Sem etapas ativas</p>}</div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title={data.plans.length ? "Nenhum planejamento encontrado" : "Nenhum plano disponível no momento"} action={data.plans.length ? <Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button> : undefined}>{data.plans.length ? 'Tente outro nome ou tipo.' : 'Os planos aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty>}
   </div>;
 }
 
@@ -314,7 +316,8 @@ function ImportacaoPlanilha({ planId, onImport }) {
 }
 
 function PlanPage(props) {
-  const { plan, can, onModal, onImportPlanilha } = props;
+  const { plan, can, onModal, onImportPlanilha, route } = props;
+  if (isDashboardRoute(route)) return plan.type === 'PDI' ? <PlanDashboard {...props} /> : <NotFoundPage onGoHome={() => navigate(planUrl(plan.id))} />;
   if (plan.type !== 'PDI') return <PlanExplorer {...props} />;
   return <PdiWorkspace {...props} actions={({ axis, objective, item }) => !item && can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>} renderDetail={(context) => <PlanItemDetail {...props} {...context} />} />;
 }
@@ -346,7 +349,7 @@ function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPl
     : plan.axes;
   const toggle = (key) => setExpanded((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const resetFilters = () => { setSearch(''); setOwner(''); setStatus(''); };
-  return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1><Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge></div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
+  return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1>{!(plan.type === 'PDI' && plan.status === 'published') && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
     <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /><div className="tree-filters">
       <Select
         aria-label="Filtrar responsável"

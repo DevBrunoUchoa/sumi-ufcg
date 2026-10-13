@@ -42,6 +42,8 @@ declaração de que o conteúdo não foi aprovado pela ONU e não representa as
 opiniões da organização, de seus agentes ou Estados-membros. A redação oficial
 está disponível na página de materiais de comunicação.
 
-Esta pasta disponibiliza os ativos para uso posterior; não altera as telas,
-não associa ODS automaticamente aos eixos e não cria uma fonte remota em tempo
-de execução.
+Esta pasta disponibiliza os ativos sem fonte remota em tempo de execução.
+As páginas próprias dos objetivos usam os vínculos
+documentados do PDI 2026–2030; o comportamento e a procedência dessa relação
+estão registrados em [ADR 0010](../../../../docs/adr/0010-ods-vinculadas-aos-objetivos.md).
+Não são atribuídas ODS automaticamente pelo código de um eixo ou objetivo.

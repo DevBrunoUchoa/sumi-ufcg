@@ -150,6 +150,7 @@ const PERMISSOES_POR_EIXO = [
   { code: 'history.comment', label: 'Comentar no histórico' },
   { code: 'item.submit', label: 'Enviar para validação' },
   { code: 'item.review', label: 'Validar itens (aprovar/pedir correção)' },
+  { code: 'item.attach', label: 'Anexar documentos' },
 ];
 
 export function StructureForm({ plan, onClose, onSave }) {

@@ -92,3 +92,18 @@ test('tema escuro e alto contraste são alternativas coerentes em tela pequena',
   await expect(page.getByRole('button', { name: 'Alto contraste', exact: true })).toHaveAttribute('aria-pressed', 'false');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+test('desativar Libras oculta também wrappers criados fora do container original', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const wrapper = document.createElement('div');
+    wrapper.id = 'vlibras-access-wrapper';
+    wrapper.textContent = 'Wrapper externo do VLibras';
+    document.body.appendChild(wrapper);
+  });
+  await page.getByLabel('Acessibilidade', { exact: true }).click();
+  await page.getByRole('button', { name: 'Desativar Libras', exact: true }).click();
+  await expect(page.locator('#vlibras-access-wrapper')).toBeHidden();
+  await expect(page.locator('div[vw]')).toBeHidden();
+  await page.getByRole('button', { name: 'Ativar Libras', exact: true }).click();
+  await expect(page.locator('#vlibras-access-wrapper')).toBeVisible();
+});

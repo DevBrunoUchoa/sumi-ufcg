@@ -22,7 +22,8 @@ describe("contrato da sessão de autorização", () => {
   it("mantém exatamente o vocabulário exercido pelo frontend aprovado", () => {
     // PR #6 definiu as 13 primeiras; item.submit/item.review/work_queue.read/
     // review_queue.read foram acrescentadas junto com o fluxo de submissão e
-    // validação do frontend aprovado (ver auth.contract.ts).
+    // validação do frontend aprovado; item.attach veio depois, para o anexo
+    // de documentos (ver auth.contract.ts).
     expect(PERMISSION_CODES).toEqual([
       "plan.read_published",
       "plan.read_internal",
@@ -41,6 +42,7 @@ describe("contrato da sessão de autorização", () => {
       "item.review",
       "work_queue.read",
       "review_queue.read",
+      "item.attach",
     ]);
     expect(ROLE_CODES).toEqual(["STRATEGIC_ADMIN", "AXIS_CONTRIBUTOR", "AXIS_REVIEWER"]);
   });

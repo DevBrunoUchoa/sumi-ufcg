@@ -13,9 +13,16 @@
 .objective-ods-all[open] .objective-ods-icons { margin-top: var(--spacing-scale-baseh); }
 .pdi-identity:has(.objective-ods) { align-items: flex-start; }
 .pdi-identity:has(.objective-ods) > .axis-icon { margin-top: var(--spacing-scale-4x); }
+.ods-picker fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.ods-checklist { list-style: none; margin: var(--spacing-scale-base) 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-scale-base); }
+.ods-checklist label { display: flex; align-items: center; gap: var(--spacing-scale-base); font-weight: var(--font-weight-regular); }
+.ods-checklist input, .ods-checklist img { flex-shrink: 0; }
+.ods-checklist img { width: 32px; height: 32px; object-fit: contain; filter: none; }
+.ods-checklist input:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 html[data-alto-contraste="true"] .objective-ods-icons a:focus-visible,
 html[data-alto-contraste="true"] .objective-ods-all summary:focus-visible { outline-color: #000; }
 @media (max-width: 640px) {
+  .ods-checklist { grid-template-columns: 1fr; }
   .objective-ods { gap: var(--spacing-scale-base); }
   .objective-ods-label { flex-basis: 100%; padding-top: 0; }
   .objective-ods-all { flex-basis: 100%; }

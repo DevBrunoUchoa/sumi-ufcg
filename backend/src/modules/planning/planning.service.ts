@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { HttpError } from "../../lib/http-error.js";
 import { prepareRiskWrite } from "./risk-write-policy.js";
+import { normalizeObjectiveOds, objectiveData } from "./objective-ods.js";
 import { pode } from "../auth/auth.can.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import {
@@ -122,7 +123,8 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
       const objetivosRows = nosPorPai.get(eixo.id) ?? [];
       for (const objetivo of objetivosRows) {
         const od = objetivo.dados as Partial<Objective>;
-        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? "") });
+        const ods = normalizeObjectiveOds(od.ods);
+        objectives.push({ id: objetivo.id, axisId: eixo.id, code: String(od.code ?? ""), title: String(od.title ?? ""), ...(ods === undefined ? {} : { ods }) });
 
         const itensRows = nosPorPai.get(objetivo.id) ?? [];
         for (const itemRow of itensRows) {
@@ -372,7 +374,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     objetivosAtuais.length !== plano.objectives.length ||
     plano.objectives.some((objective) => {
       const atual = objetivosAtuaisPorId.get(objective.id);
-      const dadosNovos = { code: objective.code, title: objective.title };
+      const dadosNovos = objectiveData(objective, atual?.dados);
       return !atual || atual.no_pai_id !== objective.axisId || diferente(atual.dados, dadosNovos);
     });
   if (objetivoMudou) {
@@ -388,7 +390,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
           noPaiId: objective.axisId,
           nivel: 1,
           ordem,
-          dados: { code: objective.code, title: objective.title },
+          dados: objectiveData(objective, objetivosAtuaisPorId.get(objective.id)?.dados),
         };
       }),
     );

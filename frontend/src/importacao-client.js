@@ -16,6 +16,18 @@ export function baixarModeloPlanilha() {
   link.remove();
 }
 
+// Navegação direta (não fetch): o cookie de sessão viaja normalmente numa
+// navegação same-origin, e assim o navegador decide o nome do arquivo a
+// partir do Content-Disposition da resposta sem precisar ler o corpo aqui.
+export function exportarPlano(planId) {
+  const url = `${API_BASE_URL}/api/v1/planning/planos/${planId}/exportacao`;
+  const link = document.createElement('a');
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
 export async function importarPlanilha(planId, arquivo) {
   const formData = new FormData();
   formData.append('arquivo', arquivo);

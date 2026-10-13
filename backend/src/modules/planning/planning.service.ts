@@ -370,17 +370,28 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
 
   const objetivosAtuais = [...noPorId.values()].filter((no) => no.nivel === 1 && eixosAtuaisPorId.has(no.no_pai_id ?? ""));
   const objetivosAtuaisPorId = new Map(objetivosAtuais.map((no) => [no.id, no]));
-  const objetivoMudou =
-    objetivosAtuais.length !== plano.objectives.length ||
-    plano.objectives.some((objective) => {
-      const atual = objetivosAtuaisPorId.get(objective.id);
-      const dadosNovos = objectiveData(objective, atual?.dados);
-      const odsAtuais = normalizeObjectiveOds(atual?.dados.ods);
-      const dadosAtuais = atual && { ...atual.dados, ...(odsAtuais === undefined ? {} : { ods: odsAtuais }) };
-      return !atual || atual.no_pai_id !== objective.axisId || diferente(dadosAtuais, dadosNovos);
-    });
+  const objetivosAlterados = plano.objectives.filter((objective) => {
+    const atual = objetivosAtuaisPorId.get(objective.id);
+    const dadosNovos = objectiveData(objective, atual?.dados);
+    const odsAtuais = normalizeObjectiveOds(atual?.dados.ods);
+    const dadosAtuais = atual && { ...atual.dados, ...(odsAtuais === undefined ? {} : { ods: odsAtuais }) };
+    return !atual || atual.no_pai_id !== objective.axisId || diferente(dadosAtuais, dadosNovos);
+  });
+  const idsObjetivosNovos = new Set(plano.objectives.map((objective) => objective.id));
+  const objetivosRemovidos = objetivosAtuais.filter((no) => !idsObjetivosNovos.has(no.id));
+  const objetivoMudou = objetivosAlterados.length > 0 || objetivosRemovidos.length > 0;
   if (objetivoMudou) {
-    exigir(pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
+    // Criar/atualizar/remover objetivo normalmente exige plan.manage (tela de
+    // Estrutura, administrativa) — mas quando todo objetivo tocado pertence a
+    // um eixo onde a sessão já tem item.edit, basta essa permissão de eixo:
+    // é o caso da importação de planilha do Gestor do Eixo, que pode
+    // introduzir um objetivo ainda não cadastrado dentro do seu próprio eixo.
+    const eixosEnvolvidos = new Set([
+      ...objetivosAlterados.map((objective) => objective.axisId),
+      ...objetivosRemovidos.map((no) => no.no_pai_id).filter((id): id is string => Boolean(id)),
+    ]);
+    const temPermissaoPorEixo = [...eixosEnvolvidos].every((axisId) => pode(sessao, "item.edit", { planId: plano.id, axisId }));
+    exigir(temPermissaoPorEixo || pode(sessao, "plan.manage", { planId: plano.id }), "Sem permissão para editar a estrutura deste planejamento");
     const contadorPorEixo = new Map<string, number>();
     await noPlanoRepo.upsertLote(
       plano.objectives.map((objective) => {
@@ -396,8 +407,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
         };
       }),
     );
-    const idsNovos = new Set(plano.objectives.map((objective) => objective.id));
-    await noPlanoRepo.removerLote(objetivosAtuais.filter((no) => !idsNovos.has(no.id)).map((no) => no.id));
+    await noPlanoRepo.removerLote(objetivosRemovidos.map((no) => no.id));
   }
 
   const objetivosValidosPorId = new Set(plano.objectives.map((objective) => objective.id));

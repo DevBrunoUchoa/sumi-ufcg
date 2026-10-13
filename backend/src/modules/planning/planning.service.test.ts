@@ -5,10 +5,11 @@ import type { Workspace } from "./planning.types.js";
 const mocks = vi.hoisted(() => ({ listar: vi.fn(), atualizar: vi.fn() }));
 vi.mock("./planning.repository.js", () => ({
   tipoPlanoRepo: { listar: mocks.listar, atualizarMetadados: mocks.atualizar },
-  noPlanoRepo: { listarTodos: vi.fn().mockResolvedValue([]) },
+  noPlanoRepo: { listarTodos: vi.fn().mockResolvedValue([]), upsertLote: vi.fn().mockResolvedValue(undefined), removerLote: vi.fn().mockResolvedValue(undefined), criarRaiz: vi.fn().mockResolvedValue(undefined) },
   ...Object.fromEntries(["indicadorRepo", "resultadoRepo", "acaoRepo", "etapaRepo", "riscoRepo", "historicoRepo", "anexoRepo"].map((name) => [name, { listarTodos: vi.fn().mockResolvedValue([]) }])),
 }));
 import { salvarWorkspace } from "./planning.service.js";
+import { noPlanoRepo } from "./planning.repository.js";
 
 const session: SessaoUsuario = {
   authenticated: true,
@@ -45,5 +46,48 @@ describe("salvarWorkspace com metadados JSONB", () => {
     const admin = { ...session, grants: [...session.grants, { permission: "model.manage" as const, scope: { type: "global" as const } }] };
     await salvarWorkspace(admin, changed);
     expect(mocks.atualizar).toHaveBeenCalledWith("pdi", { rotulos: changed.templates[0]!.labels, camposExtras: [], versao: 1 });
+  });
+});
+
+describe("salvarWorkspace — criação de objetivo durante a importação (Gestor do Eixo)", () => {
+  const planoId = "p1";
+  const axisId = "a1";
+  const now = new Date().toISOString();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.listar.mockResolvedValue([{ id: "pdi", versao: 1, rotulos: { item: "Iniciativa", axis: "Eixo", objective: "Objetivo" }, campos_extras: [] }]);
+    (noPlanoRepo.listarTodos as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: planoId, tipo_plano_id: "pdi", no_pai_id: null, nivel: -1, ordem: 0, dados: { shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "published" }, criado_em: now, atualizado_em: now },
+      { id: axisId, tipo_plano_id: "pdi", no_pai_id: planoId, nivel: 0, ordem: 0, dados: { code: "8", name: "Governança", color: "#000", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: [], customGrants: [] }, criado_em: now, atualizado_em: now },
+    ]);
+  });
+
+  function workspaceComNovoObjetivo(): Workspace {
+    return {
+      version: 2,
+      templates: [{ id: "pdi", type: "PDI", name: "PDI", version: 1, description: "", labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" }, defaultPeriodicity: "annual", fields: [] }],
+      plans: [{
+        id: planoId, type: "PDI", shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "published",
+        template: { id: "pdi", type: "PDI", name: "PDI", version: 1, description: "", labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" }, defaultPeriodicity: "annual", fields: [] },
+        axes: [{ id: axisId, code: "8", name: "Governança", color: "#000", ownerUnit: "SEPLAN", managerIds: [], reviewerIds: [], customGrants: [] }],
+        objectives: [{ id: "o-novo", axisId, code: "8.9", title: "Objetivo novo trazido pela planilha" }],
+        items: [],
+      }],
+    };
+  }
+
+  it("permite criar objetivo no eixo para quem só tem item.edit nesse eixo (sem plan.manage)", async () => {
+    const gestor: SessaoUsuario = { ...session, grants: [...session.grants, { permission: "item.edit", scope: { type: "axis", planId: planoId, axisId } }] };
+    await expect(salvarWorkspace(gestor, workspaceComNovoObjetivo())).resolves.toBeUndefined();
+  });
+
+  it("continua negando a criação de objetivo para quem não tem nenhuma permissão nesse eixo", async () => {
+    await expect(salvarWorkspace(session, workspaceComNovoObjetivo())).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("nega quando item.edit é de outro eixo", async () => {
+    const outroEixo: SessaoUsuario = { ...session, grants: [...session.grants, { permission: "item.edit", scope: { type: "axis", planId: planoId, axisId: "outro-eixo" } }] };
+    await expect(salvarWorkspace(outroEixo, workspaceComNovoObjetivo())).rejects.toMatchObject({ status: 403 });
   });
 });

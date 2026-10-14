@@ -151,6 +151,7 @@ export interface Item {
   title: string;
   owner: string;
   partners: string;
+  estimatedBudget?: number;
   description: string;
   source: string;
   reviewStatus: SituacaoValidacao;

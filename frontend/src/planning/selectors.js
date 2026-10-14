@@ -13,6 +13,8 @@ export function summarizeScope(items, objectiveCount) {
   return { objectives: objectiveCount, items: items.length, actions: actions.length, execution };
 }
 
+export const totalEstimatedBudget = (items) => items.reduce((total, item) => total + (Number(item.estimatedBudget) || 0), 0);
+
 export const numericValue = (value) => value == null || String(value).trim() === '' || !Number.isFinite(Number(value)) ? null : Number(value);
 
 // A count of comparable indicators, never an average of unrelated units.

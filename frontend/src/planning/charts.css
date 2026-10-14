@@ -3,6 +3,7 @@
 .dashboard-heading { flex-wrap: wrap; gap: var(--spacing-scale-2x); align-items: end; }
 .dashboard-heading > br-select { flex: 0 1 210px; min-width: 180px; }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: var(--spacing-scale-3x); align-items: stretch; }
+.dashboard-grid-three { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
 .planning-chart.br-card { margin: 0; border: 1px solid var(--border-soft); background: var(--surface); box-shadow: var(--elevation-layer-1); min-width: 0; }
 .planning-chart .card-content { padding: var(--spacing-scale-3x); }
 .planning-chart :is(h2, h3) { font-size: var(--font-size-scale-up-01); font-weight: var(--font-weight-semi-bold); margin: 0 0 var(--spacing-scale-base); }

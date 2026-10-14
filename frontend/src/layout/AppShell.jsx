@@ -132,7 +132,7 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
     const keyboard = (event) => {
       if (event.key === 'Escape') { returnMenuFocus.current = true; setMenuOpen(false); }
       if (event.key === 'Tab') {
-        const controls = [...menu.current.querySelectorAll('a[href], button')];
+        const controls = [...menu.current.querySelectorAll('a[href], button, summary')];
         const first = controls[0]; const last = controls.at(-1);
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -203,9 +203,18 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
                   <button ref={closeButton} type="button" className="br-button circle small" aria-label={t('shell.menu.close')} onClick={closeMenu}><Icon name="close" /></button>
                 </div>
                 <nav className="menu-body" aria-label={t('shell.nav.ariaLabel')}>
-                  {links.map(({ path, icon, text }) => (
-                    <a key={path} className={`menu-item ${route.path === path || (path === '/planejamentos' && plan) ? 'active' : ''}`} aria-current={route.path === path || (path === '/planejamentos' && plan) ? 'page' : undefined} href={`#${path}`}>
-                      <span className="icon"><Icon name={icon} /></span><span className="content">{text}</span>
+                  {links.map((link) => link.items ? (
+                    <details className="menu-group" key={link.text}>
+                      <summary className="menu-item"><span className="icon"><Icon name={link.icon} /></span><span className="content">{link.text}</span><Icon name="chevron" size={12} className="menu-group-chevron" aria-hidden="true" /></summary>
+                      <div className="menu-group-items">
+                        {link.items.map((item) => item.href
+                          ? <a key={item.href} className="menu-subitem" href={item.href} target="_blank" rel="noopener noreferrer">{item.text}</a>
+                          : <a key={item.path} className={`menu-subitem ${route.path === item.path ? 'active' : ''}`} aria-current={route.path === item.path ? 'page' : undefined} href={`#${item.path}`}>{item.text}</a>)}
+                      </div>
+                    </details>
+                  ) : (
+                    <a key={link.path} className={`menu-item ${route.path === link.path || (link.path === '/planejamentos' && plan) ? 'active' : ''}`} aria-current={route.path === link.path || (link.path === '/planejamentos' && plan) ? 'page' : undefined} href={`#${link.path}`}>
+                      <span className="icon"><Icon name={link.icon} /></span><span className="content">{link.text}</span>
                     </a>
                   ))}
                 </nav>

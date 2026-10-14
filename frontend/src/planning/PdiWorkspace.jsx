@@ -68,7 +68,6 @@ function AxisOverview({ plan, axis, objective, route, editable, canViewInternal 
   const comparison = objective ? items.map((item) => ({ id: item.id, label: `${item.code} · ${item.title}`, url: itemUrl(plan, item), execution: summarizeScope([item], 0).execution }))
     : objectives.map((entry) => ({ id: entry.id, label: `${objectiveCode(entry)}${objectiveCode(entry) ? ' · ' : ''}${entry.title}`, url: objectiveUrl(plan, entry), execution: summarizeScope(items.filter((item) => item.objectiveId === entry.id), 0).execution }));
   return <>
-    {!!objectives.length && <ScopeDashboard plan={plan} items={items} level={objective ? 'objective' : 'axis'} rows={comparison} period={period} onPeriodChange={setPeriod} />}
     {!objective && canViewInternal && <AxisVersionHistory axisId={axis.id} />}
     {objective && !!items.length && <IndicatorTable plan={plan} items={items} period={period} />}
     {!objectives.length ? <Empty title="Nenhum objetivo cadastrado neste eixo">{editable ? 'Configure os objetivos deste eixo na opção Estrutura.' : 'Os objetivos e suas iniciativas aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty> : <>
@@ -79,6 +78,7 @@ function AxisOverview({ plan, axis, objective, route, editable, canViewInternal 
       {groups.map((entry) => <ObjectiveGroup key={JSON.stringify([entry.id, search, owner, status])} plan={plan} objective={entry} standalone={Boolean(objective)} items={filtered.filter((item) => item.objectiveId === entry.id)} />)}
       {filtering && !groups.length && <Empty title="Nenhuma iniciativa encontrada" action={<Button onClick={clear}>Limpar filtros</Button>}>Ajuste os filtros para continuar.</Empty>}
     </>}
+    {!!objectives.length && <ScopeDashboard plan={plan} items={items} level={objective ? 'objective' : 'axis'} rows={comparison} period={period} onPeriodChange={setPeriod} />}
   </>;
 }
 

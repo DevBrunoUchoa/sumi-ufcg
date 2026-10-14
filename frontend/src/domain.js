@@ -6,6 +6,7 @@ export const currentPeriod = (plan, item, now = new Date()) => item?.metric?.per
 export const periodLabel = (plan, item, period) => item?.metric?.periodicity === 'final' ? `Ciclo ${plan.start}–${plan.end}` : String(period);
 export const normalize = (value) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export const formatNumber = (value) => value == null || value === '' ? '—' : new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(Number(value));
+export const formatCurrency = (value) => value == null || value === '' ? '—' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value));
 export const formatDate = (value) => !value ? '—' : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(value.length === 10 ? `${value}T12:00:00` : value));
 
 export const stageStatusLabels = Object.freeze({ not_started: 'Não iniciada', in_progress: 'Em andamento', completed: 'Concluída', cancelled: 'Cancelada' });

@@ -156,6 +156,7 @@ const itemSchema = z.object({
   title: presente,
   owner: z.string(),
   partners: z.string(),
+  estimatedBudget: z.number().nonnegative().optional().default(0),
   description: z.string(),
   source: z.string(),
   reviewStatus: z.enum(["draft", "submitted", "validated", "changes_requested"]),

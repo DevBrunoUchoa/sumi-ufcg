@@ -11,6 +11,7 @@ import { ScopeDashboard } from './ScopeDashboard.jsx';
 import { ObjectiveOds } from './ObjectiveOds.jsx';
 import './ods.css';
 import { AxisVersionHistory } from './AxisVersionHistory.jsx';
+import { PlanTree } from './PlanTree.jsx';
 
 const go = (path) => { window.location.hash = path; };
 
@@ -25,12 +26,15 @@ export function PdiWorkspace({ plan, route, can, authenticated, actions, renderD
   const title = view === 'riscos' ? stage?.title || action.title : action?.title || item?.title || objective?.title || axis?.name;
   const eyebrow = view === 'riscos' ? stage ? 'RISCOS DA ETAPA' : `RISCOS DA AÇÃO ${action.code}` : action ? `AÇÃO ${action.code}` : item ? `${plan.template.labels.item.toUpperCase()} ${item.code}` : objective ? `${plan.shortName} · ${plan.template.labels.objective.toUpperCase()} ${objectiveCode(objective)}` : axis ? `${plan.shortName} ${plan.start}–${plan.end} · EIXO ${axis.code}` : 'PLANEJAMENTO INSTITUCIONAL';
   const editable = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
-  return <div className="plan-page pdi-workspace" style={{ '--axis-color': axis?.color }}>
-    <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && plan.status !== 'published' && <Badge tone="neutral">Rascunho</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}{objective && !item && <ObjectiveOds key={objective.id} plan={plan} objective={objective} />}</div></div>{!item && <a className="br-button secondary dashboard-entry" href={`#${dashboardUrl(plan, { axis: axis?.id, objective: objective?.id, period: route.query.get('period') })}`}><Icon name="chart" size={16} />Painel de acompanhamento</a>}{actions(context)}</div>
-    {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} canViewInternal={can(PERMISSIONS.VIEW_INTERNAL_PLAN, { planId: plan.id, axisId: axis.id })} /> : <>
-      <section className="planning-context" aria-label="Contexto do planejamento"><p><a href={`#${objectiveUrl(plan, objective)}`}><strong>{plan.template.labels.objective} {objectiveCode(objective)}</strong> · {objective.title}</a></p>{action && <p><a href={`#${itemUrl(plan, item)}`}><strong>{plan.template.labels.item} {item.code}</strong> · {item.title}</a></p>}</section>
-      <section className="detail pdi-detail" aria-label="Detalhe do item">{renderDetail(context)}</section>
-    </>}
+  return <div className="explorer pdi-explorer">
+    <PlanTree plan={plan} axis={axis} objective={objective} item={item} action={action} stage={stage} />
+    <div className="plan-page pdi-workspace" style={{ '--axis-color': axis?.color }}>
+      <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && plan.status !== 'published' && <Badge tone="neutral">Rascunho</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}{objective && !item && <ObjectiveOds key={objective.id} plan={plan} objective={objective} />}</div></div>{!item && <a className="br-button secondary dashboard-entry" href={`#${dashboardUrl(plan, { axis: axis?.id, objective: objective?.id, period: route.query.get('period') })}`}><Icon name="chart" size={16} />Painel de acompanhamento</a>}{actions(context)}</div>
+      {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} canViewInternal={can(PERMISSIONS.VIEW_INTERNAL_PLAN, { planId: plan.id, axisId: axis.id })} /> : <>
+        <section className="planning-context" aria-label="Contexto do planejamento"><p><a href={`#${objectiveUrl(plan, objective)}`}><strong>{plan.template.labels.objective} {objectiveCode(objective)}</strong> · {objective.title}</a></p>{action && <p><a href={`#${itemUrl(plan, item)}`}><strong>{plan.template.labels.item} {item.code}</strong> · {item.title}</a></p>}</section>
+        <section className="detail pdi-detail" aria-label="Detalhe do item">{renderDetail(context)}</section>
+      </>}
+    </div>
   </div>;
 }
 

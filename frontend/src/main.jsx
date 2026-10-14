@@ -12,7 +12,7 @@ import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, Unauthorized
 import { Attachments, AttachmentsProvider } from './attachments.jsx';
 import { UsersAdmin } from './UsersAdmin.jsx';
 import { createPlanningClient } from './planning-client.js';
-import { baixarModeloPlanilha, exportarPlano, importarPlanilha } from './importacao-client.js';
+import { baixarModeloPlanilha, importarPlanilha } from './importacao-client.js';
 import { AxisIcon } from './AxisIcon.jsx';
 import { PdiWorkspace } from './planning/PdiWorkspace.jsx';
 import { PlanDashboard } from './planning/PlanDashboard.jsx';
@@ -341,22 +341,10 @@ function Models({ templates, onEdit, onUse }) {
 
 function ImportacaoPlanilha({ planId, onImport }) {
   const [importando, setImportando] = useState(false);
-  const [exportando, setExportando] = useState(false);
   const [erro, setErro] = useState('');
   const [avisos, setAvisos] = useState([]);
   const inputRef = React.useRef(null);
   const escolherArquivo = () => { setErro(''); setAvisos([]); inputRef.current?.click(); };
-  const exportar = async () => {
-    setExportando(true);
-    setErro('');
-    try {
-      await exportarPlano(planId);
-    } catch (err) {
-      setErro(err.message || 'Não foi possível exportar a planilha.');
-    } finally {
-      setExportando(false);
-    }
-  };
   const arquivoSelecionado = async (event) => {
     const arquivo = event.target.files?.[0];
     event.target.value = '';
@@ -380,7 +368,6 @@ function ImportacaoPlanilha({ planId, onImport }) {
   };
   return <div className="import-tools">
     <Button icon="download" onClick={baixarModeloPlanilha}>Baixar modelo</Button>
-    <Button icon="download" onClick={exportar} disabled={exportando}>{exportando ? 'Exportando…' : 'Exportar planilha'}</Button>
     <Button icon="upload" onClick={escolherArquivo} disabled={importando}>{importando ? 'Importando…' : 'Importar planilha'}</Button>
     <input ref={inputRef} type="file" accept=".xlsx" hidden onChange={arquivoSelecionado} aria-label="Selecionar planilha para importar" />
     {erro && <p role="alert" className="form-error">{erro}</p>}

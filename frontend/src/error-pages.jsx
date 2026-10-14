@@ -1,45 +1,24 @@
 import { Button, Empty, Icon } from './ui.jsx';
+import { useTranslation } from './i18n/context.jsx';
 
 // Páginas de erro dedicadas por código — usadas quando uma rota não existe
 // (404), a sessão não tem permissão para o recurso (403), não há sessão
 // válida para uma ação que exige uma (401), o servidor falhou (500) ou a
 // API não respondeu (falha de conexão). Reaproveitam os componentes visuais
 // já aprovados (Empty/Button/Icon), não criam um sistema visual novo.
-const PRESETS = Object.freeze({
-  404: {
-    icon: 'search',
-    eyebrow: 'PÁGINA NÃO ENCONTRADA',
-    title: 'Não encontramos essa página',
-    description: 'O endereço acessado não existe ou não está disponível para a sua sessão.',
-  },
-  403: {
-    icon: 'info',
-    eyebrow: 'ACESSO NÃO AUTORIZADO',
-    title: 'Você não tem acesso a esta página',
-    description: 'Sua sessão não possui a permissão necessária para ver este conteúdo.',
-  },
-  401: {
-    icon: 'user',
-    eyebrow: 'SESSÃO NECESSÁRIA',
-    title: 'Entre para continuar',
-    description: 'Esta ação exige uma sessão institucional autenticada.',
-  },
-  500: {
-    icon: 'info',
-    eyebrow: 'ERRO INTERNO',
-    title: 'Algo deu errado do nosso lado',
-    description: 'Não foi possível concluir a operação. Tente novamente em instantes.',
-  },
-  offline: {
-    icon: 'link',
-    eyebrow: 'SEM CONEXÃO',
-    title: 'Não foi possível falar com o servidor',
-    description: 'Verifique sua conexão com a internet e tente novamente.',
-  },
-});
+function presets(t) {
+  return {
+    404: { icon: 'search', eyebrow: t('errors.notFoundEyebrow'), title: t('errors.notFoundTitle'), description: t('errors.notFoundText') },
+    403: { icon: 'info', eyebrow: t('errors.forbiddenEyebrow'), title: t('errors.forbiddenTitle'), description: t('errors.forbiddenText') },
+    401: { icon: 'user', eyebrow: t('errors.unauthorizedEyebrow'), title: t('errors.unauthorizedTitle'), description: t('errors.unauthorizedText') },
+    500: { icon: 'info', eyebrow: t('errors.serverEyebrow'), title: t('errors.serverTitle'), description: t('errors.serverText') },
+    offline: { icon: 'link', eyebrow: t('errors.offlineEyebrow'), title: t('errors.offlineTitle'), description: t('errors.offlineText') },
+  };
+}
 
 export function ErrorPage({ code, description, action, secondaryAction }) {
-  const preset = PRESETS[code] || PRESETS[500];
+  const { t } = useTranslation();
+  const preset = presets(t)[code] || presets(t)[500];
   return (
     <div className="page error-page">
       <div className="page-heading">
@@ -49,7 +28,7 @@ export function ErrorPage({ code, description, action, secondaryAction }) {
           <p>{description || preset.description}</p>
         </div>
       </div>
-      <Empty title={`Erro ${typeof code === 'number' ? code : ''}`.trim()} action={action}>
+      <Empty title={typeof code === 'number' ? t('errors.errorLabel', { code }) : t('errors.errorLabel', { code: '' }).trim()} action={action}>
         {secondaryAction}
       </Empty>
     </div>
@@ -57,21 +36,26 @@ export function ErrorPage({ code, description, action, secondaryAction }) {
 }
 
 export function NotFoundPage({ onGoHome }) {
-  return <ErrorPage code={404} action={<Button variant="primary" onClick={onGoHome}>Voltar ao início</Button>} />;
+  const { t } = useTranslation();
+  return <ErrorPage code={404} action={<Button variant="primary" onClick={onGoHome}>{t('errors.backHome')}</Button>} />;
 }
 
 export function ForbiddenPage({ onGoHome }) {
-  return <ErrorPage code={403} action={<Button variant="primary" onClick={onGoHome}>Voltar ao início</Button>} />;
+  const { t } = useTranslation();
+  return <ErrorPage code={403} action={<Button variant="primary" onClick={onGoHome}>{t('errors.backHome')}</Button>} />;
 }
 
 export function UnauthorizedPage({ onLogin }) {
-  return <ErrorPage code={401} action={<Button variant="primary" onClick={onLogin}>Entrar</Button>} />;
+  const { t } = useTranslation();
+  return <ErrorPage code={401} action={<Button variant="primary" onClick={onLogin}>{t('errors.signIn')}</Button>} />;
 }
 
 export function ServerErrorPage({ onRetry }) {
-  return <ErrorPage code={500} action={<Button variant="primary" onClick={onRetry}>Tentar novamente</Button>} />;
+  const { t } = useTranslation();
+  return <ErrorPage code={500} action={<Button variant="primary" onClick={onRetry}>{t('errors.retry')}</Button>} />;
 }
 
 export function OfflinePage({ onRetry }) {
-  return <ErrorPage code="offline" action={<Button variant="primary" onClick={onRetry}>Tentar novamente</Button>} />;
+  const { t } = useTranslation();
+  return <ErrorPage code="offline" action={<Button variant="primary" onClick={onRetry}>{t('errors.retry')}</Button>} />;
 }

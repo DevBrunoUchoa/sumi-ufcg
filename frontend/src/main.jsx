@@ -4,6 +4,7 @@ import { actionProgress, axisFor, axisLabel, controlFactor, currentPeriod, execu
 import { Badge, Button, Empty, Field, Icon, Input, Modal, Select } from './ui.jsx';
 import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, StageForm, StructureForm, TargetsForm, TemplateForm } from './forms.jsx';
 import { SessionProvider, useSession } from './auth/context.jsx';
+import { LanguageProvider } from './i18n/context.jsx';
 import { PERMISSIONS, resourceFor } from './auth/permissions.js';
 import { LoginPage } from './auth/Login.jsx';
 import { ForgotPasswordPage, ResetPasswordPage } from './auth/PasswordReset.jsx';
@@ -976,4 +977,4 @@ function History({ item, canComment, onComment }) {
   return <><div className="section-heading"><div><h3>Histórico do acompanhamento</h3><p className="hint">Atualizações, resultados, validações e observações.</p></div><Badge>{item.history.length} registros</Badge></div>{canComment && <form className="comment-form" onSubmit={submit}><Field label="Adicionar observação"><textarea rows="2" required maxLength={400} placeholder="Registre um contexto ou encaminhamento…" value={comment} onChange={(event) => setComment(event.target.value)} /></Field>{error && <p role="alert" className="form-error">{error}</p>}<Button type="submit">Salvar observação</Button></form>}<div className="timeline">{[...item.history].reverse().map((entry) => <article key={entry.id}><span className="timeline-dot" /><div className="timeline-meta"><strong>{entry.actor}</strong><time>{formatDate(entry.at)}</time></div><p>{entry.text}</p></article>)}</div></>;
 }
 
-createRoot(document.getElementById('root')).render(<SessionProvider><AppGate /></SessionProvider>);
+createRoot(document.getElementById('root')).render(<LanguageProvider><SessionProvider><AppGate /></SessionProvider></LanguageProvider>);

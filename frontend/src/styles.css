@@ -241,6 +241,7 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 .plan-card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--spacing-scale-2x); padding-top: var(--spacing-scale-2x); border-top: 1px solid var(--border-soft); }
 .card-facts { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-2x); color: var(--text-muted); font-size: var(--font-size-scale-base); }
 .card-facts > span + span { padding-left: var(--spacing-scale-2x); border-left: 1px solid var(--border); }
+.plan-card-actions { display: flex; align-items: center; gap: var(--spacing-scale-2x); margin-left: auto; }
 .progress-block { display: flex; align-items: center; gap: var(--spacing-scale-baseh); }
 .progress-block > span { white-space: nowrap; font-size: var(--font-size-scale-base); color: var(--text-muted); }
 .progress-track { height: 4px; background: var(--border-soft); border-radius: 3px; flex: 1; overflow: hidden; min-width: 48px; }

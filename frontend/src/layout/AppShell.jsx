@@ -3,64 +3,67 @@ import { Icon } from '../ui.jsx';
 import { breadcrumbsFor } from './breadcrumbs.js';
 import { loginUrl } from '../auth/navigation.js';
 import { isDashboardRoute } from '../planning/navigation.js';
+import { useTranslation } from '../i18n/context.jsx';
+import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
 
-function Brand() {
-  return <a className="sumi-brand" href="#/inicio" aria-label="SUMI início"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>SUMI<small>Sistema Unificado de Monitoramento Institucional</small></span></a>;
+function Brand({ t }) {
+  return <a className="sumi-brand" href="#/inicio" aria-label="SUMI início"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>SUMI<small>{t('shell.tagline')}</small></span></a>;
 }
 
-function OrgBar() {
+function OrgBar({ t }) {
   return (
     <div className="sumi-org-bar">
       <div className="sumi-container">
-        <a href="https://www.ufcg.edu.br/" target="_blank" rel="noopener noreferrer">Universidade Federal de Campina Grande</a>
+        <a href="https://www.ufcg.edu.br/" target="_blank" rel="noopener noreferrer">{t('shell.orgBar.ufcg')}</a>
         <span aria-hidden="true">·</span>
-        <a href="https://www.gov.br/" target="_blank" rel="noopener noreferrer">Portal gov.br</a>
+        <a href="https://www.gov.br/" target="_blank" rel="noopener noreferrer">{t('shell.orgBar.govbr')}</a>
+        <LanguageSelector className="sumi-org-bar-language" />
       </div>
     </div>
   );
 }
 
-function CidadaoLinks({ className }) {
+function CidadaoLinks({ className, t }) {
   return (
-    <nav className={className} aria-label="Serviços ao cidadão">
-      <a href="https://falabr.cgu.gov.br/" target="_blank" rel="noopener noreferrer">Ouvidoria (Fala.BR)</a>
-      <a href="https://falabr.cgu.gov.br/" target="_blank" rel="noopener noreferrer">e-SIC</a>
-      <a href="https://www.ufcg.edu.br/" target="_blank" rel="noopener noreferrer">Acesso à Informação</a>
+    <nav className={className} aria-label={t('shell.footer.citizenAria')}>
+      <a href="https://falabr.cgu.gov.br/" target="_blank" rel="noopener noreferrer">{t('shell.footer.ombudsman')}</a>
+      <a href="https://falabr.cgu.gov.br/" target="_blank" rel="noopener noreferrer">{t('shell.footer.esic')}</a>
+      <a href="https://www.ufcg.edu.br/" target="_blank" rel="noopener noreferrer">{t('shell.footer.accessToInfo')}</a>
     </nav>
   );
 }
 
-function Footer({ inert = false, work = false }) {
+function Footer({ inert = false, work = false, t }) {
   if (work) return (
-    <footer className="sumi-work-footer" id="footer" aria-label="Rodapé" inert={inert}>
+    <footer className="sumi-work-footer" id="footer" aria-label={t('shell.footer.ariaLabel')} inert={inert}>
       <div className="sumi-container">
         <span>SUMI</span>
-        <nav aria-label="Links do rodapé"><a href="#/ajuda">Ajuda</a><a href="#/privacidade">Privacidade</a></nav>
-        <CidadaoLinks className="sumi-work-footer-cidadao" />
+        <nav aria-label={t('shell.footer.linksAria')}><a href="#/ajuda">{t('shell.footer.workHelp')}</a><a href="#/privacidade">{t('shell.footer.workPrivacy')}</a></nav>
+        <CidadaoLinks className="sumi-work-footer-cidadao" t={t} />
       </div>
     </footer>
   );
   return (
-    <footer className="br-footer sumi-footer" id="footer" aria-label="Rodapé" inert={inert}>
+    <footer className="br-footer sumi-footer" id="footer" aria-label={t('shell.footer.ariaLabel')} inert={inert}>
       <div className="sumi-container">
         <div className="sumi-footer-main">
           <div>
             <strong>SUMI</strong>
-            <p>Sistema Unificado de Monitoramento Institucional</p>
-            <p>Consulta pública e acompanhamento dos planos institucionais.</p>
+            <p>{t('shell.footer.tagline')}</p>
+            <p>{t('shell.footer.description')}</p>
           </div>
-          <nav aria-label="Links do rodapé">
-            <a href="#/sobre">Sobre o SUMI</a>
-            <a href="#/ajuda">Ajuda e acessibilidade</a>
-            <a href="#/privacidade">Informações sobre privacidade</a>
+          <nav aria-label={t('shell.footer.linksAria')}>
+            <a href="#/sobre">{t('shell.footer.about')}</a>
+            <a href="#/ajuda">{t('shell.footer.help')}</a>
+            <a href="#/privacidade">{t('shell.footer.privacy')}</a>
           </nav>
-          <CidadaoLinks />
+          <CidadaoLinks t={t} />
         </div>
         <div className="sumi-footer-bottom">
-          <a href="https://www.gov.br" aria-label="Portal GOV.BR">
+          <a href="https://www.gov.br" aria-label={t('shell.footer.govbrAria')}>
             <img src="/images/govbr-negative.png" alt="gov.br" width="120" height="44" />
           </a>
-          <span>Planos, ações e resultados em um único lugar.</span>
+          <span>{t('shell.footer.bottomTagline')}</span>
         </div>
       </div>
     </footer>
@@ -68,6 +71,7 @@ function Footer({ inert = false, work = false }) {
 }
 
 export function AppShell({ route, plan, session, mode, links = [], altoContraste, darkMode, vlibrasAtivo, toggleAltoContraste, toggleDarkMode, toggleVlibras, onLogout, children, loading = false }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(() => window.matchMedia('(min-width: 992px)').matches);
   const [logoutState, setLogoutState] = useState('idle');
   const menuButton = useRef(null);
@@ -143,27 +147,27 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
   }
   return (
     <div className={`template-base sumi-shell sumi-${mode} ${work && menuOpen ? 'menu-open' : ''}`}>
-      <nav className="sumi-skiplinks" aria-label="Acesso rápido" inert={mobileMenuOpen}>
-        <a href="#main-content" onClick={(event) => { event.preventDefault(); document.getElementById('main-content')?.focus(); }}>Ir para o conteúdo</a>
-        <a href="#footer" onClick={(event) => { event.preventDefault(); const footer = document.getElementById('footer'); footer.tabIndex = -1; footer.focus(); }}>Ir para o rodapé</a>
+      <nav className="sumi-skiplinks" aria-label={t('shell.skip.ariaLabel')} inert={mobileMenuOpen}>
+        <a href="#main-content" onClick={(event) => { event.preventDefault(); document.getElementById('main-content')?.focus(); }}>{t('shell.skip.content')}</a>
+        <a href="#footer" onClick={(event) => { event.preventDefault(); const footer = document.getElementById('footer'); footer.tabIndex = -1; footer.focus(); }}>{t('shell.skip.footer')}</a>
       </nav>
-      <OrgBar />
+      <OrgBar t={t} />
       <header className="br-header compact sumi-header" inert={mobileMenuOpen}>
         <div className="sumi-container">
           <div className="header-top">
             <div className="header-logo">
-              {work && <button ref={menuButton} className="br-button circle small" type="button" aria-label={menuOpen ? 'Recolher menu lateral' : 'Expandir menu lateral'} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(!menuOpen)}><Icon name="menu" /></button>}
-              <Brand />
+              {work && <button ref={menuButton} className="br-button circle small" type="button" aria-label={menuOpen ? t('shell.menu.collapse') : t('shell.menu.expand')} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(!menuOpen)}><Icon name="menu" /></button>}
+              <Brand t={t} />
             </div>
             <div className="header-actions">
               <details className="sumi-accessibility" ref={accessibilityMenu}>
-                <summary className="br-button small" aria-label="Acessibilidade"><Icon name="accessibility" /><span>Acessibilidade</span></summary>
+                <summary className="br-button small" aria-label={t('shell.accessibility.button')}><Icon name="accessibility" /><span>{t('shell.accessibility.button')}</span></summary>
                 <div className="sumi-accessibility-panel">
-                  <strong>Recursos de acessibilidade</strong>
-                  <button type="button" className="br-button tertiary small" aria-pressed={darkMode} onClick={toggleDarkMode}><Icon name={darkMode ? 'sun' : 'moon'} />{darkMode ? 'Tema claro' : 'Tema escuro'}</button>
-                  <button type="button" className="br-button tertiary small" aria-pressed={altoContraste} onClick={toggleAltoContraste}><Icon name="contrast" />{altoContraste ? 'Contraste padrão' : 'Alto contraste'}</button>
-                  <button type="button" className="br-button tertiary small" aria-pressed={vlibrasAtivo} onClick={toggleVlibras}><Icon name="libras" />{vlibrasAtivo ? 'Desativar Libras' : 'Ativar Libras'}</button>
-                  <a href="#/ajuda">Ajuda para navegar</a>
+                  <strong>{t('shell.accessibility.heading')}</strong>
+                  <button type="button" className="br-button tertiary small" aria-pressed={darkMode} onClick={toggleDarkMode}><Icon name={darkMode ? 'sun' : 'moon'} />{darkMode ? t('shell.accessibility.lightTheme') : t('shell.accessibility.darkTheme')}</button>
+                  <button type="button" className="br-button tertiary small" aria-pressed={altoContraste} onClick={toggleAltoContraste}><Icon name="contrast" />{altoContraste ? t('shell.accessibility.contrastDefault') : t('shell.accessibility.contrastHigh')}</button>
+                  <button type="button" className="br-button tertiary small" aria-pressed={vlibrasAtivo} onClick={toggleVlibras}><Icon name="libras" />{vlibrasAtivo ? t('shell.accessibility.librasOff') : t('shell.accessibility.librasOn')}</button>
+                  <a href="#/ajuda">{t('shell.accessibility.helpLink')}</a>
                 </div>
               </details>
               {session.authenticated ? (
@@ -173,39 +177,39 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
                     <strong>{session.user.name}</strong>
                     <small>{session.roles.map((role) => role.name).join(' · ')}</small>
                   </div>
-                  <button type="button" className="br-button tertiary small" disabled={logoutState === 'loading'} onClick={leave}>{logoutState === 'loading' ? 'Saindo…' : 'Sair'}</button>
+                  <button type="button" className="br-button tertiary small" disabled={logoutState === 'loading'} onClick={leave}>{logoutState === 'loading' ? t('shell.account.signingOut') : t('shell.account.signOut')}</button>
                 </div>
-              ) : mode !== 'access' && <a className="br-sign-in small" href={`#${loginUrl(route)}`}><Icon name="user" size={16} /><span>Entrar</span></a>}
+              ) : mode !== 'access' && <a className="br-sign-in small" href={`#${loginUrl(route)}`}><Icon name="user" size={16} /><span>{t('shell.account.signIn')}</span></a>}
             </div>
           </div>
           {!work && mode !== 'access' && (
-            <nav className="sumi-public-nav" aria-label="Navegação principal">
-              {[['/inicio', 'Início'], ['/planejamentos', 'Planos'], ['/sobre', 'Sobre o SUMI']].map(([path, label]) => (
+            <nav className="sumi-public-nav" aria-label={t('shell.nav.ariaLabel')}>
+              {[['/inicio', t('shell.nav.home')], ['/planejamentos', t('shell.nav.plans')], ['/sobre', t('shell.nav.about')]].map(([path, label]) => (
                 <a key={path} href={`#${path}`} aria-current={route.path === path || (path === '/planejamentos' && plan) ? 'page' : undefined}>{label}</a>
               ))}
             </nav>
           )}
         </div>
       </header>
-      {logoutState === 'error' && <p role="alert" className="sumi-session-error">Não foi possível sair. Tente novamente.</p>}
+      {logoutState === 'error' && <p role="alert" className="sumi-session-error">{t('shell.account.signOutError')}</p>}
       <div className="sumi-body">
         {work && menuOpen && <>
-          <button className="sumi-menu-backdrop" aria-label="Fechar menu" tabIndex={-1} onClick={closeMenu} />
-          <aside className="br-menu push active sumi-menu" id="main-navigation" ref={menu} role={mobileMenuOpen ? 'dialog' : undefined} aria-modal={mobileMenuOpen ? 'true' : undefined} aria-label={mobileMenuOpen ? 'Menu da área de trabalho' : undefined}>
+          <button className="sumi-menu-backdrop" aria-label={t('shell.menu.backdropClose')} tabIndex={-1} onClick={closeMenu} />
+          <aside className="br-menu push active sumi-menu" id="main-navigation" ref={menu} role={mobileMenuOpen ? 'dialog' : undefined} aria-modal={mobileMenuOpen ? 'true' : undefined} aria-label={mobileMenuOpen ? t('shell.menu.dialogLabel') : undefined}>
             <div className="menu-container">
               <div className="menu-panel">
                 <div className="menu-header">
-                  <span className="menu-title">Área de trabalho</span>
-                  <button ref={closeButton} type="button" className="br-button circle small" aria-label="Fechar menu lateral" onClick={closeMenu}><Icon name="close" /></button>
+                  <span className="menu-title">{t('shell.menu.title')}</span>
+                  <button ref={closeButton} type="button" className="br-button circle small" aria-label={t('shell.menu.close')} onClick={closeMenu}><Icon name="close" /></button>
                 </div>
-                <nav className="menu-body" aria-label="Navegação principal">
+                <nav className="menu-body" aria-label={t('shell.nav.ariaLabel')}>
                   {links.map(({ path, icon, text }) => (
                     <a key={path} className={`menu-item ${route.path === path || (path === '/planejamentos' && plan) ? 'active' : ''}`} aria-current={route.path === path || (path === '/planejamentos' && plan) ? 'page' : undefined} href={`#${path}`}>
                       <span className="icon"><Icon name={icon} /></span><span className="content">{text}</span>
                     </a>
                   ))}
                 </nav>
-                <div className="menu-footer"><a href="#/ajuda">Ajuda e orientações</a></div>
+                <div className="menu-footer"><a href="#/ajuda">{t('shell.menu.help')}</a></div>
               </div>
             </div>
           </aside>
@@ -213,7 +217,7 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
         <main id="main-content" tabIndex={-1} aria-busy={loading} inert={mobileMenuOpen}>
           <div className="sumi-content">
             {!!crumbs.length && (
-              <nav className="br-breadcrumb planning-breadcrumb" aria-label={plan ? 'Hierarquia do planejamento' : 'Localização'}>
+              <nav className="br-breadcrumb planning-breadcrumb" aria-label={plan ? t('shell.breadcrumb.hierarchy') : t('shell.breadcrumb.location')}>
                 <ol className="crumb-list">
                   {crumbs.map((entry, index) => (
                     <li className="crumb" key={`${entry.label}-${index}`}>
@@ -228,7 +232,7 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
           </div>
         </main>
       </div>
-      <Footer inert={mobileMenuOpen} work={work} />
+      <Footer inert={mobileMenuOpen} work={work} t={t} />
     </div>
   );
 }

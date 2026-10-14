@@ -9,6 +9,9 @@
 .sumi-org-bar .sumi-container { display: flex; gap: var(--spacing-scale-base); align-items: center; padding-block: var(--spacing-scale-half); }
 .sumi-org-bar a { color: var(--pure-0); text-decoration: underline; }
 .sumi-org-bar a:focus-visible { outline-color: var(--pure-0); }
+.sumi-org-bar-language { margin-left: auto; }
+.sumi-org-bar-language select { background: transparent; color: var(--pure-0); border: 1px solid rgba(255,255,255,.5); border-radius: 4px; font-size: var(--font-size-scale-down-01); padding: 2px var(--spacing-scale-half); }
+.sumi-org-bar-language select option { color: var(--text-strong); }
 .sumi-header.br-header { position: relative; z-index: 20; padding: var(--spacing-scale-2x) 0 0; box-shadow: var(--elevation-layer-1); }
 .sumi-header.br-header > .sumi-container { display: block; }
 .sumi-header.br-header .header-top { display: flex; justify-content: space-between; gap: var(--spacing-scale-3x); padding-bottom: var(--spacing-scale-2x); align-items: center; }

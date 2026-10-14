@@ -5,7 +5,7 @@ import type { SituacaoValidacao, Workspace } from "./planning.types.js";
 const mocks = vi.hoisted(() => ({ listar: vi.fn(), atualizar: vi.fn() }));
 vi.mock("./planning.repository.js", () => ({
   tipoPlanoRepo: { listar: mocks.listar, atualizarMetadados: mocks.atualizar },
-  noPlanoRepo: { listarTodos: vi.fn().mockResolvedValue([]), upsertLote: vi.fn().mockResolvedValue(undefined), removerLote: vi.fn().mockResolvedValue(undefined), criarRaiz: vi.fn().mockResolvedValue(undefined) },
+  noPlanoRepo: { buscarPorId: vi.fn().mockResolvedValue(null), listarTodos: vi.fn().mockResolvedValue([]), upsertLote: vi.fn().mockResolvedValue(undefined), removerLote: vi.fn().mockResolvedValue(undefined), criarRaiz: vi.fn().mockResolvedValue(undefined) },
   ...Object.fromEntries(["indicadorRepo", "resultadoRepo", "acaoRepo", "etapaRepo", "riscoRepo", "historicoRepo"].map((name) => [name, {
     listarTodos: vi.fn().mockResolvedValue([]),
     upsertLote: vi.fn().mockResolvedValue(undefined),
@@ -18,7 +18,7 @@ const authMocks = vi.hoisted(() => ({ listarPorIds: vi.fn().mockResolvedValue([]
 vi.mock("../auth/auth.repository.js", () => ({ usuarioRepository: { listarPorIds: authMocks.listarPorIds } }));
 const mailerMocks = vi.hoisted(() => ({ enviar: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("../../lib/mailer.js", () => ({ mailer: { enviar: mailerMocks.enviar } }));
-import { salvarWorkspace } from "./planning.service.js";
+import { removerPlano, salvarWorkspace } from "./planning.service.js";
 import { noPlanoRepo } from "./planning.repository.js";
 
 const session: SessaoUsuario = {
@@ -255,5 +255,43 @@ describe("salvarWorkspace — notifica responsáveis quando um item é enviado p
     await salvarWorkspace(gestor, workspaceComItem("submitted"));
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(mailerMocks.enviar).not.toHaveBeenCalled();
+  });
+});
+
+describe("removerPlano", () => {
+  const admin: SessaoUsuario = { ...session, grants: [...session.grants, { permission: "model.manage", scope: { type: "global" } }] };
+  const now = new Date().toISOString();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("exige autenticação", async () => {
+    const anonimo: SessaoUsuario = { authenticated: false, user: null, roles: [], grants: [] };
+    await expect(removerPlano(anonimo, "p1")).rejects.toMatchObject({ status: 401 });
+    expect(noPlanoRepo.removerLote).not.toHaveBeenCalled();
+  });
+
+  it("nega quem não administra modelos", async () => {
+    await expect(removerPlano(session, "p1")).rejects.toMatchObject({ status: 403 });
+    expect(noPlanoRepo.removerLote).not.toHaveBeenCalled();
+  });
+
+  it("retorna 404 quando o plano não existe", async () => {
+    (noPlanoRepo.buscarPorId as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    await expect(removerPlano(admin, "p1")).rejects.toMatchObject({ status: 404 });
+    expect(noPlanoRepo.removerLote).not.toHaveBeenCalled();
+  });
+
+  it("retorna 404 quando o id não é a raiz de um plano (ex.: um eixo)", async () => {
+    (noPlanoRepo.buscarPorId as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "a1", tipo_plano_id: "pdi", no_pai_id: "p1", nivel: 0, ordem: 0, dados: {}, criado_em: now, atualizado_em: now });
+    await expect(removerPlano(admin, "a1")).rejects.toMatchObject({ status: 404 });
+    expect(noPlanoRepo.removerLote).not.toHaveBeenCalled();
+  });
+
+  it("remove a raiz do plano para quem administra modelos", async () => {
+    (noPlanoRepo.buscarPorId as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "p1", tipo_plano_id: "pdi", no_pai_id: null, nivel: -1, ordem: 0, dados: {}, criado_em: now, atualizado_em: now });
+    await removerPlano(admin, "p1");
+    expect(noPlanoRepo.removerLote).toHaveBeenCalledWith(["p1"]);
   });
 });

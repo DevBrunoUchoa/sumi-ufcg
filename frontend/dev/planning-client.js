@@ -49,6 +49,13 @@ export function createDevelopmentClient() {
       localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(workspace));
       return workspace;
     },
+    async removePlan(planId) {
+      const raw = localStorage.getItem(MOCK_STORAGE_KEY);
+      if (!raw) return;
+      const workspace = JSON.parse(raw);
+      workspace.plans = workspace.plans.filter((plan) => plan.id !== planId);
+      localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(workspace));
+    },
   };
 }
 

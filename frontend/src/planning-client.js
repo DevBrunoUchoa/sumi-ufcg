@@ -25,6 +25,9 @@ function createHttpClient() {
       saveQueue = saveQueue.catch(() => undefined).then(() => request(WORKSPACE_PATH, { method: 'PUT', body: JSON.stringify(workspace), signal }));
       return saveQueue;
     },
+    async removePlan(planId) {
+      await request(`/api/v1/planning/planos/${encodeURIComponent(planId)}`, { method: 'DELETE' });
+    },
   };
 }
 
@@ -35,6 +38,7 @@ export function createPlanningClient() {
     return {
       load: (options) => client.then((adapter) => adapter.load(options)),
       save: (workspace, options) => client.then((adapter) => adapter.save(workspace, options)),
+      removePlan: (planId) => client.then((adapter) => adapter.removePlan(planId)),
     };
   }
   return createHttpClient();

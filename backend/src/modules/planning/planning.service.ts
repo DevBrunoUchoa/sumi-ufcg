@@ -302,6 +302,25 @@ function recursoDoItem(planId: string, axisId: string, itemId: string) {
   return { planId, axisId, itemId };
 }
 
+/**
+ * Apaga um plano inteiro (eixo, objetivos, iniciativas, ações, etapas,
+ * indicadores, resultados, riscos, histórico e anexos) — restrito a quem
+ * administra os modelos (model.manage), já que não há como desfazer. A
+ * cascata é feita pelo próprio banco (ON DELETE CASCADE a partir de
+ * no_plano), então apagar a raiz basta.
+ */
+export async function removerPlano(sessao: SessaoUsuario, planId: string): Promise<void> {
+  if (!sessao.authenticated) {
+    throw new HttpError(401, "Autenticação necessária para remover um plano");
+  }
+  exigir(pode(sessao, "model.manage"), "Sem permissão para remover planos");
+  const raiz = await noPlanoRepo.buscarPorId(planId);
+  if (!raiz || raiz.nivel !== -1) {
+    throw new HttpError(404, "Plano não encontrado");
+  }
+  await noPlanoRepo.removerLote([planId]);
+}
+
 export async function salvarWorkspace(sessao: SessaoUsuario, workspace: Workspace): Promise<void> {
   if (!sessao.authenticated) {
     throw new HttpError(401, "Autenticação necessária para gravar alterações");

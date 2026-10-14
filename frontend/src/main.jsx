@@ -223,6 +223,11 @@ function App({ auth }) {
     }
   };
   const changeItem = (planId, itemId, change, message) => update((draft) => { const plan = draft.plans.find((candidate) => candidate.id === planId); const index = plan.items.findIndex((item) => item.id === itemId); plan.items[index] = change(plan.items[index]); }, message);
+  const removePlan = async (planId) => {
+    await planningClient.removePlan(planId);
+    update((draft) => { draft.plans = draft.plans.filter((candidate) => candidate.id !== planId); }, 'Plano removido.');
+    if (planId === plan?.id) navigate('/planejamentos');
+  };
   const close = () => setModal(null);
   const toggleAltoContraste = () => {
     const next = !altoContraste;
@@ -270,7 +275,7 @@ function App({ auth }) {
           : auth.status === 'error' ? (isOfflineError(auth.error) ? <OfflinePage onRetry={() => auth.reload().catch(() => {})} /> : <ServerErrorPage onRetry={() => auth.reload().catch(() => {})} />)
           : workspaceState.status === 'error' ? (isOfflineError(workspaceState.error) ? <OfflinePage onRetry={loadWorkspace} /> : <ServerErrorPage onRetry={loadWorkspace} />)
           : route.path === '/inicio' ? <Home data={{ ...data, plans: visiblePlans }} session={session} can={can} />
-          : route.path === '/planejamentos' ? <PlanList data={{ ...data, plans: visiblePlans }} can={can} onCreate={() => setModal({ type: 'plan' })} />
+          : route.path === '/planejamentos' ? <PlanList data={{ ...data, plans: visiblePlans }} can={can} onCreate={() => setModal({ type: 'plan' })} onDelete={removePlan} />
             : route.path === '/pendencias' && can(PERMISSIONS.VIEW_WORK_QUEUE) ? <WorkQueue plans={visiblePlans} can={can} />
               : route.path === '/validacoes' && can(PERMISSIONS.VIEW_REVIEW_QUEUE) ? <ReviewQueue plans={visiblePlans} can={can} />
                 : route.path === '/modelos' && can(PERMISSIONS.MANAGE_MODEL) ? <Models templates={data.templates} onEdit={(template) => setModal({ type: 'template', template })} onUse={(template) => setModal({ type: 'plan', templateId: template.id })} />
@@ -325,13 +330,29 @@ function QueuePage({ eyebrow, title, description, rows, empty }) {
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{description}</p></div></div>{rows.length ? <div className="queue-list">{rows.map(({ plan, item }) => <a key={`${plan.id}-${item.id}`} href={`#${itemUrl(plan, item.id)}`}><span><Badge tone={plan.type === 'PDI' ? 'blue' : 'green'}>{plan.shortName}</Badge><strong>{item.code} · {item.title}</strong><small>{item.owner}</small></span><span><Badge tone={statusTone(reviewStatusLabel(item.reviewStatus))}>{reviewStatusLabel(item.reviewStatus)}</Badge><Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title={empty}>Quando houver novos itens, eles aparecerão aqui.</Empty>}</div>;
 }
 
-function PlanList({ data, can, onCreate }) {
+function PlanList({ data, can, onCreate, onDelete }) {
   const [filter, setFilter] = useState('Todos');
   const [search, setSearch] = useState('');
+  const [confirmingRemoval, setConfirmingRemoval] = useState(null);
+  const [removing, setRemoving] = useState(false);
+  const canDeletePlan = can(PERMISSIONS.MANAGE_MODEL);
   const filtered = data.plans.filter((plan) => (filter === 'Todos' || plan.type === filter) && normalize(`${plan.shortName} ${plan.name}`).includes(normalize(search)));
+  const removePlan = async () => {
+    setRemoving(true);
+    try {
+      await onDelete(confirmingRemoval.id);
+      setConfirmingRemoval(null);
+    } finally {
+      setRemoving(false);
+    }
+  };
   return <div className="page"><div className="page-heading"><div><p className="eyebrow">PLANEJAMENTOS</p><h1>Planos institucionais</h1><p>Acompanhe estrutura, execução e resultados em um único lugar.</p></div>{can(PERMISSIONS.MANAGE_PLAN) && <Button icon="plus" variant="primary" onClick={onCreate}>Novo planejamento</Button>}</div>
     <div className="list-toolbar"><div className="segmented" aria-label="Filtrar tipo de planejamento">{['Todos', 'PDI', 'PLS'].map((value) => <button key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className='searchbar'><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar planejamento" placeholder="Buscar planejamento…" value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>
-    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div>{!(plan.type === 'PDI' && plan.status === 'published') && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress">{progress.total ? <><p className="hint">Execução das etapas</p><Progress {...progress} /><small>{progress.done} de {progress.total} etapas ativas concluídas</small></> : <p className="hint">Sem etapas ativas</p>}</div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></article>; })}</div> : <Empty title={data.plans.length ? "Nenhum planejamento encontrado" : "Nenhum plano disponível no momento"} action={data.plans.length ? <Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button> : undefined}>{data.plans.length ? 'Tente outro nome ou tipo.' : 'Os planos aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty>}
+    {filtered.length ? <div className="plan-grid">{filtered.map((plan) => { const progress = executionProgress({ actions: plan.items.flatMap((item) => item.actions) }); return <article className={`plan-card ${plan.type.toLowerCase()}`} key={plan.id}><div className="plan-card-header"><div className="plan-identity"><span className="plan-icon"><Icon name={plan.type === 'PDI' ? 'book' : 'leaf'} size={22} /></span><div className="plan-card-title"><h2>{plan.shortName}</h2><span>{plan.start}–{plan.end}</span></div></div>{!(plan.type === 'PDI' && plan.status === 'published') && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div><p className="plan-full-name">{plan.name}</p><div className="plan-card-progress">{progress.total ? <><p className="hint">Execução das etapas</p><Progress {...progress} /><small>{progress.done} de {progress.total} etapas ativas concluídas</small></> : <p className="hint">Sem etapas ativas</p>}</div><div className="plan-card-footer"><div className="card-facts"><span>{plan.axes.length} eixos</span><span>{plan.items.length} {plan.template.labels.item.toLowerCase()}{plan.items.length !== 1 ? 's' : ''}</span></div><div className="plan-card-actions">{canDeletePlan && <Button variant="tertiary" icon="close" className="danger" onClick={() => setConfirmingRemoval(plan)} aria-label={`Apagar ${plan.shortName} ${plan.start}–${plan.end}`}>Apagar</Button>}<Button onClick={() => window.location.href = `#${planUrl(plan.id)}`} aria-label={`Abrir ${plan.shortName} ${plan.start}–${plan.end}`}>Abrir planejamento<Icon name="arrow" size={15} /></Button></div></div></article>; })}</div> : <Empty title={data.plans.length ? "Nenhum planejamento encontrado" : "Nenhum plano disponível no momento"} action={data.plans.length ? <Button onClick={() => { setFilter('Todos'); setSearch(''); }}>Limpar filtros</Button> : undefined}>{data.plans.length ? 'Tente outro nome ou tipo.' : 'Os planos aparecerão aqui quando estiverem disponíveis para consulta.'}</Empty>}
+    {confirmingRemoval && <Modal title="Apagar plano?" subtitle={`${confirmingRemoval.shortName} ${confirmingRemoval.start}–${confirmingRemoval.end}`} onClose={() => setConfirmingRemoval(null)}>
+      <div className="form-body"><p>Isso apaga o plano inteiro — todos os eixos, objetivos, iniciativas, ações, etapas, indicadores, resultados, riscos, histórico e anexos vinculados a ele. Essa ação não pode ser desfeita.</p></div>
+      <div className="form-end"><Button onClick={() => setConfirmingRemoval(null)} disabled={removing}>Cancelar</Button><Button variant="primary" className="danger-primary" onClick={removePlan} disabled={removing}>{removing ? 'Apagando…' : 'Apagar plano'}</Button></div>
+    </Modal>}
   </div>;
 }
 

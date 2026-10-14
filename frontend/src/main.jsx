@@ -29,7 +29,7 @@ import { loginUrl, safeReturnPath } from './auth/navigation.js';
 import './layout/layout.css';
 import './layout/theme.css';
 
-const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login', '/sobre', '/ajuda', '/privacidade'];
+const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login', '/sobre', '/ajuda', '/privacidade', '/legislacao', '/resolucoes'];
 const EMPTY_WORKSPACE = { version: 2, templates: [], plans: [] };
 const PUBLIC_SESSION = { authenticated: false, user: null, roles: [], grants: [] };
 const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
@@ -47,6 +47,8 @@ const PAGE_DESCRIPTIONS = {
   '/sobre': 'Conheça o SUMI e a consulta pública aos planos institucionais.',
   '/ajuda': 'Orientações de navegação, acesso e acessibilidade do SUMI.',
   '/privacidade': 'Informações sobre sessão e preferências armazenadas pelo SUMI.',
+  '/legislacao': 'Normas institucionais que orientam o planejamento da UFCG.',
+  '/resolucoes': 'Atos normativos que instituem os planos acompanhados pelo SUMI.',
 };
 const DEFAULT_DESCRIPTION = 'SUMI — Sistema Unificado de Monitoramento Institucional.';
 
@@ -141,7 +143,7 @@ function App({ auth }) {
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
-  const needsWorkspace = !['/login', '/esqueci-senha', '/redefinir-senha', '/sobre', '/ajuda', '/privacidade'].includes(route.path);
+  const needsWorkspace = !['/login', '/esqueci-senha', '/redefinir-senha', '/sobre', '/ajuda', '/privacidade', '/legislacao', '/resolucoes'].includes(route.path);
   const sessionKey = session.authenticated ? session.user.id : 'public';
   const replaceData = (next) => { savedData.current = next; setData(next); };
   const loadWorkspace = () => {
@@ -250,7 +252,7 @@ function App({ auth }) {
   const planningContext = plan?.type === 'PDI' ? resolvePlanRoute(plan, route) : null;
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';
   useEffect(() => {
-    const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.objective ? `${planningContext.objective.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/esqueci-senha': 'Esqueci minha senha', '/redefinir-senha': 'Redefinir senha', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade' })[route.path] || 'SUMI';
+    const label = planningContext?.item ? `${planningContext.stage?.title || planningContext.action?.title || planningContext.item.title} · ${plan.shortName}` : planningContext?.objective ? `${planningContext.objective.title} · ${plan.shortName}` : planningContext?.axis ? `${planningContext.axis.name} · ${plan.shortName}` : plan?.shortName || ({ '/inicio': 'Início', '/planejamentos': 'Planejamentos', '/pendencias': 'Minhas pendências', '/validacoes': 'Validações', '/modelos': 'Modelos', '/usuarios': 'Usuários', '/login': 'Entrar', '/esqueci-senha': 'Esqueci minha senha', '/redefinir-senha': 'Redefinir senha', '/sobre': 'Sobre o SUMI', '/ajuda': 'Ajuda', '/privacidade': 'Privacidade', '/legislacao': 'Legislação', '/resolucoes': 'Resoluções' })[route.path] || 'SUMI';
     document.title = `SUMI · ${isDashboardRoute(route) ? `Painel de acompanhamento · ${plan?.shortName || 'Plano'}` : label}`;
     setMetaDescription((plan && `${plan.name} — acompanhamento de eixos, iniciativas, indicadores e execução no SUMI.`) || PAGE_DESCRIPTIONS[route.path] || DEFAULT_DESCRIPTION);
   }, [plan?.shortName, plan?.name, planningContext?.axis?.name, planningContext?.objective?.title, planningContext?.item?.title, planningContext?.action?.title, planningContext?.stage?.title, route.path]);
@@ -264,13 +266,23 @@ function App({ auth }) {
   if (can(PERMISSIONS.VIEW_WORK_QUEUE)) links.push({ path: '/pendencias', icon: 'list', text: 'Minhas pendências' });
   if (can(PERMISSIONS.VIEW_REVIEW_QUEUE)) links.push({ path: '/validacoes', icon: 'check', text: 'Validações' });
   if (can(PERMISSIONS.MANAGE_MODEL)) links.push({ path: '/modelos', icon: 'layers', text: 'Modelos de plano' }, { path: '/usuarios', icon: 'user', text: 'Usuários' });
+  links.push({
+    icon: 'info',
+    text: 'Institucional',
+    items: [
+      { href: 'https://www.gov.br/pt-br/orgaos-do-governo', text: 'Órgãos do Governo' },
+      { href: 'https://www.ufcg.edu.br/', text: 'Acesso à Informação' },
+      { path: '/legislacao', text: 'Legislação' },
+      { path: '/resolucoes', text: 'Resoluções' },
+    ],
+  });
   const loading = needsWorkspace && auth.status !== 'error' && (auth.status === 'loading' || workspaceState.status === 'loading' || workspaceState.sessionKey !== sessionKey);
   return <AppShell route={route} plan={plan} session={session} mode={['/login', '/esqueci-senha', '/redefinir-senha'].includes(route.path) ? 'access' : session.authenticated ? 'work' : 'public'} links={links} altoContraste={altoContraste} darkMode={darkMode} vlibrasAtivo={vlibrasAtivo} toggleAltoContraste={toggleAltoContraste} toggleDarkMode={toggleDarkMode} toggleVlibras={toggleVlibras} onLogout={leaveSession} loading={loading}>
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
         {route.path === '/login' ? <LoginPage authenticated={session.authenticated} returnTo={safeReturnPath(route.query.get('returnTo'))} onSuccess={async () => { await auth.reload(); navigate(safeReturnPath(route.query.get('returnTo'))); }} />
           : route.path === '/esqueci-senha' ? <ForgotPasswordPage />
           : route.path === '/redefinir-senha' ? <ResetPasswordPage token={route.query.get('token')} />
-          : ['/sobre', '/ajuda', '/privacidade'].includes(route.path) ? <InformationPage path={route.path} />
+          : ['/sobre', '/ajuda', '/privacidade', '/legislacao', '/resolucoes'].includes(route.path) ? <InformationPage path={route.path} />
           : loading ? <LoadingState />
           : auth.status === 'error' ? (isOfflineError(auth.error) ? <OfflinePage onRetry={() => auth.reload().catch(() => {})} /> : <ServerErrorPage onRetry={() => auth.reload().catch(() => {})} />)
           : workspaceState.status === 'error' ? (isOfflineError(workspaceState.error) ? <OfflinePage onRetry={loadWorkspace} /> : <ServerErrorPage onRetry={loadWorkspace} />)

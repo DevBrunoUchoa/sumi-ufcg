@@ -51,6 +51,24 @@ function useContent() {
         [t('privacy.s4Title'), t('privacy.s4Text')],
       ],
     },
+    // Conteúdo institucional (menu "Institucional" da área de trabalho) — só em
+    // português por ora, diferente das demais páginas desta lista.
+    '/legislacao': {
+      title: 'Legislação',
+      lead: 'Normas institucionais que orientam o planejamento da UFCG.',
+      sections: [
+        ['Plano de Desenvolvimento Institucional (PDI)', 'O PDI 2026–2030 foi instituído pela Resolução nº 09/2025 do Colegiado Pleno da UFCG, que define os objetivos, iniciativas, indicadores, metas e ações do plano.'],
+        ['Outras normas', 'Outras resoluções e normativos institucionais relacionados aos planos acompanhados pelo SUMI serão listados aqui conforme disponibilizados.'],
+      ],
+    },
+    '/resolucoes': {
+      title: 'Resoluções',
+      lead: 'Atos normativos que instituem os planos acompanhados pelo SUMI.',
+      sections: [
+        ['PDI 2026–2030', 'Instituído pela Resolução nº 09/2025 do Colegiado Pleno da UFCG.'],
+        ['PLS 2025–2030', 'Resolução de instituição a confirmar e incluir aqui.'],
+      ],
+    },
   };
 }
 

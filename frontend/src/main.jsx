@@ -600,7 +600,7 @@ function StageRow({ task, action, actor, canUpdate, canAttach, canManageAction, 
     </div>
     <div className="stage-tools">
       {!justifying && canUpdate && (overdue || task.status === 'cancelled') && !task.justification && <Button variant="tertiary" icon="edit" aria-expanded={false} onClick={() => { setJustification(''); setJustifying(true); setError(''); }}>{task.status === 'cancelled' ? 'Justificar cancelamento' : 'Justificar atraso'}</Button>}
-      {canViewRisk && <Button variant="tertiary" icon="danger" onClick={() => onViewRisks(task)}>Riscos</Button>}
+      {canViewRisk && <Button variant="tertiary" icon="danger" onClick={() => onViewRisks(task)}>Gerenciamento de riscos</Button>}
       <Attachments itemId={itemId} etapaId={task.id} canManage={canAttach} buttonVariant="tertiary" />
     </div>
     {task.justification && <Button variant="tertiary" icon="eye" className="justification-trigger" onClick={openJustification}>Ver justificativa</Button>}

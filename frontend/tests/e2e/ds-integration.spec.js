@@ -4,7 +4,7 @@ import { Buffer } from 'node:buffer';
 test('prazo do risco editado permanece salvo', async ({ page }) => {
   await openPdi(page);
   await expandFirstAction(page);
-  await page.getByRole('button', { name: /Riscos da ação/ }).click();
+  await page.getByRole('button', { name: /Gerenciamento de riscos \(/ }).click();
   await page.locator('.risk-card').first().getByRole('button', { name: 'Editar' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Prazo de conclusão').locator('input').first().fill('30/11/2026');

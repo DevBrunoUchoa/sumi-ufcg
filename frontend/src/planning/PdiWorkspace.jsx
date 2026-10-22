@@ -11,7 +11,6 @@ import { ScopeDashboard } from './ScopeDashboard.jsx';
 import { ObjectiveOds } from './ObjectiveOds.jsx';
 import './ods.css';
 import { AxisVersionHistory } from './AxisVersionHistory.jsx';
-import { PlanTree } from './PlanTree.jsx';
 
 const go = (path) => { window.location.hash = path; };
 
@@ -26,15 +25,12 @@ export function PdiWorkspace({ plan, route, can, authenticated, actions, renderD
   const title = view === 'riscos' ? stage?.title || action.title : action?.title || item?.title || objective?.title || axis?.name;
   const eyebrow = view === 'riscos' ? stage ? 'RISCOS DA ETAPA' : `RISCOS DA AÇÃO ${action.code}` : action ? `AÇÃO ${action.code}` : item ? `${plan.template.labels.item.toUpperCase()} ${item.code}` : objective ? `${plan.shortName} · ${plan.template.labels.objective.toUpperCase()} ${objectiveCode(objective)}` : axis ? `${plan.shortName} ${plan.start}–${plan.end} · EIXO ${axis.code}` : 'PLANEJAMENTO INSTITUCIONAL';
   const editable = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
-  return <div className="explorer pdi-explorer">
-    <PlanTree plan={plan} axis={axis} objective={objective} item={item} action={action} stage={stage} />
-    <div className="plan-page pdi-workspace" style={{ '--axis-color': axis?.color }}>
-      <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && plan.status !== 'published' && <Badge tone="neutral">Rascunho</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}{objective && !item && <ObjectiveOds key={objective.id} plan={plan} objective={objective} />}</div></div>{!item && <a className="br-button secondary dashboard-entry" href={`#${dashboardUrl(plan, { axis: axis?.id, objective: objective?.id, period: route.query.get('period') })}`}><Icon name="chart" size={16} />Painel de acompanhamento</a>}{actions(context)}</div>
-      {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} canViewInternal={can(PERMISSIONS.VIEW_INTERNAL_PLAN, { planId: plan.id, axisId: axis.id })} /> : <>
-        <section className="planning-context" aria-label="Contexto do planejamento"><p><a href={`#${objectiveUrl(plan, objective)}`}><strong>{plan.template.labels.objective} {objectiveCode(objective)}</strong> · {objective.title}</a></p>{action && <p><a href={`#${itemUrl(plan, item)}`}><strong>{plan.template.labels.item} {item.code}</strong> · {item.title}</a></p>}</section>
-        <section className="detail pdi-detail" aria-label="Detalhe do item">{renderDetail(context)}</section>
-      </>}
-    </div>
+  return <div className="plan-page pdi-workspace" style={{ '--axis-color': axis?.color }}>
+    <div className="plan-page-heading pdi-heading"><div className="pdi-identity">{axis && !item && <AxisIcon planType={plan.type} axis={axis} />}<div><p className="eyebrow">{eyebrow}</p><div className="title-line"><h1 tabIndex={-1}>{title || <>{plan.shortName} <span>{plan.start}–{plan.end}</span></>}</h1>{!axis && plan.status !== 'published' && <Badge tone="neutral">Rascunho</Badge>}</div>{!item && <p>{axis ? `Unidade responsável: ${axis.ownerUnit || 'Não informada'}` : plan.name}</p>}{objective && !item && <ObjectiveOds key={objective.id} plan={plan} objective={objective} />}</div></div>{!item && <a className="br-button secondary dashboard-entry" href={`#${dashboardUrl(plan, { axis: axis?.id, objective: objective?.id, period: route.query.get('period') })}`}><Icon name="chart" size={16} />Painel de acompanhamento</a>}{actions(context)}</div>
+    {!axis ? <PlanOverview key={plan.id} plan={plan} editable={editable} /> : !item ? <AxisOverview key={`${axis.id}:${objective?.id || ''}`} plan={plan} axis={axis} objective={objective} route={route} editable={editable} canViewInternal={can(PERMISSIONS.VIEW_INTERNAL_PLAN, { planId: plan.id, axisId: axis.id })} canViewRisks={can(PERMISSIONS.VIEW_RISK, { planId: plan.id, axisId: axis.id })} /> : <>
+      <section className="planning-context" aria-label="Contexto do planejamento"><p><a href={`#${objectiveUrl(plan, objective)}`}><strong>{plan.template.labels.objective} {objectiveCode(objective)}</strong> · {objective.title}</a></p>{action && <p><a href={`#${itemUrl(plan, item)}`}><strong>{plan.template.labels.item} {item.code}</strong> · {item.title}</a></p>}</section>
+      <section className="detail pdi-detail" aria-label="Detalhe do item">{renderDetail(context)}</section>
+    </>}
   </div>;
 }
 
@@ -55,7 +51,7 @@ function PlanOverview({ plan, editable }) {
   </>;
 }
 
-function AxisOverview({ plan, axis, objective, route, editable, canViewInternal }) {
+function AxisOverview({ plan, axis, objective, route, editable, canViewInternal, canViewRisks }) {
   const [search, setSearch] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState('');
@@ -79,14 +75,14 @@ function AxisOverview({ plan, axis, objective, route, editable, canViewInternal 
       <div className="pdi-axis-filters"><Input id="search-axis-items" label={objective ? 'Buscar neste objetivo' : 'Buscar neste eixo'} type="search" placeholder="Código, objetivo ou iniciativa…" value={search} onChange={(event) => setSearch(event.target.value)} /><Select label="Filtrar responsável" placeholder="Todos os responsáveis" value={owner} onChange={(event) => setOwner(event.target.value)} options={[{ value: '', label: 'Todos os responsáveis' }, ...Array.from(new Set(items.map((item) => item.owner))).filter(Boolean).map((value) => ({ value, label: value }))]} /><Select label="Filtrar situação" placeholder="Todas as situações" value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: '', label: 'Todas as situações' }, ...['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'].map((value) => ({ value, label: value }))]} /></div>
       {filtering && <div className="pdi-filter-summary"><span>{objectiveId && `Objetivo ${objectives.find((entry) => entry.id === objectiveId)?.code} · `}{filtered.length} iniciativas encontradas</span>{groups.length > 0 && <Button variant="tertiary" onClick={clear}>Limpar filtros</Button>}</div>}
       <p className="sr-only" role="status">{filtered.length} iniciativas encontradas neste {objective ? 'objetivo' : 'eixo'}</p>
-      {groups.map((entry) => <ObjectiveGroup key={JSON.stringify([entry.id, search, owner, status])} plan={plan} objective={entry} standalone={Boolean(objective)} items={filtered.filter((item) => item.objectiveId === entry.id)} />)}
+      {groups.map((entry) => <ObjectiveGroup key={JSON.stringify([entry.id, search, owner, status])} plan={plan} objective={entry} standalone={Boolean(objective)} items={filtered.filter((item) => item.objectiveId === entry.id)} canViewRisks={canViewRisks} />)}
       {filtering && !groups.length && <Empty title="Nenhuma iniciativa encontrada" action={<Button onClick={clear}>Limpar filtros</Button>}>Ajuste os filtros para continuar.</Empty>}
     </>}
     {!!objectives.length && <ScopeDashboard plan={plan} items={items} level={objective ? 'objective' : 'axis'} rows={comparison} period={period} onPeriodChange={setPeriod} />}
   </>;
 }
 
-function ObjectiveGroup({ plan, objective, items, standalone = false }) {
+function ObjectiveGroup({ plan, objective, items, standalone = false, canViewRisks = false }) {
   const [expanded, setExpanded] = useState(true);
   const contentId = `objective-content-${objective.id}`;
   return <section className="pdi-objective" aria-label={standalone ? 'Iniciativas vinculadas' : undefined} aria-labelledby={standalone ? undefined : `objective-${objective.id}`}>
@@ -97,10 +93,34 @@ function ObjectiveGroup({ plan, objective, items, standalone = false }) {
       </button>
     </div>}
     <div id={contentId} className="br-list pdi-objective-content" hidden={!expanded}>
-      {items.map((item) => <a className="br-item pdi-initiative-link" key={item.id} href={`#${itemUrl(plan, item)}`}><span><small>{plan.template.labels.item} {item.code}</small><strong>{item.title}</strong><span className="hint">{item.owner || 'Responsável não informado'} · {item.actions.length} ações estratégicas</span></span><span className="pdi-initiative-end"><Badge>{executionStatus(item)}</Badge><Icon name="arrow" size={14} /></span></a>)}
+      {items.map((item) => <InitiativeRow key={item.id} plan={plan} item={item} canViewRisks={canViewRisks} />)}
       {!items.length && <p className="pdi-objective-empty">Nenhuma {plan.template.labels.item.toLowerCase()} cadastrada neste {plan.template.labels.objective.toLowerCase()}.</p>}
     </div>
   </section>;
+}
+
+// Ações da iniciativa à mostra na própria página do eixo, com atalho para os
+// riscos de cada uma — evita descer uma camada só para chegar a uma ação.
+function InitiativeRow({ plan, item, canViewRisks }) {
+  const [open, setOpen] = useState(false);
+  const actionsId = `initiative-actions-${item.id}`;
+  return <div className="pdi-initiative">
+    <div className="pdi-initiative-row">
+      <a className="br-item pdi-initiative-link" href={`#${itemUrl(plan, item)}`}><span><small>{plan.template.labels.item} {item.code}</small><strong>{item.title}</strong><span className="hint">{item.owner || 'Responsável não informado'} · {item.actions.length} ações estratégicas</span></span><span className="pdi-initiative-end"><Badge>{executionStatus(item)}</Badge><Icon name="arrow" size={14} /></span></a>
+      {!!item.actions.length && <button type="button" className="br-button tertiary small pdi-initiative-toggle" aria-expanded={open} aria-controls={actionsId} aria-label={`${open ? 'Ocultar' : 'Mostrar'} ações da ${plan.template.labels.item.toLowerCase()} ${item.code}`} onClick={() => setOpen((current) => !current)}>
+        {open ? 'Ocultar ações' : 'Ver ações'}<Icon name="chevron" size={14} aria-hidden="true" />
+      </button>}
+    </div>
+    {!!item.actions.length && <ul id={actionsId} className="pdi-initiative-actions" hidden={!open}>
+      {ordered(item.actions).map((action) => {
+        const riskCount = (item.risks || []).filter((risk) => risk.actionId === action.id).length;
+        return <li key={action.id}>
+          <a className="pdi-action-link" href={`#${itemUrl(plan, item, 'acao', undefined, action.id)}`}><small>Ação {action.code}</small><span>{action.title}</span></a>
+          {canViewRisks && <a className="br-button tertiary small pdi-action-risks" href={`#${itemUrl(plan, item, 'riscos', undefined, action.id)}`} aria-label={`Gerenciamento de riscos da ação ${action.code}: ${riskCount}`}><Icon name="shield" size={14} />Gerenciamento de riscos ({riskCount})</a>}
+        </li>;
+      })}
+    </ul>}
+  </div>;
 }
 
 function IndicatorTable({ plan, items, period }) {

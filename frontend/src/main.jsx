@@ -529,7 +529,7 @@ function ActionDetail({ plan, item, action, actor, can, onModal, changeItem }) {
         <div className="item-meta"><span>Responsável: <strong>{action.owner}</strong></span><span>Prazo: <strong>{formatDate(action.deadline)}</strong></span></div>
       </div>
       <div className="action-detail-cta">
-        {can(PERMISSIONS.VIEW_RISK, resourceFor(plan, item)) && <Button variant="tertiary" icon="danger" onClick={() => navigate(itemUrl(plan, item.id, 'riscos', undefined, action.id))}>Riscos da ação ({item.risks.filter((risk) => risk.actionId === action.id).length})</Button>}
+        {can(PERMISSIONS.VIEW_RISK, resourceFor(plan, item)) && <Button variant="tertiary" icon="shield" onClick={() => navigate(itemUrl(plan, item.id, 'riscos', undefined, action.id))}>Gerenciamento de riscos ({item.risks.filter((risk) => risk.actionId === action.id).length})</Button>}
         {(can(PERMISSIONS.MANAGE_ACTION, resourceFor(plan, item)) || can(PERMISSIONS.UPDATE_STAGE, resourceFor(plan, item))) && <Button variant="tertiary" icon="plus" onClick={() => onModal({ type: 'stage', item, action })}>Adicionar etapa</Button>}
       </div>
     </div>
@@ -620,7 +620,7 @@ function StageRow({ task, action, actor, canUpdate, canAttach, canManageAction, 
     </div>
     <div className="stage-tools">
       {!justifying && canUpdate && (overdue || task.status === 'cancelled') && !task.justification && <Button variant="tertiary" icon="edit" aria-expanded={false} onClick={() => { setJustification(''); setJustifying(true); setError(''); }}>{task.status === 'cancelled' ? 'Justificar cancelamento' : 'Justificar atraso'}</Button>}
-      {canViewRisk && <Button variant="tertiary" icon="danger" onClick={() => onViewRisks(task)}>Gerenciamento de riscos</Button>}
+      {canViewRisk && <Button variant="tertiary" icon="shield" onClick={() => onViewRisks(task)}>Gerenciamento de riscos</Button>}
       <Attachments itemId={itemId} etapaId={task.id} canManage={canAttach} buttonVariant="tertiary" />
     </div>
     {task.justification && <Button variant="tertiary" icon="eye" className="justification-trigger" onClick={openJustification}>Ver justificativa</Button>}

@@ -48,7 +48,7 @@ test('navegação com workspace HTTP não grava dados; atualização de etapa sa
   expect(workspace.plans[0].items[0].axisId).toBe(item.axisId);
   await page.reload();
   await expect(page.locator('.execution-summary strong')).toHaveText('60%');
-  await page.getByRole('button', { name: /Riscos da ação/ }).click();
+  await page.getByRole('button', { name: /Gerenciamento de riscos \(/ }).click();
   await expect(page.locator('.risk-card')).toHaveCount(1);
   expect(writes).toBe(1);
 });

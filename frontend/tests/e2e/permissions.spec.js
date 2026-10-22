@@ -10,7 +10,7 @@ test('consulta pública recebe somente conteúdo publicado', async ({ page }) =>
   await expect(page.getByRole('button', { name: 'Editar informações' })).toHaveCount(0);
   await expect(page.locator('.stage-status-select')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Histórico' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Riscos da ação/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Gerenciamento de riscos \(/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Registrar resultado' })).toHaveCount(0);
 });
 

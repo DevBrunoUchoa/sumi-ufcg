@@ -14,10 +14,10 @@ test('PDI entra pelos eixos e mantém a cadeia até os riscos da etapa', async (
   await expect(breadcrumb).toContainText('Objetivo 8.1');
   await expect(breadcrumb).toContainText('Iniciativa 8.1.3');
   await expect(breadcrumb).toContainText('Ação 8.1.3.1');
-  await page.getByRole('button', { name: /Riscos da ação/ }).click();
+  await page.getByRole('button', { name: /Gerenciamento de riscos \(/ }).click();
   await expect(page.locator('.risk-card')).toHaveCount(1);
   await page.getByRole('link', { name: '← Voltar à ação' }).click();
-  await page.locator('.task-row').filter({ hasText: 'Elaborar a minuta da portaria' }).getByRole('button', { name: 'Riscos', exact: true }).click();
+  await page.locator('.task-row').filter({ hasText: 'Elaborar a minuta da portaria' }).getByRole('button', { name: 'Gerenciamento de riscos', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Riscos da etapa' })).toBeVisible();
   await expect(breadcrumb).toContainText('Elaborar a minuta da portaria');
   await page.reload();
@@ -109,8 +109,8 @@ test('entrada, eixo e riscos permanecem utilizáveis por teclado e em tela estre
   await page.locator('.pdi-initiative-link').first().click();
   await page.locator('.action-overview-link').first().click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(page.getByRole('button', { name: /Riscos da ação/ })).toBeVisible();
-  await page.getByRole('button', { name: /Riscos da ação/ }).click();
+  await expect(page.getByRole('button', { name: /Gerenciamento de riscos \(/ })).toBeVisible();
+  await page.getByRole('button', { name: /Gerenciamento de riscos \(/ }).click();
   await expect(page.locator('.risk-cell')).toHaveCount(25);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

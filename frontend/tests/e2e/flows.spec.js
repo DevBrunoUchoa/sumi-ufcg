@@ -158,7 +158,7 @@ test('alto contraste responde ao teclado e persiste ao recarregar', async ({ pag
 test('matriz de riscos filtra e detalha os registros', async ({ page }) => {
   await openPdi(page);
   await expandFirstAction(page);
-  await page.getByRole('button', { name: /Riscos da ação/ }).click();
+  await page.getByRole('button', { name: /Gerenciamento de riscos \(/ }).click();
   await expect(page.locator('.risk-cell')).toHaveCount(25);
   await page.getByRole('button', { name: /Probabilidade 3, impacto 3/ }).click();
   await expect(page.locator('.risk-card')).toHaveCount(1);

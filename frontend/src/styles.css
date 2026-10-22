@@ -372,18 +372,6 @@ main:focus { outline: 3px solid var(--primary); outline-offset: -3px; }
 .node-dot { display: none; }
 .tree-no-results { color: var(--text-muted); padding: var(--spacing-scale-2x); }
 .detail { min-width: 0; padding-left: var(--spacing-scale-4x); padding-top: var(--spacing-scale-base); }
-.pdi-explorer > .pdi-workspace { min-width: 0; }
-
-/* Árvore do PDI (pdi-plan-tree): destaca a posição atual com sombra, em vez
-   da tinta de fundo usada pela árvore do PLS — o ancestral do nó atual (ex.:
-   o eixo de uma ação selecionada) recebe só um indicador mais discreto. */
-.pdi-plan-tree :is(.tree-group, .tree-item, .tree-action).current { box-shadow: var(--elevation-layer-2); background: var(--surface); border-radius: 4px; border-left-color: var(--axis-color); position: relative; z-index: 1; }
-.pdi-plan-tree :is(.tree-group, .tree-item, .tree-action).ancestor { border-left-color: var(--axis-color); color: var(--text-strong); }
-.stage-tree { display: grid; gap: var(--spacing-scale-half); margin: 0 0 var(--spacing-scale-base) var(--spacing-scale-4x); }
-.tree-stage { display: block; padding: var(--spacing-scale-half) var(--spacing-scale-base); font-size: var(--font-size-scale-base); color: var(--text-muted); border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.tree-stage:hover { background: var(--surface-hover); }
-.tree-stage.current { box-shadow: var(--elevation-layer-2); background: var(--surface); border-radius: 4px; border-left-color: var(--axis-color); color: var(--text-strong); position: relative; z-index: 1; }
-html[data-alto-contraste="true"] .pdi-plan-tree :is(.tree-group, .tree-item, .tree-action, .tree-stage).current { outline: 2px solid #000; box-shadow: none; }
 .item-heading { padding: 0 0 var(--spacing-scale-2x); }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-2x); }
 .item-heading .section-heading { align-items: flex-start; }

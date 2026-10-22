@@ -47,14 +47,15 @@ export function MetricTrend({ plan, item, period }) {
     if (group.length) groups.push(group);
     return groups;
   };
-  return <section className="br-card planning-chart metric-trend" aria-labelledby={id}><div className="card-content"><h3 id={id}>Evolução da meta e do resultado</h3><p className="hint">{item.metric.name}{item.metric.unit && ` · ${item.metric.unit}`}. Períodos sem resultado permanecem sem ponto no gráfico.</p>
-    {numbers.length ? <svg viewBox="0 0 600 235" role="img" aria-labelledby={`${id}-title ${id}-description`}><title id={`${id}-title`}>Meta e resultado de {item.metric.name}</title><desc id={`${id}-description`}>Comparação por período na mesma unidade do indicador. Os valores estão disponíveis na tabela abaixo.</desc>
+  // Visualização "Gráfico" do bloco de indicador (alternativa à tabela por ano,
+  // que já traz os mesmos valores) — por isso sem card nem tabela própria.
+  return <div className="metric-trend"><p className="hint">{item.metric.name}{item.metric.unit && ` · ${item.metric.unit}`}. Períodos sem resultado permanecem sem ponto no gráfico.</p>
+    {numbers.length ? <svg viewBox="0 0 600 235" role="img" aria-labelledby={`${id}-title ${id}-description`}><title id={`${id}-title`}>Meta e resultado de {item.metric.name}</title><desc id={`${id}-description`}>Comparação por período na mesma unidade do indicador. Os valores estão disponíveis na visualização em tabela.</desc>
       {[min, (min + max) / 2, max].map((value) => <g key={value}><line className="trend-grid" x1="55" x2="565" y1={y(value)} y2={y(value)} /><text x="45" y={y(value) + 4} textAnchor="end">{formatNumber(value)}</text></g>)}
       {series.map((entry, index) => <g key={entry.year}>{entry.year === period && <line className="trend-selection" x1={x(index)} x2={x(index)} y1="30" y2="200" />}<text x={x(index)} y="220" textAnchor="middle">{entry.year}</text></g>)}
       {['target', 'result'].map((key) => <g key={key} className={`trend-${key}`}>{segments(key).map((points, index) => <polyline key={index} points={points.join(' ')} />)}{series.map((entry, index) => entry[key] !== null && <circle key={entry.year} cx={x(index)} cy={y(entry[key])} r="4"><title>{entry.year}: {key === 'target' ? 'Meta' : 'Resultado'} {formatMetricValue(item, entry[key])}</title></circle>)}</g>)}
     </svg> : <p className="chart-empty">Sem metas ou resultados numéricos disponíveis para este indicador.</p>}
     <div className="trend-legend"><span><i className="trend-target-key" aria-hidden="true" />Meta</span><span><i className="trend-result-key" aria-hidden="true" />Resultado</span></div>
     {item.metric.measurementMode === 'stages' && <p className="hint">O resultado do período atual é calculado pelas etapas; anos anteriores usam os resultados registrados.</p>}
-    <DataTable caption={`Meta e resultado — ${item.metric.name}`} headings={['Período', 'Meta', 'Resultado']} rows={series.map((entry) => [entry.year, entry.target === null ? 'Sem meta numérica' : formatMetricValue(item, entry.target), entry.result === null ? 'Sem resultado' : formatMetricValue(item, entry.result)])} />
-  </div></section>;
+  </div>;
 }

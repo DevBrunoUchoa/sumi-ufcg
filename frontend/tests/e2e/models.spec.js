@@ -25,6 +25,8 @@ test('administrador cria plano vazio, estrutura e primeiro item', async ({ page 
   await structure.getByLabel('Nome do objetivo').last().fill('Qualificar o acompanhamento');
   await structure.getByRole('button', { name: 'Salvar estrutura' }).click();
 
+  // Iniciativa se adiciona dentro do eixo, não no hub do plano.
+  await page.getByRole('link', { name: /^Explorar eixo 1/ }).click();
   await page.getByRole('button', { name: 'Adicionar iniciativa' }).click();
   const item = page.getByRole('dialog');
   await item.getByLabel('Código').last().fill('1.1.1');

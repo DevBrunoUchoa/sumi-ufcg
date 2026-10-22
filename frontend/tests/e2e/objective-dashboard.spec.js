@@ -19,6 +19,7 @@ test('objetivo tem título, dados do seu escopo, ano das metas e retorno pela hi
   await page.getByRole('button', { name: 'Limpar filtros', exact: true }).click();
   await expect(page).toHaveURL(/\/objetivo\/pdi-objective-8-1\?period=2027$/);
   await page.locator('.pdi-initiative-link').first().click();
+  await page.getByRole('button', { name: 'Gráfico', exact: true }).click();
   await expect(page.locator('.metric-trend svg')).toBeVisible();
   await page.getByRole('navigation', { name: 'Hierarquia do planejamento' }).getByRole('link', { name: 'Objetivo 8.1', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Aperfeiçoar Práticas de Governança Pública');

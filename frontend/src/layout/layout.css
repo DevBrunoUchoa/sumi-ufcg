@@ -135,7 +135,10 @@
 .sumi-shell .pdi-heading { padding-bottom: var(--spacing-scale-3x); }
 .sumi-shell .planning-context { background: var(--surface-soft); border-left-color: var(--axis-color, var(--primary)); }
 .sumi-shell .pdi-detail > .item-heading h2 { font-size: var(--font-size-scale-up-02); }
-.sumi-shell .pdi-heading .heading-actions { flex-basis: auto; margin-left: auto; }
+/* As ações não crescem: o bloco do título absorve o espaço livre e elas
+   encostam à direita, ao lado do Painel; se não couberem, descem para uma
+   linha própria alinhada à esquerda (caso do hub, com mais botões). */
+.sumi-shell .pdi-heading .heading-actions { flex: 0 1 auto; margin-left: 0; }
 html[data-alto-contraste="true"] :is(.sumi-footer, .sumi-org-bar) { background: #000; color: #fff; }
 html[data-alto-contraste="true"] :is(.sumi-footer, .sumi-org-bar) a { color: #fff; }
 html[data-alto-contraste="true"] :is(.sumi-menu, .sumi-accessibility-panel, .public-plan-card, .access-public-info, .sumi-public-nav, .sumi-work-footer) { border-color: #000; }

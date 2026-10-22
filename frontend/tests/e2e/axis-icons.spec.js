@@ -8,6 +8,8 @@ test('exibe os oito ícones temáticos do PDI, inclusive em eixos vazios', async
   await page.getByRole('link', { name: 'Explorar eixo 1: Ensino' }).click();
   await expect(page.getByRole('heading', { name: 'Nenhum objetivo cadastrado neste eixo' })).toBeVisible();
 
+  // A Estrutura fica só no hub do plano.
+  await page.goto('/#/plano/pdi');
   await page.getByRole('button', { name: 'Estrutura', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Estrutura do planejamento' });
   await expect(dialog.locator('.axis-structure .axis-icon')).toHaveCount(8);

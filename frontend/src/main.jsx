@@ -106,9 +106,9 @@ function OnboardingCard({ can }) {
   </section>;
 }
 
-function Progress({ done, total, percent, label = 'etapas', compact = false }) {
+function Progress({ done, total, percent, label = 'etapas', compact = false, text }) {
   const value = percent ?? (total ? done / total * 100 : 0);
-  return <div className={`progress-block ${compact ? 'compact' : ''}`}><div className="progress-track" role="progressbar" aria-label={`Execução das ${label}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)}><span style={{ width: `${value}%` }} /></div><span>{Math.round(value)}% {label}</span></div>;
+  return <div className={`progress-block ${compact ? 'compact' : ''}`}><div className="progress-track" role="progressbar" aria-label={`Execução das ${label}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)}><span style={{ width: `${value}%` }} /></div><span>{text ?? `${Math.round(value)}% ${label}`}</span></div>;
 }
 
 // O backend roda no plano gratuito do Render, que "dorme" sem tráfego —
@@ -433,19 +433,14 @@ function PlanPage(props) {
   if (isDashboardRoute(route)) return plan.type === 'PDI' ? <PlanDashboard {...props} /> : <NotFoundPage onGoHome={() => navigate(planUrl(plan.id))} />;
   if (plan.type !== 'PDI') return <PlanExplorer {...props} />;
   return <PdiWorkspace {...props} actions={({ axis, objective, item }) => {
-    if (item) return null;
-    const canManagePlan = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
-    // A importação de um eixo exige item.edit nesse eixo — a mesma permissão
-    // que o backend cobra para gravar as iniciativas da planilha. O Gestor do
-    // Eixo não a tem (vai só até a etapa), então na prática é do administrador.
-    const canImportAxis = Boolean(axis) && can(PERMISSIONS.EDIT_ITEM, { planId: plan.id, axisId: axis.id });
-    if (!canManagePlan && !canImportAxis) return null;
-    return <div className="heading-actions">
-      {canManagePlan && !axis && <PlanPublication plan={plan} onPublish={onPublish} />}
-      {canManagePlan && <Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button>}
-      {(canManagePlan || canImportAxis) && <ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />}
-      {canManagePlan && plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}
-    </div>;
+    if (item || !can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan))) return null;
+    // Publicação, Estrutura e planilha valem para o plano inteiro (a importação
+    // acha o eixo pela coluna "Eixo" da própria planilha), então ficam só no
+    // hub. Iniciativa pertence a um objetivo de um eixo: só se adiciona dentro
+    // dele, com o eixo (e o objetivo, se houver) já escolhidos.
+    if (!axis) return <div className="heading-actions"><PlanPublication plan={plan} onPublish={onPublish} /><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} /></div>;
+    if (!plan.objectives.some((entry) => entry.axisId === axis.id)) return null;
+    return <div className="heading-actions"><Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button></div>;
   }} renderDetail={(context) => <PlanItemDetail {...props} {...context} />} />;
 }
 
@@ -522,18 +517,50 @@ function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPl
     {item.linkedPlan && <a className="linked-plan" href={`#${planUrl(item.linkedPlan)}`}><Icon name="link" size={16} /><span>Relacionado ao Plano Diretor de Logística Sustentável</span><Icon name="arrow" size={14} /></a>}{children}</>;
 }
 
+// Visão geral da iniciativa: primeiro o que está sendo feito (as ações), depois
+// como o indicador está indo. Uma linha de resumo do indicador antecede as ações
+// para dar o "como está" sem empurrá-las para baixo.
 function ItemDetail({ plan, item, actor, can, view, period, setPeriod, onModal, changeItem }) {
   const resource = resourceFor(plan, item);
+  const indicatorId = `indicador-${item.id}`;
+  const history = view === 'historico';
   return <ItemHeader scoped={plan.type === 'PDI'} plan={plan} item={item} actor={actor} can={can} onModal={onModal} changeItem={changeItem}>
-    {can(PERMISSIONS.VIEW_HISTORY, resource) && <div className="detail-actions"><a className={view === 'historico' ? 'active' : ''} href={`#${itemUrl(plan, item.id, 'historico')}`}>Histórico</a></div>}
-    {view === 'historico' ? <History item={item} canComment={can(PERMISSIONS.COMMENT_HISTORY, resource)} onComment={(text) => changeItem(plan.id, item.id, (current) => ({ ...current, history: [...current.history, historyEntry(text, actor)] }), 'Observação adicionada.')} /> : <>
-      <Indicators key={item.id} item={item} can={can} plan={plan} period={period} setPeriod={setPeriod} onRecord={() => onModal({ type: 'measurement', item, period })} onTargets={() => onModal({ type: 'targets', item })} />
-      {plan.type === 'PDI' && <MetricTrend plan={plan} item={item} period={period} />}
+    {can(PERMISSIONS.VIEW_HISTORY, resource) && <nav className="detail-tabs" aria-label="Seções da iniciativa">
+      <a className={history ? '' : 'active'} aria-current={history ? undefined : 'page'} href={`#${itemUrl(plan, item.id)}`}>Visão geral</a>
+      <a className={history ? 'active' : ''} aria-current={history ? 'page' : undefined} href={`#${itemUrl(plan, item.id, 'historico')}`}>Histórico</a>
+    </nav>}
+    {history ? <History item={item} canComment={can(PERMISSIONS.COMMENT_HISTORY, resource)} onComment={(text) => changeItem(plan.id, item.id, (current) => ({ ...current, history: [...current.history, historyEntry(text, actor)] }), 'Observação adicionada.')} /> : <>
+      <IndicatorGlance plan={plan} item={item} period={period} onShowDetails={() => document.getElementById(indicatorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
       <div className="section-heading actions-heading"><h3>Ações estratégicas <span>{item.actions.length}</span></h3>{can(PERMISSIONS.MANAGE_ACTION, resource) && <Button icon="plus" onClick={() => onModal({ type: 'action', item })}>Adicionar ação</Button>}</div>
-      {item.actions.length ? <div className="actions-list">{item.actions.map((action) => <a key={action.id} className="action-overview-link" href={`#${itemUrl(plan, item.id, 'acao', undefined, action.id)}`}><span><small>Ação {action.code}</small><strong>{action.title}</strong></span><span>{actionProgress(action).percent}% <Icon name="chevron" size={14} /></span></a>)}</div> : <Empty title="Nenhuma ação cadastrada">As ações desta iniciativa aparecerão aqui.</Empty>}
+      {item.actions.length ? <div className="actions-list">{item.actions.map((action) => <ActionOverview key={action.id} plan={plan} item={item} action={action} canViewRisks={can(PERMISSIONS.VIEW_RISK, resource)} />)}</div> : <Empty title="Nenhuma ação cadastrada">As ações desta iniciativa aparecerão aqui.</Empty>}
+      <div id={indicatorId} className="section-heading indicator-section-title"><h3>Indicador e metas</h3></div>
+      <Indicators key={item.id} item={item} can={can} plan={plan} period={period} setPeriod={setPeriod} onRecord={() => onModal({ type: 'measurement', item, period })} onTargets={() => onModal({ type: 'targets', item })} />
     </>}
     <footer className="source-note"><Icon name="info" size={13} />{item.source}</footer>
   </ItemHeader>;
+}
+
+function IndicatorGlance({ plan, item, period, onShowDetails }) {
+  const value = (raw) => `${formatMetricValue(item, raw)}${raw == null || raw === '' || !item.metric.unit ? '' : ` ${item.metric.unit}`}`;
+  return <div className="indicator-glance">
+    <span className="indicator-glance-label">Indicador · {periodLabel(plan, item, period)}</span>
+    <span><strong>{value(metricResult(item, period))}</strong> <span className="indicator-glance-target">de meta {value(item.metric.targets[period])}</span></span>
+    <Badge tone={metricTone(item, period)}>{metricStatus(item, period)}</Badge>
+    <button type="button" className="text-button indicator-glance-link" onClick={onShowDetails}>Ver indicador e metas</button>
+  </div>;
+}
+
+function ActionOverview({ plan, item, action, canViewRisks }) {
+  const progress = actionProgress(action);
+  const riskCount = (item.risks || []).filter((risk) => risk.actionId === action.id).length;
+  return <article className="action-overview">
+    <a className="action-overview-link" href={`#${itemUrl(plan, item.id, 'acao', undefined, action.id)}`}>
+      <span className="action-overview-title"><small>Ação {action.code}</small><strong>{action.title}</strong></span>
+      <span className="action-overview-meta">{action.owner && <span>Responsável: {action.owner}</span>}{action.deadline && <span>Prazo: {formatDate(action.deadline)}</span>}<span>{progress.total ? `${progress.done} de ${progress.total} etapas concluídas` : 'Sem etapas ativas'}</span></span>
+      <Progress {...progress} compact text={`${progress.percent}%`} />
+    </a>
+    {canViewRisks && <a className="br-button tertiary small action-overview-risks" href={`#${itemUrl(plan, item.id, 'riscos', undefined, action.id)}`} aria-label={`Gerenciamento de riscos da ação ${action.code}: ${riskCount}`}><Icon name="shield" size={14} />Gerenciamento de riscos ({riskCount})</a>}
+  </article>;
 }
 
 function ActionDetail({ plan, item, action, actor, can, onModal, changeItem }) {
@@ -725,6 +752,9 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
   const description = item.metric.measurementMode === 'stages' ? 'Calculado automaticamente pela conclusão das etapas ativas.' : item.metric.measurementMode === 'delivery' ? 'Entrega acompanhada por situação e evidências.' : `Valor informado · ${item.metric.direction === 'down' ? 'Quanto menor, melhor' : 'Quanto maior, melhor'} · ${item.metric.periodicity === 'annual' ? 'Consolidado anual' : 'Resultado do ciclo'}`;
   const metricValue = (value) => `${formatMetricValue(item, value)}${value == null || value === '' || !item.metric.unit ? '' : ` ${item.metric.unit}`}`;
   const targetValue = (value) => `${value != null && value !== '' && item.metric.direction === 'down' ? '≤ ' : ''}${metricValue(value)}`;
+  // No PDI, a alternativa à tabela é o gráfico de meta × resultado; no PLS,
+  // a evolução do atingimento por ano.
+  const chartLabel = plan.type === 'PDI' ? 'Gráfico' : 'Evolução';
   return <section className="indicator" aria-label="Indicador e metas" style={{ '--axis-color': axisFor(plan, item)?.color || '#2f78a5' }}>
     <div className="section-heading indicator-heading">
       <div><h3>{item.metric.name}</h3><p>{description}</p></div>
@@ -746,7 +776,7 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
     <div className="section-heading annual-heading">
       <h3>{item.metric.periodicity === 'final' ? 'Meta e resultado do ciclo' : 'Metas e resultados por ano'}</h3>
       <div className="annual-tools">
-        {hasEvolution && <div className="view-switch" role="group" aria-label="Visualização dos resultados"><button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>Tabela</button><button type="button" aria-pressed={view === 'evolution'} onClick={() => setView('evolution')}>Evolução</button></div>}
+        {hasEvolution && <div className="view-switch" role="group" aria-label="Visualização dos resultados"><button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>Tabela</button><button type="button" aria-pressed={view === 'evolution'} onClick={() => setView('evolution')}>{chartLabel}</button></div>}
         {can(PERMISSIONS.EDIT_TARGET, resource) && <Button variant="tertiary" onClick={onTargets}>Editar metas</Button>}
       </div>
     </div>
@@ -762,7 +792,7 @@ function Indicators({ item, can, plan, period, setPeriod, onRecord, onTargets })
           <td><Badge tone={metricTone(item, value)}>{metricStatus(item, value)}</Badge></td>
         </tr>;
       })}</tbody>
-    </table></div> : <IndicatorEvolution item={item} plan={plan} period={period} setPeriod={setPeriod} />}
+    </table></div> : plan.type === 'PDI' ? <MetricTrend plan={plan} item={item} period={period} /> : <IndicatorEvolution item={item} plan={plan} period={period} setPeriod={setPeriod} />}
     <div className="record-footer"><p>{latestMeasurement(item, period) ? `Último registro: ${formatDate(latestMeasurement(item, period).at)}` : item.metric.measurementMode === 'stages' ? 'Resultado atualizado automaticamente pelas etapas.' : 'Nenhum resultado registrado para o período.'}</p>{canRecord && <Button variant="primary" icon="plus" onClick={onRecord}>Registrar resultado</Button>}</div>
     <div className="measurements"><h3>Registros do período</h3>{measurements.length ? measurements.map((entry) => <article className="measurement" key={entry.id}><div><strong>{metricValue(entry.value)}</strong><time>{formatDate(entry.at)}</time></div><p>{entry.note}</p>{entry.evidence && <a href={entry.evidence} target="_blank" rel="noreferrer">Abrir evidência <Icon name="arrow" size={13} /></a>}<Attachments itemId={item.id} resultadoId={entry.id} canManage={canAttachResult} /></article>) : <p className="hint">Nenhum registro manual para este período.</p>}</div>
   </section>;

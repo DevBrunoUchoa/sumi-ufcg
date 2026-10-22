@@ -167,21 +167,18 @@ test('matriz de riscos filtra e detalha os registros', async ({ page }) => {
   await expect(page.locator('.risk-card')).toContainText('Responsável:');
 });
 
-test('tabela e evolução mantêm o período selecionado e distinguem ausência de resultado', async ({ page }) => {
+test('tabela e gráfico mantêm o período selecionado e distinguem ausência de resultado', async ({ page }) => {
   await openPdi(page);
   await expect(page.getByRole('table')).toBeVisible();
   await page.getByRole('button', { name: 'Selecionar 2027', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Ano de referência' })).toHaveAttribute('value', '2027');
   await expect(page.locator('.current-result')).toContainText('Sem resultado');
-  await page.getByRole('button', { name: 'Evolução', exact: true }).click();
-  const evolution = page.getByRole('region', { name: 'Evolução anual do atingimento' });
-  await expect(evolution).toBeVisible();
-  await expect(evolution.getByRole('button', { name: 'Selecionar 2027: Sem resultado', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(evolution.getByRole('button', { name: 'Selecionar 2028: Sem meta definida', exact: true })).toBeVisible();
-  await evolution.getByRole('button', { name: 'Selecionar 2026: 25% de atingimento', exact: true }).click();
-  await expect(page.locator('.current-result strong')).toHaveText('20 %');
+  await page.getByRole('button', { name: 'Gráfico', exact: true }).click();
+  await expect(page.locator('.metric-trend svg')).toBeVisible();
   await page.getByRole('button', { name: 'Tabela', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Selecionar 2026', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Selecionar 2027', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Selecionar 2026', exact: true }).click();
+  await expect(page.locator('.current-result strong')).toHaveText('20 %');
   await page.reload();
   await expect(page.getByRole('combobox', { name: 'Ano de referência' })).toHaveAttribute('value', '2026');
 });

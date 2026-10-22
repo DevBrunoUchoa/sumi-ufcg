@@ -58,7 +58,8 @@
 .objective-indicators tbody th { width: 42%; }
 .metric-state { display: inline-block; font-size: var(--font-size-scale-base); color: var(--text-body); }
 .metric-state-done { font-weight: var(--font-weight-semi-bold); }
-.metric-trend.br-card { margin: var(--spacing-scale-3x) 0 var(--spacing-scale-5x); }
+.metric-trend { padding: var(--spacing-scale-2x) 0; }
+.metric-trend .hint { font-size: var(--font-size-scale-base); margin-bottom: var(--spacing-scale-2x); line-height: var(--font-line-height-medium); }
 .metric-trend svg { width: 100%; max-height: 310px; display: block; }
 .metric-trend svg text { fill: var(--text-muted); font-size: 12px; }
 .trend-grid { stroke: var(--border-soft); stroke-width: 1; }

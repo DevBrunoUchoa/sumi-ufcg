@@ -138,21 +138,13 @@ export function ItemForm({ plan, item, initialAxisId, initialObjectiveId, actor,
   </Modal>;
 }
 
-// Espelha PERMISSOES_CONCEDIVEIS_POR_EIXO em backend/src/modules/auth/auth.permissions.ts —
-// mesmos 9 códigos, mesma ordem. Mudar um lado sem o outro não quebra nada
-// (o backend valida e filtra por conta própria), só desalinha o rótulo.
-const PERMISSOES_POR_EIXO = [
-  { code: 'item.edit', label: 'Editar objetivos/iniciativas' },
-  { code: 'action.manage', label: 'Gerenciar ações' },
-  { code: 'stage.update', label: 'Atualizar etapas' },
-  { code: 'indicator.edit_target', label: 'Editar metas do indicador' },
-  { code: 'result.create', label: 'Registrar resultado' },
-  { code: 'risk.manage', label: 'Gerenciar riscos' },
-  { code: 'history.comment', label: 'Comentar no histórico' },
-  { code: 'item.submit', label: 'Enviar para validação' },
-  { code: 'item.review', label: 'Validar itens (aprovar/pedir correção)' },
-  { code: 'item.attach', label: 'Anexar documentos' },
-];
+// O que cada perfil recebe neste eixo ao marcar o usuário — espelha
+// PERMISSOES_GESTOR_EIXO e PERMISSOES_RESPONSAVEL_EIXO em
+// backend/src/modules/auth/auth.permissions.ts (Plano de Negócio, seção 1.1).
+const PERMISSOES_DO_PERFIL = {
+  gestor: ['Cadastrar e atualizar etapas', 'Registrar resultados', 'Gerenciar os riscos das etapas', 'Anexar documentos e comentar no histórico', 'Enviar para validação'],
+  responsavel: ['Acompanhar as iniciativas, os riscos e o histórico do eixo', 'Validar ou solicitar correção dos itens enviados', 'Anexar documentos e comentar no histórico'],
+};
 
 export function StructureForm({ plan, onClose, onSave }) {
   const [axes, setAxes] = useState(structuredClone(plan.axes));
@@ -166,18 +158,6 @@ export function StructureForm({ plan, onClose, onSave }) {
     return { ...axis, [field]: value, ...(color ? { color } : {}) };
   }));
   const toggleAxisUser = (id, field, userId) => setAxes((current) => current.map((axis) => axis.id !== id ? axis : { ...axis, [field]: (axis[field] || []).includes(userId) ? axis[field].filter((candidate) => candidate !== userId) : [...(axis[field] || []), userId] }));
-  const toggleAxisPermission = (axisId, userId, permissionCode) => setAxes((current) => current.map((axis) => {
-    if (axis.id !== axisId) return axis;
-    const grants = axis.customGrants || [];
-    const current_ = grants.find((grant) => grant.userId === userId)?.permissions || [];
-    const next = current_.includes(permissionCode) ? current_.filter((code) => code !== permissionCode) : [...current_, permissionCode];
-    const nextGrants = next.length === 0
-      ? grants.filter((grant) => grant.userId !== userId)
-      : grants.some((grant) => grant.userId === userId)
-        ? grants.map((grant) => grant.userId === userId ? { ...grant, permissions: next } : grant)
-        : [...grants, { userId, permissions: next }];
-    return { ...axis, customGrants: nextGrants };
-  }));
   const updateObjective = (id, field, value) => setObjectives((current) => current.map((objective) => objective.id === id ? { ...objective, [field]: value } : objective));
   const toggleObjectiveOds = (id, number) => setObjectives((current) => current.map((objective) => {
     if (objective.id !== id) return objective;
@@ -190,7 +170,9 @@ export function StructureForm({ plan, onClose, onSave }) {
     if (objectives.some((objective) => !objective.code.trim() || !objective.title.trim() || !axes.some((axis) => axis.id === objective.axisId))) return setError('Preencha código, título e eixo de todos os objetivos.');
     if (new Set(axes.map((axis) => normalize(axis.code))).size !== axes.length) return setError('Os códigos dos eixos não podem se repetir.');
     if (new Set(objectives.map((objective) => `${objective.axisId}:${normalize(objective.code)}`)).size !== objectives.length) return setError('Os códigos dos objetivos não podem se repetir no mesmo eixo.');
-    onSave({ axes, objectives });
+    // Permissões avulsas por usuário não são mais concedidas pela tela: salvar
+    // a estrutura limpa as que ainda existirem, para não sobrar acesso invisível.
+    onSave({ axes: axes.map((axis) => ({ ...axis, customGrants: [] })), objectives });
   }
   const removeAxis = (id) => {
     if (plan.items.some((item) => item.axisId === id)) return setError('Não é possível remover um eixo que possui itens cadastrados.');
@@ -202,37 +184,19 @@ export function StructureForm({ plan, onClose, onSave }) {
     setObjectives((current) => current.filter((objective) => objective.id !== id));
   };
   return <Modal title="Estrutura do planejamento" subtitle={plan.name} onClose={onClose} wide><form onSubmit={submit}><div className="form-body"><div className="section-heading"><div><h3>Eixos</h3><p className="hint">Defina a estrutura institucional e a unidade responsável.</p></div><Button icon="plus" onClick={() => setAxes((current) => [...current, { id: uid(), code: '', name: '', color: '#2f78a5', ownerUnit: '', managerIds: [], reviewerIds: [], customGrants: [] }])}>Adicionar eixo</Button></div><div className="structure-list">{axes.map((axis) => <div className="structure-row axis-structure" key={axis.id}><AxisIcon planType={plan.type} axis={axis} /><Input aria-label="Código do eixo" value={axis.code} onChange={(event) => updateAxis(axis.id, 'code', event.target.value)} placeholder="1" /><Input aria-label="Nome do eixo" value={axis.name} onChange={(event) => updateAxis(axis.id, 'name', event.target.value)} placeholder="Nome do eixo" /><Input aria-label="Unidade responsável pelo eixo" value={axis.ownerUnit} onChange={(event) => updateAxis(axis.id, 'ownerUnit', event.target.value)} placeholder="Unidade responsável" /><Input aria-label={`Cor do eixo ${axis.code || 'novo'}`} type="color" value={axis.color} onChange={(event) => updateAxis(axis.id, 'color', event.target.value)} /><button type="button" className="text-button danger" onClick={() => removeAxis(axis.id)}>Remover</button>
-    <AxisUserPicker label="Gestor do eixo" help="Pode cadastrar/atualizar etapas, registrar resultados e enviar para validação." usuarios={usuarios} selectedIds={axis.managerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} />
-    <AxisUserPicker label="Responsável pelo eixo" help="Valida ou solicita correção nos itens enviados deste eixo." usuarios={usuarios} selectedIds={axis.reviewerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} />
-    <AxisPermissionPicker usuarios={usuarios} customGrants={axis.customGrants || []} onTogglePermission={(userId, permissionCode) => toggleAxisPermission(axis.id, userId, permissionCode)} />
+    <AxisUserPicker label="Gestor do eixo" permissions={PERMISSOES_DO_PERFIL.gestor} usuarios={usuarios} selectedIds={axis.managerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} />
+    <AxisUserPicker label="Responsável pelo eixo" permissions={PERMISSOES_DO_PERFIL.responsavel} usuarios={usuarios} selectedIds={axis.reviewerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} />
   </div>)}</div><div className="section-divider" /><div className="section-heading"><div><h3>Objetivos</h3><p className="hint">Cada objetivo pertence a um eixo.</p></div><Button icon="plus" disabled={!axes.length} onClick={() => setObjectives((current) => [...current, { id: uid(), axisId: axes[0]?.id || '', code: '', title: '' }])}>Adicionar objetivo</Button></div><div className="structure-list">{objectives.map((objective) => <div className="structure-row objective-structure" key={objective.id}><Select aria-label="Eixo do objetivo" value={objective.axisId} onChange={(event) => updateObjective(objective.id, 'axisId', event.target.value)} options={[{ value: '', label: 'Selecione' }, ...axes.map((axis) => ({ value: axis.id, label: `${axis.code} · ${axis.name}` }))]} /><Input aria-label="Código do objetivo" value={objective.code} onChange={(event) => updateObjective(objective.id, 'code', event.target.value)} placeholder="1.1" /><Input aria-label="Nome do objetivo" value={objective.title} onChange={(event) => updateObjective(objective.id, 'title', event.target.value)} placeholder="Descrição do objetivo" /><button type="button" className="text-button danger" onClick={() => removeObjective(objective.id)}>Remover</button>
     <OdsPicker objective={objective} selected={odsForObjective({ ...plan, axes }, objective).map((icon) => icon.id)} documented={documentedOdsForObjective({ ...plan, axes }, objective)} onToggle={(number) => toggleObjectiveOds(objective.id, number)} onApplyDocumented={() => updateObjective(objective.id, 'ods', documentedOdsForObjective({ ...plan, axes }, objective).map((icon) => icon.id))} />
   </div>)}</div></div><FormEnd onClose={onClose} submit="Salvar estrutura" error={error} /></form></Modal>;
 }
 
-function AxisUserPicker({ label, help, usuarios, selectedIds, onToggle }) {
+function AxisUserPicker({ label, permissions, usuarios, selectedIds, onToggle }) {
   return <details className="axis-user-picker">
     <summary>{label} {selectedIds.length > 0 && <span className="picker-count">({selectedIds.length})</span>}</summary>
-    <p className="hint">{help}</p>
+    <p className="hint">Quem for marcado recebe, neste eixo, as permissões de {label.toLowerCase()}:</p>
+    <ul className="axis-profile-permissions">{permissions.map((permission) => <li key={permission}>{permission}</li>)}</ul>
     {!usuarios.length ? <p className="hint">Nenhum usuário disponível.</p> : <ul>{usuarios.map((usuario) => <li key={usuario.id}><label><input type="checkbox" checked={selectedIds.includes(usuario.id)} onChange={() => onToggle(usuario.id)} /> {usuario.nome} <small>{usuario.email}</small></label></li>)}</ul>}
-  </details>;
-}
-
-// Permissões avulsas por usuário neste eixo — complemento granular aos
-// pacotes fixos de Gestor/Responsável acima (ver PERMISSOES_POR_EIXO).
-function AxisPermissionPicker({ usuarios, customGrants, onTogglePermission }) {
-  const totalConcedido = customGrants.reduce((total, grant) => total + grant.permissions.length, 0);
-  const permissoesDe = (userId) => customGrants.find((grant) => grant.userId === userId)?.permissions || [];
-  return <details className="axis-user-picker">
-    <summary>Permissões específicas {totalConcedido > 0 && <span className="picker-count">({totalConcedido})</span>}</summary>
-    <p className="hint">Conceda permissões avulsas a um usuário neste eixo, sem torná-lo Gestor ou Responsável inteiro.</p>
-    {!usuarios.length ? <p className="hint">Nenhum usuário disponível.</p> : <ul className="permission-user-list">{usuarios.map((usuario) => {
-      const permissoes = permissoesDe(usuario.id);
-      return <li key={usuario.id}><details>
-        <summary>{usuario.nome} <small>{usuario.email}</small> {permissoes.length > 0 && <span className="picker-count">({permissoes.length})</span>}</summary>
-        <ul className="permission-checklist">{PERMISSOES_POR_EIXO.map((permissao) => <li key={permissao.code}><label><input type="checkbox" checked={permissoes.includes(permissao.code)} onChange={() => onTogglePermission(usuario.id, permissao.code)} /> {permissao.label}</label></li>)}</ul>
-      </details></li>;
-    })}</ul>}
   </details>;
 }
 

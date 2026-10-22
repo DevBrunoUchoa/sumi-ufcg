@@ -26,7 +26,7 @@ export const developmentSessions = Object.freeze({
     roles: [{ code: 'AXIS_CONTRIBUTOR', name: 'Gestor do Eixo' }],
     grants: [
       ...globalGrants(['plan.read_published', 'work_queue.read']),
-      ...['plan.read_internal', 'stage.update', 'result.create', 'risk.read', 'history.read', 'history.comment', 'item.submit', 'item.attach'].map((permission) => ({ permission, scope: { type: 'axis', planId: 'pdi', axisId: 'pdi-axis-8' } })),
+      ...['plan.read_internal', 'stage.update', 'result.create', 'risk.read', 'risk.manage', 'history.read', 'history.comment', 'item.submit', 'item.attach'].map((permission) => ({ permission, scope: { type: 'axis', planId: 'pdi', axisId: 'pdi-axis-8' } })),
     ],
   },
   axis_reviewer: {

@@ -34,20 +34,15 @@ export const TODAS_PERMISSOES_ADMIN = PERMISSION_CODES;
 /**
  * Concedidas por eixo a quem está em `managerIds` (Gestor do Eixo).
  *
- * EDIT_ITEM, MANAGE_ACTION, EDIT_TARGET e MANAGE_RISK foram incluídas para
- * que o Gestor consiga importar a planilha de monitoramento do seu próprio
- * eixo: a importação (importarPlanilha) delega toda a gravação para
- * salvarWorkspace, que exige essas permissões para criar/atualizar
- * iniciativas, ações, metas e riscos — sem elas o Gestor via a importação
- * falhar no meio do caminho com 403 em itens que a própria planilha precisa
- * tocar.
+ * O Plano de Negócio limita o Gestor ao nível da etapa: cadastrar e alterar
+ * etapas, informar resultados, justificar e anexar — e os riscos, que nascem
+ * das etapas. Objetivos, iniciativas, metas e ações (EDIT_ITEM, EDIT_TARGET,
+ * MANAGE_ACTION) ficam com o Administrador Estratégico, e com eles a
+ * importação de planilha, que exige EDIT_ITEM no eixo (importarPlanilha).
  */
 export const PERMISSOES_GESTOR_EIXO = Object.freeze([
   PERMISSOES.VIEW_INTERNAL_PLAN,
-  PERMISSOES.EDIT_ITEM,
-  PERMISSOES.MANAGE_ACTION,
   PERMISSOES.UPDATE_STAGE,
-  PERMISSOES.EDIT_TARGET,
   PERMISSOES.RECORD_RESULT,
   PERMISSOES.VIEW_RISK,
   PERMISSOES.MANAGE_RISK,

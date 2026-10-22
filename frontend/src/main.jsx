@@ -99,7 +99,7 @@ function OnboardingCard({ can }) {
       <ul className="onboarding-steps">
         <li><Icon name="layers" size={16} /><span><strong>Estrutura</strong> — dentro de um plano, cadastre eixos e objetivos, e defina quem é Gestor ou Responsável de cada eixo.</span></li>
         <li><Icon name="upload" size={16} /><span><strong>Importar planilha</strong> — traga o conteúdo de um eixo direto da planilha de monitoramento, sem redigitar.</span></li>
-        {can(PERMISSIONS.MANAGE_MODEL) && <li><Icon name="user" size={16} /><span><strong>Usuários</strong> — gerencie quem tem acesso e, por eixo, atribua permissões específicas sem precisar tornar alguém Gestor ou Responsável inteiro.</span></li>}
+        {can(PERMISSIONS.MANAGE_MODEL) && <li><Icon name="user" size={16} /><span><strong>Usuários</strong> — gerencie quem tem acesso ao SUMI. Em cada eixo, marque o Gestor e o Responsável na Estrutura do plano e as permissões do perfil vêm junto.</span></li>}
       </ul>
       <a className="text-button" href="#/ajuda">Ver guia completo de ajuda <Icon name="arrow" size={14} /></a>
     </div>
@@ -206,6 +206,7 @@ function App({ auth }) {
   };
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   const update = (mutate, message) => { setData((current) => { const next = structuredClone(current); mutate(next); return next; }); if (message) setToast(message); };
+  const setPlanStatus = (planId, status) => update((draft) => { draft.plans.find((candidate) => candidate.id === planId).status = status; }, status === 'published' ? 'Plano publicado na consulta pública.' : 'Plano voltou para rascunho.');
   const importPlanilha = async (planId, arquivo) => {
     try {
       const resumo = await importarPlanilha(planId, arquivo);
@@ -292,7 +293,7 @@ function App({ auth }) {
               : route.path === '/validacoes' && can(PERMISSIONS.VIEW_REVIEW_QUEUE) ? <ReviewQueue plans={visiblePlans} can={can} />
                 : route.path === '/modelos' && can(PERMISSIONS.MANAGE_MODEL) ? <Models templates={data.templates} onEdit={(template) => setModal({ type: 'template', template })} onUse={(template) => setModal({ type: 'plan', templateId: template.id })} />
                   : route.path === '/usuarios' && can(PERMISSIONS.MANAGE_MODEL) ? <UsersAdmin currentUserId={session.user?.id} />
-                    : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} authenticated={session.authenticated} route={route} onModal={setModal} changeItem={changeItem} onImportPlanilha={importPlanilha} />
+                    : plan ? <PlanPage key={plan.id} plan={plan} actor={actor} can={can} authenticated={session.authenticated} route={route} onModal={setModal} changeItem={changeItem} onImportPlanilha={importPlanilha} onPublish={setPlanStatus} />
                     // /plano/:id sem correspondência não distingue "não existe" de "existe mas sem acesso" —
                     // o backend já nem devolve planos sem acesso, então tratar como 404 evita confirmar a
                     // existência de um plano para quem não pode vê-lo. Itens de navegação conhecidos
@@ -412,20 +413,35 @@ function ImportacaoPlanilha({ planId, onImport }) {
   </div>;
 }
 
+// Publicar põe o plano na consulta pública (sem login); voltar a rascunho o
+// tira de lá. Planos novos nascem como rascunho.
+function PlanPublication({ plan, onPublish }) {
+  const [confirming, setConfirming] = useState(false);
+  const published = plan.status === 'published';
+  const label = published ? 'Voltar para rascunho' : 'Publicar plano';
+  return <>
+    <Button icon={published ? undefined : 'eye'} onClick={() => setConfirming(true)}>{label}</Button>
+    {confirming && <Modal title={published ? 'Voltar o plano para rascunho?' : 'Publicar o plano?'} subtitle={`${plan.shortName} ${plan.start}–${plan.end}`} onClose={() => setConfirming(false)}>
+      <div className="form-body"><p>{published ? 'O plano deixa de aparecer na consulta pública. Quem tem acesso interno continua vendo normalmente.' : 'O plano passa a aparecer na consulta pública, para qualquer pessoa, sem login.'}</p></div>
+      <div className="form-end"><Button onClick={() => setConfirming(false)}>Cancelar</Button><Button variant="primary" onClick={() => { onPublish(plan.id, published ? 'draft' : 'published'); setConfirming(false); }}>{label}</Button></div>
+    </Modal>}
+  </>;
+}
+
 function PlanPage(props) {
-  const { plan, can, onModal, onImportPlanilha, route } = props;
+  const { plan, can, onModal, onImportPlanilha, onPublish, route } = props;
   if (isDashboardRoute(route)) return plan.type === 'PDI' ? <PlanDashboard {...props} /> : <NotFoundPage onGoHome={() => navigate(planUrl(plan.id))} />;
   if (plan.type !== 'PDI') return <PlanExplorer {...props} />;
   return <PdiWorkspace {...props} actions={({ axis, objective, item }) => {
     if (item) return null;
     const canManagePlan = can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan));
-    // Gestor do Eixo não tem plan.manage (Estrutura é administrativa, cobre
-    // todos os eixos do plano), mas pode importar/exportar a planilha do
-    // próprio eixo — a mesma permissão (item.edit) que a importação exige
-    // no backend para gravar as iniciativas desse eixo.
+    // A importação de um eixo exige item.edit nesse eixo — a mesma permissão
+    // que o backend cobra para gravar as iniciativas da planilha. O Gestor do
+    // Eixo não a tem (vai só até a etapa), então na prática é do administrador.
     const canImportAxis = Boolean(axis) && can(PERMISSIONS.EDIT_ITEM, { planId: plan.id, axisId: axis.id });
     if (!canManagePlan && !canImportAxis) return null;
     return <div className="heading-actions">
+      {canManagePlan && !axis && <PlanPublication plan={plan} onPublish={onPublish} />}
       {canManagePlan && <Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button>}
       {(canManagePlan || canImportAxis) && <ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />}
       {canManagePlan && plan.objectives.some((entry) => !axis || entry.axisId === axis.id) && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item', axisId: axis?.id, objectiveId: objective?.id })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}
@@ -442,7 +458,7 @@ function PlanItemDetail({ plan, item, action, stage, view, route, actor, can, on
   return <AttachmentsProvider key={item.id} itemId={item.id} enabled={attachmentsEnabled}>{view === 'acao' && action ? <ActionDetail plan={plan} item={item} action={action} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : view === 'riscos' && action ? <ActionRiskDetail plan={plan} item={item} action={action} stage={stage} actor={actor} can={can} onModal={onModal} changeItem={changeItem} /> : <ItemDetail plan={plan} item={item} actor={actor} can={can} view={view} period={period} setPeriod={setPeriod} onModal={onModal} changeItem={changeItem} />}</AttachmentsProvider>;
 }
 
-function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPlanilha }) {
+function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPlanilha, onPublish }) {
   const [search, setSearch] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState('');
@@ -462,7 +478,7 @@ function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPl
     : plan.axes;
   const toggle = (key) => setExpanded((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const resetFilters = () => { setSearch(''); setOwner(''); setStatus(''); };
-  return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1>{!(plan.type === 'PDI' && plan.status === 'published') && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
+  return <div className="plan-page"><div className="plan-page-heading"><div><a className="back-link" href="#/planejamentos">← Todos os planejamentos</a><div className="title-line"><h1>{plan.shortName} <span>{plan.start}–{plan.end}</span></h1>{!(plan.type === 'PDI' && plan.status === 'published') && <Badge tone={plan.status === 'published' ? 'green' : 'neutral'}>{plan.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>}</div><p>{plan.name}</p></div>{can(PERMISSIONS.MANAGE_PLAN, resourceFor(plan)) && <div className="heading-actions"><PlanPublication plan={plan} onPublish={onPublish} /><Button icon="layers" onClick={() => onModal({ type: 'structure' })}>Estrutura</Button><ImportacaoPlanilha planId={plan.id} onImport={onImportPlanilha} />{plan.objectives.length > 0 && <Button variant="primary" icon="plus" onClick={() => onModal({ type: 'item' })}>Adicionar {plan.template.labels.item.toLowerCase()}</Button>}</div>}</div>
     <div className="explorer"><aside className="plan-tree" aria-label="Estrutura do plano"><div className="tree-heading"><h2>Estrutura do plano</h2><span>{plan.items.length} itens</span></div><Input id="input-search-medium" size="medium" type="search" aria-label="Buscar no plano" placeholder="Buscar no plano…" value={search} onChange={(event) => setSearch(event.target.value)} /><div className="tree-filters">
       <Select
         aria-label="Filtrar responsável"

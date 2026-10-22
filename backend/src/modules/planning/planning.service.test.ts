@@ -59,7 +59,7 @@ describe("salvarWorkspace com metadados JSONB", () => {
   });
 });
 
-describe("salvarWorkspace — criação de objetivo durante a importação (Gestor do Eixo)", () => {
+describe("salvarWorkspace — criação de objetivo durante a importação (item.edit no eixo)", () => {
   const planoId = "p1";
   const axisId = "a1";
   const now = new Date().toISOString();

@@ -197,7 +197,7 @@ describe("importarPlanilha — autorização por eixo", () => {
     expect(salvarWorkspaceMock).not.toHaveBeenCalled();
   });
 
-  it("permite quem tem item.edit escopado ao eixo da planilha (Gestor do Eixo)", async () => {
+  it("permite quem tem item.edit escopado ao eixo da planilha", async () => {
     const plano = planoBase({ items: [itemBase({ actions: [{ id: "ac1", code: "8.1.1.1", title: "Ação", owner: "", deadline: "", tasks: [] }] })] });
     montarWorkspaceMock.mockResolvedValueOnce({ version: 2, templates: [plano.template], plans: [plano] });
 

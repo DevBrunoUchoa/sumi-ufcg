@@ -25,7 +25,7 @@ function TreeNode({ label, code, title, href, active, expanded, onToggle, hasChi
   </li>;
 }
 
-export function PlanTree({ plan, context, open, onOpenChange }) {
+export function PlanTree({ plan, context, open }) {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState(() => new Set([context.objective?.id, context.item?.id].filter(Boolean)));
   const axis = context.axis;

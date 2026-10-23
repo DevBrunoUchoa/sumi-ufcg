@@ -23,7 +23,9 @@ test('menu de trabalho usa rótulos e pode ser recolhido; ações abrem por cont
   await page.reload();
   await expect(page.locator('.sumi-menu')).toBeVisible();
   await openPdi(page);
-  await expect(page.locator('.plan-tree')).toHaveCount(0);
+  // A árvore do eixo é opcional e começa fechada; o menu lateral segue como navegação padrão.
+  await expect(page.locator('.context-tree')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Abrir navegação do eixo' })).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.task-row')).toHaveCount(0);
   await expect(page.locator('.action-overview-link').first()).toBeVisible();
 });

@@ -1,11 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Icon } from '../ui.jsx';
+import { Icon } from '../ui.jsx';
 import { breadcrumbsFor } from './breadcrumbs.js';
 import { loginUrl } from '../auth/navigation.js';
 import { isDashboardRoute } from '../planning/navigation.js';
 import { useTranslation } from '../i18n/context.jsx';
 import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
 import { PlanTree } from '../planning/PlanTree.jsx';
+
+const TREE_PREFERENCE_KEY = 'sumi.ui.plan-tree-open';
+// Abaixo desta largura a árvore do eixo abre por cima do conteúdo, como diálogo.
+const WIDE_TREE_QUERY = '(min-width: 1200px)';
+
+function readTreePreference() {
+  try { return localStorage.getItem(TREE_PREFERENCE_KEY) === 'true'; } catch { return false; }
+}
+
+function saveTreePreference(open) {
+  try { localStorage.setItem(TREE_PREFERENCE_KEY, String(open)); } catch { /* preferência não essencial */ }
+}
 
 function Brand({ t }) {
   return <a className="sumi-brand" href="#/inicio" aria-label="SUMI início"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>SUMI<small>{t('shell.tagline')}</small></span></a>;
@@ -81,24 +93,26 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
   const menu = useRef(null);
   const previousRoute = useRef('');
   const returnMenuFocus = useRef(false);
-  const [treeOpen, setTreeOpen] = useState(() => contextualNavigation ? (() => { try { return localStorage.getItem('sumi.ui.plan-tree-open') !== 'false'; } catch { return true; } })() : false);
+  const treeButton = useRef(null);
+  const returnTreeFocus = useRef(false);
+  const [treeOpen, setTreeOpen] = useState(() => window.matchMedia(WIDE_TREE_QUERY).matches && readTreePreference());
   const crumbs = mode === 'public' && !plan ? [] : breadcrumbsFor(route, plan);
   const work = mode === 'work';
-  const mobileMenuOpen = work && menuOpen && !window.matchMedia('(min-width: 992px)').matches;
+  // Dentro de um eixo, a árvore aberta ocupa o lugar do menu lateral; ao sair do eixo o menu volta.
+  const treeVisible = work && Boolean(contextualNavigation) && treeOpen;
+  const menuVisible = work && menuOpen && !treeVisible;
+  const mobileMenuOpen = menuVisible && !window.matchMedia('(min-width: 992px)').matches;
+  const treeOverlay = treeVisible && !window.matchMedia(WIDE_TREE_QUERY).matches;
+  const modalOpen = mobileMenuOpen || treeOverlay;
   const locationKey = isDashboardRoute(route) ? route.path : `${route.path}|${['item', 'action', 'stage', 'view', 'tab', 'objective'].map((key) => route.query.get(key)).join('|')}`;
   const closeMenu = () => { returnMenuFocus.current = true; setMenuOpen(false); };
-  const toggleMenu = () => setMenuOpen((current) => {
-    const next = !current;
-    if (next) setTreeOpen(false);
-    return next;
-  });
-  const handleTreeOpenChange = (next) => {
-    setTreeOpen(next);
-    if (next) setMenuOpen(false);
+  const toggleMenu = () => {
+    if (menuVisible) { setMenuOpen(false); return; }
+    setMenuOpen(true);
+    if (treeVisible) { setTreeOpen(false); saveTreePreference(false); }
   };
-  useEffect(() => {
-    if (menuOpen && treeOpen) setMenuOpen(false);
-  }, [menuOpen, treeOpen]);
+  const toggleTree = () => { setTreeOpen(!treeOpen); saveTreePreference(!treeOpen); };
+  const closeTree = () => { returnTreeFocus.current = true; setTreeOpen(false); saveTreePreference(false); };
   useEffect(() => {
     if (!mobileMenuOpen && returnMenuFocus.current) {
       returnMenuFocus.current = false;
@@ -106,8 +120,20 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
     }
   }, [mobileMenuOpen]);
   useEffect(() => {
+    if (!treeVisible && returnTreeFocus.current) {
+      returnTreeFocus.current = false;
+      treeButton.current?.focus();
+    }
+  }, [treeVisible]);
+  useEffect(() => {
     const media = window.matchMedia('(min-width: 992px)');
     const resize = () => setMenuOpen(media.matches);
+    media.addEventListener('change', resize);
+    return () => media.removeEventListener('change', resize);
+  }, []);
+  useEffect(() => {
+    const media = window.matchMedia(WIDE_TREE_QUERY);
+    const resize = () => setTreeOpen(media.matches && readTreePreference());
     media.addEventListener('change', resize);
     return () => media.removeEventListener('change', resize);
   }, []);
@@ -126,6 +152,7 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
     if (loading || previousRoute.current === locationKey) return;
     // Release the modal menu before focusing content, which is inert while open.
     if (mobileMenuOpen) { setMenuOpen(false); return; }
+    if (treeOverlay) { setTreeOpen(false); return; }
     const initial = !previousRoute.current;
     previousRoute.current = locationKey;
     if (!window.matchMedia('(min-width: 992px)').matches) setMenuOpen(false);
@@ -137,9 +164,9 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
       target?.setAttribute('tabindex', '-1');
       target?.focus({ preventScroll: true });
     }
-  }, [locationKey, loading, mobileMenuOpen]);
+  }, [locationKey, loading, mobileMenuOpen, treeOverlay]);
   useEffect(() => {
-    if (!work || !menuOpen || window.matchMedia('(min-width: 992px)').matches) return;
+    if (!menuVisible || window.matchMedia('(min-width: 992px)').matches) return;
     const priorOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     closeButton.current?.focus();
@@ -154,38 +181,47 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
     };
     document.addEventListener('keydown', keyboard);
     return () => { document.body.style.overflow = priorOverflow; document.removeEventListener('keydown', keyboard); };
-  }, [work, menuOpen]);
+  }, [menuVisible]);
+  useEffect(() => {
+    if (!treeOverlay) return;
+    const tree = document.getElementById('context-tree-navigation');
+    const priorOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    tree?.querySelector('.context-tree-close')?.focus();
+    const keyboard = (event) => {
+      if (event.key === 'Escape') { returnTreeFocus.current = true; setTreeOpen(false); saveTreePreference(false); }
+      if (event.key === 'Tab' && tree) {
+        const controls = [...tree.querySelectorAll('a[href], button')];
+        const first = controls[0]; const last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', keyboard);
+    return () => { document.body.style.overflow = priorOverflow; document.removeEventListener('keydown', keyboard); };
+  }, [treeOverlay]);
   async function leave() {
     setLogoutState('loading');
     try { await onLogout(); setLogoutState('idle'); } catch { setLogoutState('error'); }
   }
   return (
-    <div className={`template-base sumi-shell sumi-${mode} ${work && menuOpen ? 'menu-open' : ''} ${contextualNavigation && treeOpen ? 'context-tree-open' : ''}`}>
-      <nav className="sumi-skiplinks" aria-label={t('shell.skip.ariaLabel')} inert={mobileMenuOpen}>
+    <div className={`template-base sumi-shell sumi-${mode} ${menuVisible ? 'menu-open' : ''}`}>
+      <nav className="sumi-skiplinks" aria-label={t('shell.skip.ariaLabel')} inert={modalOpen}>
         <a href="#main-content" onClick={(event) => { event.preventDefault(); document.getElementById('main-content')?.focus(); }}>{t('shell.skip.content')}</a>
         <a href="#footer" onClick={(event) => { event.preventDefault(); const footer = document.getElementById('footer'); footer.tabIndex = -1; footer.focus(); }}>{t('shell.skip.footer')}</a>
       </nav>
       <OrgBar t={t} />
-      <header className="br-header compact sumi-header" inert={mobileMenuOpen}>
+      <header className="br-header compact sumi-header" inert={modalOpen}>
         {work && contextualNavigation && (
-        <Button
-        className="plan-tree-header-toggle"
-        variant="tertiary"
-        aria-label={treeOpen ? 'Recolher árvore de navegação' : 'Abrir árvore de navegação'}
-        aria-expanded={treeOpen}
-        aria-controls="plan-tree-navigation"
-        onClick={() => handleTreeOpenChange(!treeOpen)}
-        >
-        <span className="plan-tree-header-chevron" data-open={treeOpen} aria-hidden="true">
-          <Icon name="chevron" size={14} />
-        </span>
-        <span>Navegação</span>
-        </Button>
+          <button ref={treeButton} type="button" className="br-button tertiary small context-tree-button" aria-label={treeOpen ? t('shell.tree.collapse') : t('shell.tree.expand')} aria-expanded={treeOpen} aria-controls="context-tree-navigation" onClick={toggleTree}>
+            <span className="context-tree-button-chevron" data-open={treeOpen} aria-hidden="true"><Icon name="chevron" size={14} /></span>
+            <span className="context-tree-button-label">{t('shell.tree.button')}</span>
+          </button>
         )}
         <div className="sumi-container">
           <div className="header-top">
             <div className="header-logo">
-              {work && <button ref={menuButton} className="br-button circle small" type="button" aria-label={menuOpen ? t('shell.menu.collapse') : t('shell.menu.expand')} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={toggleMenu}><Icon name="menu" /></button>}
+              {work && <button ref={menuButton} className="br-button circle small" type="button" aria-label={menuVisible ? t('shell.menu.collapse') : t('shell.menu.expand')} aria-expanded={menuVisible} aria-controls="main-navigation" onClick={toggleMenu}><Icon name="menu" /></button>}
               <Brand t={t} />
             </div>
             <div className="header-actions">
@@ -222,7 +258,7 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
       </header>
       {logoutState === 'error' && <p role="alert" className="sumi-session-error">{t('shell.account.signOutError')}</p>}
       <div className="sumi-body">
-        {work && menuOpen && <>
+        {menuVisible && <>
           <button className="sumi-menu-backdrop" aria-label={t('shell.menu.backdropClose')} tabIndex={-1} onClick={closeMenu} />
           <aside className="br-menu push active sumi-menu" id="main-navigation" ref={menu} role={mobileMenuOpen ? 'dialog' : undefined} aria-modal={mobileMenuOpen ? 'true' : undefined} aria-label={mobileMenuOpen ? t('shell.menu.dialogLabel') : undefined}>
             <div className="menu-container">
@@ -252,8 +288,11 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
             </div>
           </aside>
         </>}
-        {work && contextualNavigation && <PlanTree {...contextualNavigation} open={treeOpen} onOpenChange={handleTreeOpenChange} />}
-        <main id="main-content" tabIndex={-1} aria-busy={loading} inert={mobileMenuOpen}>
+        {treeVisible && <>
+          {treeOverlay && <button className="context-tree-backdrop" aria-label={t('shell.tree.close')} tabIndex={-1} onClick={closeTree} />}
+          <PlanTree key={contextualNavigation.context.axis.id} {...contextualNavigation} overlay={treeOverlay} onClose={closeTree} />
+        </>}
+        <main id="main-content" tabIndex={-1} aria-busy={loading} inert={modalOpen}>
           <div className="sumi-content">
             {!!crumbs.length && (
               <nav className="br-breadcrumb planning-breadcrumb" aria-label={plan ? t('shell.breadcrumb.hierarchy') : t('shell.breadcrumb.location')}>
@@ -271,7 +310,7 @@ export function AppShell({ route, plan, session, mode, links = [], contextualNav
           </div>
         </main>
       </div>
-      <Footer inert={mobileMenuOpen} work={work} t={t} />
+      <Footer inert={modalOpen} work={work} t={t} />
     </div>
   );
 }

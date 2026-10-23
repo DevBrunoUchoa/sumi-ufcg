@@ -129,8 +129,13 @@ test('estrutura permite sobrescrever e remover ODS, mantendo a escolha após rec
     await route.fulfill({ json: workspace });
   });
   // A Estrutura fica só no hub do plano; os ODS são conferidos na página do objetivo.
+  // Os objetivos (e seus ODS) aparecem ao editar o eixo a que pertencem.
   const objectivePage = '/#/plano/pdi/eixo/pdi-axis-8/objetivo/pdi-objective-8-2';
-  const openStructure = async () => { await page.goto('/#/plano/pdi'); await page.getByRole('button', { name: 'Estrutura', exact: true }).click(); };
+  const openStructure = async () => {
+    await page.goto('/#/plano/pdi');
+    await page.getByRole('button', { name: 'Estrutura', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Editar eixo 8', exact: true }).click();
+  };
   await openStructure();
   const picker = page.getByRole('dialog').locator('.ods-picker').filter({ hasText: 'ODS vinculadas ao objetivo 8.2' });
   await picker.locator('summary').click();

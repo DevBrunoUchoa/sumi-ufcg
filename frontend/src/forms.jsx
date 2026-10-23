@@ -165,12 +165,25 @@ export function StructureForm({ plan, onClose, onSave }) {
     const current_ = odsForObjective({ ...plan, axes }, objective).map((icon) => icon.id);
     return { ...objective, ods: current_.includes(number) ? current_.filter((n) => n !== number) : [...current_, number].sort((a, b) => a - b) };
   }));
+  // Abre os eixos com pendência, para que o campo a corrigir fique visível.
+  const reject = (message, axisIds) => {
+    setEditingAxes((current) => new Set([...current, ...axisIds]));
+    setError(message);
+  };
+  const repeated = (list, key) => {
+    const keys = list.map(key);
+    return list.filter((_, index) => keys.indexOf(keys[index]) !== keys.lastIndexOf(keys[index]));
+  };
   function submit(event) {
     event.preventDefault();
-    if (axes.some((axis) => !axis.code.trim() || !axis.name.trim() || !axis.ownerUnit.trim())) return setError('Preencha código, nome e unidade responsável de todos os eixos.');
-    if (objectives.some((objective) => !objective.code.trim() || !objective.title.trim() || !axes.some((axis) => axis.id === objective.axisId))) return setError('Preencha código, título e eixo de todos os objetivos.');
-    if (new Set(axes.map((axis) => normalize(axis.code))).size !== axes.length) return setError('Os códigos dos eixos não podem se repetir.');
-    if (new Set(objectives.map((objective) => `${objective.axisId}:${normalize(objective.code)}`)).size !== objectives.length) return setError('Os códigos dos objetivos não podem se repetir no mesmo eixo.');
+    const incompleteAxes = axes.filter((axis) => !axis.code.trim() || !axis.name.trim() || !axis.ownerUnit.trim());
+    if (incompleteAxes.length) return reject('Preencha código, nome e unidade responsável de todos os eixos.', incompleteAxes.map((axis) => axis.id));
+    const incompleteObjectives = objectives.filter((objective) => !objective.code.trim() || !objective.title.trim());
+    if (incompleteObjectives.length) return reject('Preencha código e título de todos os objetivos.', incompleteObjectives.map((objective) => objective.axisId));
+    const repeatedAxes = repeated(axes, (axis) => normalize(axis.code));
+    if (repeatedAxes.length) return reject('Os códigos dos eixos não podem se repetir.', repeatedAxes.map((axis) => axis.id));
+    const repeatedObjectives = repeated(objectives, (objective) => `${objective.axisId}:${normalize(objective.code)}`);
+    if (repeatedObjectives.length) return reject('Os códigos dos objetivos não podem se repetir no mesmo eixo.', repeatedObjectives.map((objective) => objective.axisId));
     // Permissões avulsas por usuário não são mais concedidas pela tela: salvar
     // a estrutura limpa as que ainda existirem, para não sobrar acesso invisível.
     onSave({ axes: axes.map((axis) => ({ ...axis, customGrants: [] })), objectives });
@@ -219,10 +232,10 @@ export function StructureForm({ plan, onClose, onSave }) {
               {axis.managerIds?.length ? ` · ${axis.managerIds.length} gestor(es)` : ''}
             </p>
             <div className="axis-actions">
-              <Button variant="tertiary" icon="edit" onClick={() => toggleEditing(axis.id)}>
+              <Button variant="tertiary" icon="edit" aria-label={`${editing ? 'Concluir edição do eixo' : 'Editar eixo'} ${axis.code || 'novo'}`} onClick={() => toggleEditing(axis.id)}>
                 {editing ? 'Concluir edição' : 'Editar eixo'}
               </Button>
-              <Button variant="tertiary" icon="close" onClick={() => removeAxis(axis.id)}>
+              <Button variant="tertiary" icon="close" className="danger" aria-label={`Excluir eixo ${axis.code || 'novo'}`} onClick={() => removeAxis(axis.id)}>
                 Excluir eixo
               </Button>
             </div>
@@ -231,7 +244,7 @@ export function StructureForm({ plan, onClose, onSave }) {
         {editing && <div className="axis-editor">
           <div className="form-grid axis-fields"><Field label="Código do eixo"><Input aria-label="Código do eixo" value={axis.code} onChange={(event) => updateAxis(axis.id, 'code', event.target.value)} placeholder="1" /></Field><Field label="Nome do eixo"><Input aria-label="Nome do eixo" value={axis.name} onChange={(event) => updateAxis(axis.id, 'name', event.target.value)} placeholder="Nome do eixo" /></Field><Field label="Unidade responsável"><Input aria-label="Unidade responsável pelo eixo" value={axis.ownerUnit} onChange={(event) => updateAxis(axis.id, 'ownerUnit', event.target.value)} placeholder="Unidade responsável" /></Field><Field label="Cor"><Input aria-label={`Cor do eixo ${axis.code || 'novo'}`} type="color" value={axis.color} onChange={(event) => updateAxis(axis.id, 'color', event.target.value)} /></Field></div>
           <div className="axis-user-pickers"><AxisUserPicker label="Gestor do eixo" permissions={PERMISSOES_DO_PERFIL.gestor} usuarios={usuarios} selectedIds={axis.managerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} /><AxisUserPicker label="Responsável pelo eixo" permissions={PERMISSOES_DO_PERFIL.responsavel} usuarios={usuarios} selectedIds={axis.reviewerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} /></div>
-          <div className="axis-objectives-heading"><div><h5>Objetivos do eixo</h5></div><Button icon="plus" onClick={() => addObjective(axis.id)}>Adicionar objetivo</Button></div>
+          <div className="axis-objectives-heading"><div><h5>Objetivos do eixo</h5></div><Button icon="plus" aria-label={`Adicionar objetivo ao eixo ${axis.code || 'novo'}`} onClick={() => addObjective(axis.id)}>Adicionar objetivo</Button></div>
           {!axisObjectives.length && <p className="hint">Nenhum objetivo cadastrado neste eixo.</p>}
           <div className="structure-list objective-list">{axisObjectives.map((objective) => <div className="objective-structure" key={objective.id}><div className="form-grid code-title"><Field label="Código"><Input aria-label="Código do objetivo" value={objective.code} onChange={(event) => updateObjective(objective.id, 'code', event.target.value)} placeholder={`${axis.code || '1'}.1`} /></Field><Field label="Objetivo"><Input aria-label="Nome do objetivo" value={objective.title} onChange={(event) => updateObjective(objective.id, 'title', event.target.value)} placeholder="Descrição do objetivo" /></Field></div><button type="button" className="text-button danger" onClick={() => removeObjective(objective.id)}>Remover objetivo</button><OdsPicker objective={objective} selected={odsForObjective({ ...plan, axes }, objective).map((icon) => icon.id)} documented={documentedOdsForObjective({ ...plan, axes }, objective)} onToggle={(number) => toggleObjectiveOds(objective.id, number)} onApplyDocumented={() => updateObjective(objective.id, 'ods', documentedOdsForObjective({ ...plan, axes }, objective).map((icon) => icon.id))} /></div>)}</div>
         </div>}

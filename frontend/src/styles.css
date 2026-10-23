@@ -981,6 +981,7 @@ br-select::part(option):hover {
 .muted { color: var(--text-muted); }
 .hint { font-size: var(--font-size-scale-base); color: var(--text-muted); line-height: var(--font-line-height-high); }
 .danger { color: var(--danger); }
+br-button.danger::part(button), html[data-theme="dark"] br-button.danger[emphasis]::part(button) { color: var(--danger); }
 .modal { border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--elevation-layer-4); width: min(544px, calc(100vw - 32px)); max-width: calc(100vw - 32px); min-width: 0; max-height: calc(100dvh - 48px); padding: 0; color: var(--text-body); position: fixed; z-index: var(--z-index-layer-4); margin: auto; overflow-y: auto; overscroll-behavior: contain; }
 .code-input { display: flex; align-items: center; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface-soft); overflow: hidden; }
 .code-input > span { padding: var(--spacing-scale-base) 0 var(--spacing-scale-base) var(--spacing-scale-base); color: var(--primary-strong); font-size: var(--font-size-scale-base); white-space: nowrap; }

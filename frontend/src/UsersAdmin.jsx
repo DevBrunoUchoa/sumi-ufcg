@@ -2,6 +2,41 @@ import { useEffect, useState } from 'react';
 import { Badge, Button, Empty, Field, Icon, Input } from './ui.jsx';
 import { atualizarUsuario, criarUsuario, listarUsuarios, removerUsuario } from './admin-client.js';
 
+// Espelha os pacotes fixos definidos em backend/auth.permissions.ts — texto
+// de referência, não editável aqui. Gestor/Responsável são atribuídos por
+// eixo na Estrutura de cada planejamento; os pacotes em si (o que cada um
+// pode fazer) são fixos no código, por decisão do Plano de Negócio.
+const PAPEIS = [
+  {
+    nome: 'Administrador Estratégico',
+    resumo: 'Acesso total ao sistema.',
+    permissoes: ['Gerenciar usuários e seus acessos', 'Gerenciar modelos de plano (PDI/PLS)', 'Editar a estrutura de qualquer plano (eixos, objetivos, Gestor/Responsável)', 'Publicar ou voltar um plano para rascunho', 'Editar objetivos, iniciativas, metas e ações de qualquer eixo', 'Todas as permissões de Gestor e Responsável, em qualquer eixo'],
+  },
+  {
+    nome: 'Gestor do Eixo',
+    resumo: 'Atribuído por eixo, na Estrutura do plano. Atua até o nível da etapa.',
+    permissoes: ['Ver o plano internamente (inclusive rascunhos)', 'Cadastrar e atualizar etapas', 'Registrar resultados dos indicadores', 'Ver e gerenciar riscos', 'Ver e comentar no histórico', 'Enviar iniciativas para validação', 'Anexar documentos'],
+  },
+  {
+    nome: 'Responsável pelo Eixo',
+    resumo: 'Atribuído por eixo, na Estrutura do plano. Valida o que o Gestor envia.',
+    permissoes: ['Ver o plano internamente (inclusive rascunhos)', 'Ver riscos', 'Ver e comentar no histórico', 'Validar ou solicitar correção nas iniciativas enviadas', 'Anexar documentos'],
+  },
+];
+
+function PapeisReferencia() {
+  return <section className="section-heading pdi-section-heading" aria-labelledby="papeis-title" style={{ display: 'block', marginTop: 'var(--spacing-scale-5x)' }}>
+    <div><h2 id="papeis-title">Papéis e permissões</h2><p className="hint">O que cada papel pode fazer no SUMI. Gestor e Responsável são atribuídos por eixo, na Estrutura de cada plano — aqui é só referência.</p></div>
+    <div className="models-grid" style={{ marginTop: 'var(--spacing-scale-3x)' }}>
+      {PAPEIS.map((papel) => <article className="model-card" key={papel.nome}>
+        <h2>{papel.nome}</h2>
+        <p>{papel.resumo}</p>
+        <ul className="papel-permissoes-list">{papel.permissoes.map((item) => <li key={item}><Icon name="check" size={13} />{item}</li>)}</ul>
+      </article>)}
+    </div>
+  </section>;
+}
+
 // Tela restrita ao Administrador Estratégico (model.manage) — Plano de
 // Negócio SUMI, módulo de gerenciamento de usuários. Atribuir alguém como
 // Gestor/Responsável de um eixo é feito na Estrutura do planejamento
@@ -65,11 +100,14 @@ export function UsersAdmin({ currentUserId }) {
     }
   }
 
+  const totalUsuarios = state.usuarios.length;
+  const totalAdmins = state.usuarios.filter((usuario) => usuario.papelAdmin).length;
   return <div className="page">
     <div className="page-heading">
       <div><p className="eyebrow">CONFIGURAÇÃO</p><h1>Usuários</h1><p>Contas com acesso ao SUMI. A atribuição de Gestor/Responsável por eixo é feita na estrutura de cada planejamento.</p></div>
       {!creating && <Button icon="plus" variant="primary" onClick={() => setCreating(true)}>Novo usuário</Button>}
     </div>
+    {state.status === 'ready' && <div className="overview-grid"><article><span>Usuários cadastrados</span><strong>{totalUsuarios}</strong></article><article><span>Administradores</span><strong>{totalAdmins}</strong><small>Acesso total ao sistema</small></article></div>}
     {error && <p role="alert" className="form-error">{error}</p>}
     {creating && <form className="user-create-form" onSubmit={handleCreate}>
       <div className="form-grid three">
@@ -107,5 +145,6 @@ export function UsersAdmin({ currentUserId }) {
             </td>
           </tr>)}</tbody>
         </table></div>}
+    <PapeisReferencia />
   </div>;
 }

@@ -962,6 +962,9 @@ br-select::part(option):hover {
 .model-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--elevation-layer-1); padding: var(--spacing-scale-3x); display: flex; flex-direction: column; min-width: 0; }
 .model-card h2 { font-size: var(--font-size-scale-up-03); font-weight: var(--font-weight-semi-bold); margin: var(--spacing-scale-2xh) 0 var(--spacing-scale-base); }
 .model-card > p { color: var(--text-muted); font-size: var(--font-size-scale-base); min-height: 40px; line-height: var(--font-line-height-high); }
+.papel-permissoes-list { display: grid; gap: var(--spacing-scale-base); margin-top: var(--spacing-scale-2x); }
+.papel-permissoes-list li { display: flex; align-items: flex-start; gap: var(--spacing-scale-base); font-size: var(--font-size-scale-base); color: var(--text-body); }
+.papel-permissoes-list li svg { flex-shrink: 0; margin-top: 3px; color: var(--success); }
 .model-tree { margin: var(--spacing-scale-3x) 0; padding: var(--spacing-scale-2x); background: var(--surface-soft); border-radius: 4px; }
 .model-tree > div { display: flex; gap: var(--spacing-scale-base); align-items: center; padding: var(--spacing-scale-base) 0; font-size: var(--font-size-scale-base); color: var(--text-muted); }
 .model-tree > div > span { font-size: var(--font-size-scale-base); background: var(--primary-soft); color: var(--text-muted); padding: var(--spacing-scale-half); border-radius: 3px; margin-left: auto; }

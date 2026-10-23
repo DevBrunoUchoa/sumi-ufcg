@@ -53,6 +53,7 @@
 .sumi-menu .menu-title { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-semi-bold); }
 .sumi-menu .menu-body { padding: var(--spacing-scale-base) 0; }
 .sumi-menu .menu-item { display: flex; align-items: center; gap: var(--spacing-scale-baseh); border-bottom: 0; min-height: 48px; padding: var(--spacing-scale-baseh) var(--spacing-scale-2x); }
+.sumi-menu .menu-group > .menu-item { color: var(--interactive); }
 .sumi-menu .menu-item.active { background: var(--primary-strong); color: var(--pure-0); --interactive: var(--pure-0); border-left: 4px solid var(--primary); padding-left: calc(var(--spacing-scale-2x) - 4px); font-weight: var(--font-weight-semi-bold); }
 .sumi-menu .menu-item.active :is(.icon, .content) { color: var(--pure-0); }
 .sumi-menu .menu-footer { padding: var(--spacing-scale-3x) var(--spacing-scale-2x); border-top: 1px solid var(--border-soft); }

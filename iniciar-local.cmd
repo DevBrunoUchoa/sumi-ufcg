@@ -11,5 +11,5 @@ set "TMP=%TEMP%"
 set "XDG_CACHE_HOME=%ROOT%.tools\cache"
 set "COREPACK_HOME=%ROOT%.tools\corepack"
 cd /d "%ROOT%"
-pnpm build || exit /b 1
-pnpm start
+call pnpm build || exit /b 1
+call pnpm start

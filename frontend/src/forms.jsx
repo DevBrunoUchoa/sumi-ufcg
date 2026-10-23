@@ -151,6 +151,7 @@ export function StructureForm({ plan, onClose, onSave }) {
   const [objectives, setObjectives] = useState(structuredClone(plan.objectives));
   const [error, setError] = useState('');
   const [usuarios, setUsuarios] = useState([]);
+  const [editingAxes, setEditingAxes] = useState(() => new Set());
   useEffect(() => { listarUsuarios().then(setUsuarios).catch(() => setUsuarios([])); }, []);
   const updateAxis = (id, field, value) => setAxes((current) => current.map((axis) => {
     if (axis.id !== id) return axis;
@@ -178,17 +179,65 @@ export function StructureForm({ plan, onClose, onSave }) {
     if (plan.items.some((item) => item.axisId === id)) return setError('Não é possível remover um eixo que possui itens cadastrados.');
     setAxes((current) => current.filter((axis) => axis.id !== id));
     setObjectives((current) => current.filter((objective) => objective.axisId !== id));
+    setEditingAxes((current) => { const next = new Set(current); next.delete(id); return next; });
   };
   const removeObjective = (id) => {
     if (plan.items.some((item) => item.objectiveId === id)) return setError('Não é possível remover um objetivo que possui itens cadastrados.');
     setObjectives((current) => current.filter((objective) => objective.id !== id));
   };
-  return <Modal title="Estrutura do planejamento" subtitle={plan.name} onClose={onClose} wide><form onSubmit={submit}><div className="form-body"><div className="section-heading"><div><h3>Eixos</h3><p className="hint">Defina a estrutura institucional e a unidade responsável.</p></div><Button icon="plus" onClick={() => setAxes((current) => [...current, { id: uid(), code: '', name: '', color: '#2f78a5', ownerUnit: '', managerIds: [], reviewerIds: [], customGrants: [] }])}>Adicionar eixo</Button></div><div className="structure-list">{axes.map((axis) => <div className="structure-row axis-structure" key={axis.id}><AxisIcon planType={plan.type} axis={axis} /><Input aria-label="Código do eixo" value={axis.code} onChange={(event) => updateAxis(axis.id, 'code', event.target.value)} placeholder="1" /><Input aria-label="Nome do eixo" value={axis.name} onChange={(event) => updateAxis(axis.id, 'name', event.target.value)} placeholder="Nome do eixo" /><Input aria-label="Unidade responsável pelo eixo" value={axis.ownerUnit} onChange={(event) => updateAxis(axis.id, 'ownerUnit', event.target.value)} placeholder="Unidade responsável" /><Input aria-label={`Cor do eixo ${axis.code || 'novo'}`} type="color" value={axis.color} onChange={(event) => updateAxis(axis.id, 'color', event.target.value)} /><button type="button" className="text-button danger" onClick={() => removeAxis(axis.id)}>Remover</button>
-    <AxisUserPicker label="Gestor do eixo" permissions={PERMISSOES_DO_PERFIL.gestor} usuarios={usuarios} selectedIds={axis.managerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} />
-    <AxisUserPicker label="Responsável pelo eixo" permissions={PERMISSOES_DO_PERFIL.responsavel} usuarios={usuarios} selectedIds={axis.reviewerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} />
-  </div>)}</div><div className="section-divider" /><div className="section-heading"><div><h3>Objetivos</h3><p className="hint">Cada objetivo pertence a um eixo.</p></div><Button icon="plus" disabled={!axes.length} onClick={() => setObjectives((current) => [...current, { id: uid(), axisId: axes[0]?.id || '', code: '', title: '' }])}>Adicionar objetivo</Button></div><div className="structure-list">{objectives.map((objective) => <div className="structure-row objective-structure" key={objective.id}><Select aria-label="Eixo do objetivo" value={objective.axisId} onChange={(event) => updateObjective(objective.id, 'axisId', event.target.value)} options={[{ value: '', label: 'Selecione' }, ...axes.map((axis) => ({ value: axis.id, label: `${axis.code} · ${axis.name}` }))]} /><Input aria-label="Código do objetivo" value={objective.code} onChange={(event) => updateObjective(objective.id, 'code', event.target.value)} placeholder="1.1" /><Input aria-label="Nome do objetivo" value={objective.title} onChange={(event) => updateObjective(objective.id, 'title', event.target.value)} placeholder="Descrição do objetivo" /><button type="button" className="text-button danger" onClick={() => removeObjective(objective.id)}>Remover</button>
-    <OdsPicker objective={objective} selected={odsForObjective({ ...plan, axes }, objective).map((icon) => icon.id)} documented={documentedOdsForObjective({ ...plan, axes }, objective)} onToggle={(number) => toggleObjectiveOds(objective.id, number)} onApplyDocumented={() => updateObjective(objective.id, 'ods', documentedOdsForObjective({ ...plan, axes }, objective).map((icon) => icon.id))} />
-  </div>)}</div></div><FormEnd onClose={onClose} submit="Salvar estrutura" error={error} /></form></Modal>;
+  const addAxis = () => {
+    const axis = { id: uid(), code: '', name: '', color: '#2f78a5', ownerUnit: '', managerIds: [], reviewerIds: [], customGrants: [] };
+    setAxes((current) => [...current, axis]);
+    setEditingAxes((current) => new Set(current).add(axis.id));
+  };
+  const addObjective = (axisId) => setObjectives((current) => [...current, { id: uid(), axisId, code: '', title: '' }]);
+  const toggleEditing = (id) => setEditingAxes((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  return <Modal title="Estrutura do planejamento" subtitle={plan.name} onClose={onClose} wide><form onSubmit={submit}><div className="form-body">
+    <div className="section-heading"><div><h3>Eixos</h3><p className="hint">Organize os objetivos dentro de cada eixo para facilitar o acompanhamento.</p></div><Button icon="plus" onClick={addAxis}>Adicionar eixo</Button></div>
+    {!axes.length && <p className="hint">Nenhum eixo cadastrado. Adicione o primeiro eixo para começar.</p>}
+    <div className="structure-list axis-list">{axes.map((axis) => {
+      const axisObjectives = objectives.filter((objective) => objective.axisId === axis.id);
+      const editing = editingAxes.has(axis.id);
+      return <section className={`axis-structure ${editing ? 'is-editing' : ''}`} key={axis.id} aria-labelledby={`axis-title-${axis.id}`}>
+        <div className="axis-summary">
+          <div className="axis-summary-head">
+            <AxisIcon planType={plan.type} axis={axis} />
+            <h4 id={`axis-title-${axis.id}`}>
+              {axis.code ? `Eixo ${axis.code}` : 'Novo eixo'}{axis.name && ` · ${axis.name}`}
+            </h4>
+            <span className="axis-objective-count">
+              {axisObjectives.length} {axisObjectives.length === 1 ? 'objetivo' : 'objetivos'}
+            </span>
+          </div>
+          <div className="axis-summary-foot">
+            <p className="axis-meta">
+              {axis.ownerUnit ? `Unidade responsável: ${axis.ownerUnit}` : 'Unidade responsável não definida'}
+              {axis.managerIds?.length ? ` · ${axis.managerIds.length} gestor(es)` : ''}
+            </p>
+            <div className="axis-actions">
+              <Button variant="tertiary" icon="edit" onClick={() => toggleEditing(axis.id)}>
+                {editing ? 'Concluir edição' : 'Editar eixo'}
+              </Button>
+              <Button variant="tertiary" icon="close" onClick={() => removeAxis(axis.id)}>
+                Excluir eixo
+              </Button>
+            </div>
+          </div>
+        </div>
+        {editing && <div className="axis-editor">
+          <div className="form-grid axis-fields"><Field label="Código do eixo"><Input aria-label="Código do eixo" value={axis.code} onChange={(event) => updateAxis(axis.id, 'code', event.target.value)} placeholder="1" /></Field><Field label="Nome do eixo"><Input aria-label="Nome do eixo" value={axis.name} onChange={(event) => updateAxis(axis.id, 'name', event.target.value)} placeholder="Nome do eixo" /></Field><Field label="Unidade responsável"><Input aria-label="Unidade responsável pelo eixo" value={axis.ownerUnit} onChange={(event) => updateAxis(axis.id, 'ownerUnit', event.target.value)} placeholder="Unidade responsável" /></Field><Field label="Cor"><Input aria-label={`Cor do eixo ${axis.code || 'novo'}`} type="color" value={axis.color} onChange={(event) => updateAxis(axis.id, 'color', event.target.value)} /></Field></div>
+          <div className="axis-user-pickers"><AxisUserPicker label="Gestor do eixo" permissions={PERMISSOES_DO_PERFIL.gestor} usuarios={usuarios} selectedIds={axis.managerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} /><AxisUserPicker label="Responsável pelo eixo" permissions={PERMISSOES_DO_PERFIL.responsavel} usuarios={usuarios} selectedIds={axis.reviewerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} /></div>
+          <div className="axis-objectives-heading"><div><h5>Objetivos do eixo</h5></div><Button icon="plus" onClick={() => addObjective(axis.id)}>Adicionar objetivo</Button></div>
+          {!axisObjectives.length && <p className="hint">Nenhum objetivo cadastrado neste eixo.</p>}
+          <div className="structure-list objective-list">{axisObjectives.map((objective) => <div className="objective-structure" key={objective.id}><div className="form-grid code-title"><Field label="Código"><Input aria-label="Código do objetivo" value={objective.code} onChange={(event) => updateObjective(objective.id, 'code', event.target.value)} placeholder={`${axis.code || '1'}.1`} /></Field><Field label="Objetivo"><Input aria-label="Nome do objetivo" value={objective.title} onChange={(event) => updateObjective(objective.id, 'title', event.target.value)} placeholder="Descrição do objetivo" /></Field></div><button type="button" className="text-button danger" onClick={() => removeObjective(objective.id)}>Remover objetivo</button><OdsPicker objective={objective} selected={odsForObjective({ ...plan, axes }, objective).map((icon) => icon.id)} documented={documentedOdsForObjective({ ...plan, axes }, objective)} onToggle={(number) => toggleObjectiveOds(objective.id, number)} onApplyDocumented={() => updateObjective(objective.id, 'ods', documentedOdsForObjective({ ...plan, axes }, objective).map((icon) => icon.id))} /></div>)}</div>
+        </div>}
+      </section>;
+    })}</div>
+  </div><FormEnd onClose={onClose} submit="Salvar estrutura" error={error} /></form></Modal>;
 }
 
 function AxisUserPicker({ label, permissions, usuarios, selectedIds, onToggle }) {

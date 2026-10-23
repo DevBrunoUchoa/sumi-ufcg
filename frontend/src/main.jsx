@@ -278,7 +278,7 @@ function App({ auth }) {
     ],
   });
   const loading = needsWorkspace && auth.status !== 'error' && (auth.status === 'loading' || workspaceState.status === 'loading' || workspaceState.sessionKey !== sessionKey);
-  return <AppShell route={route} plan={plan} session={session} mode={['/login', '/esqueci-senha', '/redefinir-senha'].includes(route.path) ? 'access' : session.authenticated ? 'work' : 'public'} links={links} altoContraste={altoContraste} darkMode={darkMode} vlibrasAtivo={vlibrasAtivo} toggleAltoContraste={toggleAltoContraste} toggleDarkMode={toggleDarkMode} toggleVlibras={toggleVlibras} onLogout={leaveSession} loading={loading}>
+  return <AppShell route={route} plan={plan} session={session} mode={['/login', '/esqueci-senha', '/redefinir-senha'].includes(route.path) ? 'access' : session.authenticated ? 'work' : 'public'} links={links} contextualNavigation={planningContext?.axis ? { plan, context: planningContext } : undefined} altoContraste={altoContraste} darkMode={darkMode} vlibrasAtivo={vlibrasAtivo} toggleAltoContraste={toggleAltoContraste} toggleDarkMode={toggleDarkMode} toggleVlibras={toggleVlibras} onLogout={leaveSession} loading={loading}>
       {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
         {route.path === '/login' ? <LoginPage authenticated={session.authenticated} returnTo={safeReturnPath(route.query.get('returnTo'))} onSuccess={async () => { await auth.reload(); navigate(safeReturnPath(route.query.get('returnTo'))); }} />
           : route.path === '/esqueci-senha' ? <ForgotPasswordPage />

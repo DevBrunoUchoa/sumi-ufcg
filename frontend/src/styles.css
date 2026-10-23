@@ -990,7 +990,7 @@ br-select::part(option):hover {
 .axis-palette input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .axis-palette span { width: 24px; height: 24px; border-radius: 50%; border: 3px solid var(--surface); outline: 1px solid var(--border-strong); }
 .axis-palette input:checked + span { outline: 3px solid var(--primary-strong); outline-offset: 2px; }
-.modal.wide { width: min(720px, calc(100vw - 32px)); }
+.modal.wide { width: min(800px, calc(100vw - 32px)); }
 .modal::backdrop { background: var(--backdrop); }
 .modal-heading { padding: var(--spacing-scale-3x); display: flex; align-items: flex-start; justify-content: space-between; gap: var(--spacing-scale-2x); border-bottom: 1px solid var(--border); }
 .modal-heading h2 { font-size: var(--font-size-scale-up-02); font-weight: var(--font-weight-bold); }
@@ -1047,10 +1047,28 @@ br-select::part(option):hover {
 .structure-preview { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-scale-base); padding: 0 0 var(--spacing-scale-2x); color: var(--text-subtle); font-size: var(--font-size-scale-base); }
 .structure-list { display: grid; gap: var(--spacing-scale-base); }
 .structure-row { display: grid; align-items: center; gap: var(--spacing-scale-base); padding: var(--spacing-scale-base); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; }
-.axis-structure { grid-template-columns: 40px 64px minmax(184px, 2fr) minmax(128px, 1fr) 48px auto; }
-.axis-structure > .axis-icon-marker { justify-self: center; }
-.objective-structure { grid-template-columns: minmax(160px, 1fr) 80px minmax(224px, 2fr) auto; }
 .structure-row input, .structure-row select { font-size: var(--font-size-scale-base); }
+.axis-structure { padding: var(--spacing-scale-3x); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; }
+.axis-summary { display: grid; gap: var(--spacing-scale-2x); min-width: 0; }
+.axis-summary-head { display: flex; align-items: center; gap: var(--spacing-scale-2x); min-width: 0; padding-bottom: var(--spacing-scale-2x); border-bottom: 1px solid var(--border); }
+.axis-summary-head h4 { flex: 1; min-width: 0; margin: 0; font-size: var(--font-size-scale-up-02); font-weight: var(--font-weight-semi-bold); line-height: var(--font-line-height-medium); overflow-wrap: anywhere; }
+.axis-objective-count { flex: 0 0 auto; padding: 2px var(--spacing-scale-base); border-radius: 999px; background: var(--surface-soft); color: var(--text-muted); font-size: var(--font-size-scale-base); white-space: nowrap; }
+.axis-summary-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-scale-base) var(--spacing-scale-3x); }
+.axis-meta { flex: 1 1 220px; margin: 0; color: var(--text-muted); font-size: var(--font-size-scale-base); overflow-wrap: anywhere; }
+.axis-actions { display: flex; align-items: center; gap: var(--spacing-scale-3x); margin-left: auto; }
+.axis-editor { display: grid; gap: var(--spacing-scale-3x); margin-top: var(--spacing-scale-3x); padding-top: var(--spacing-scale-3x); border-top: 1px solid var(--border); }
+.axis-fields { align-items: end; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1.5fr) 72px; }
+.axis-fields .field:last-child br-input { min-width: 64px; }
+.axis-user-pickers { display: grid; gap: var(--spacing-scale-base); }
+.axis-objectives-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-scale-2x); padding-top: var(--spacing-scale-3x); border-top: 1px solid var(--border-soft); }
+.axis-objectives-heading h5 { margin: 0; font-size: var(--font-size-scale-up-01); }
+.axis-objectives-heading .hint { margin: var(--spacing-scale-half) 0 0; }
+.objective-list { gap: var(--spacing-scale-2x); }
+.objective-structure { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--spacing-scale-2x); padding: var(--spacing-scale-2x) var(--spacing-scale-3x); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 5px; }
+.objective-structure > .form-grid.code-title { grid-column: 1; grid-template-columns: 112px minmax(0, 1fr); }
+.objective-structure > .text-button { grid-column: 2; align-self: end; justify-self: end; padding-bottom: 12px; white-space: nowrap; }
+.objective-structure > :nth-child(n+3) { grid-column: 1 / -1; }
+.objective-structure > .form-grid .field, .objective-structure > .form-grid br-input, .objective-structure > .form-grid input { min-width: 0; width: 100%; }
 .custom-field { padding: var(--spacing-scale-2x) 0; border-top: 1px solid var(--border); display: grid; gap: var(--spacing-scale-baseh); }
 .custom-field .text-button { text-align: left; width: fit-content; }
 .section-divider { border-bottom: 1px solid var(--border); }
@@ -1094,7 +1112,8 @@ br-select::part(option):hover {
   .plan-page-heading { align-items: flex-start; flex-wrap: wrap; }
   .models-grid { grid-template-columns: 1fr; }
   .plan-grid { grid-template-columns: 1fr; }
-  .axis-structure, .objective-structure { grid-template-columns: 1fr; }
+  .objective-structure { grid-template-columns: minmax(0, 1fr); }
+  .objective-structure > .text-button { grid-column: 1; justify-self: start; padding-bottom: 0; }
 }
 @media (max-width: 640px) {
   .sidebar { position: relative; box-shadow: var(--elevation-layer-1); width: 100%; height: auto; padding: var(--spacing-scale-2x); gap: var(--spacing-scale-2x); }
@@ -1179,6 +1198,12 @@ br-select::part(option):hover {
   .form-grid, .form-grid.three, .form-grid.code-title, .risk-calculation, .risk-evaluation, .risk-identification { grid-template-columns: 1fr; }
   .field input, .field textarea, .field select, .inline-task-form input { font-size: var(--font-size-scale-up-01); }
   .form-end { padding: var(--spacing-scale-2x) var(--spacing-scale-3x); }
+  .axis-structure { padding: var(--spacing-scale-2x); }
+  .axis-summary-head { flex-wrap: wrap; }
+  .axis-actions { width: 100%; justify-content: space-between; margin-left: 0; }
+  .objective-structure { padding: var(--spacing-scale-2x); }
+  .objective-structure > .form-grid.code-title { grid-template-columns: 1fr; }
+  .axis-objectives-heading { align-items: flex-start; flex-direction: column; }
   .skip-link { left: 16px; }
   .toast { right: 16px; bottom: 16px; }
 }

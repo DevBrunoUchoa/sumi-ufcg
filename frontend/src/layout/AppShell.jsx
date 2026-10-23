@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '../ui.jsx';
+import { Button, Icon } from '../ui.jsx';
 import { breadcrumbsFor } from './breadcrumbs.js';
 import { loginUrl } from '../auth/navigation.js';
 import { isDashboardRoute } from '../planning/navigation.js';
 import { useTranslation } from '../i18n/context.jsx';
 import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
+import { PlanTree } from '../planning/PlanTree.jsx';
 
 function Brand({ t }) {
   return <a className="sumi-brand" href="#/inicio" aria-label="SUMI início"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>SUMI<small>{t('shell.tagline')}</small></span></a>;
@@ -70,7 +71,7 @@ function Footer({ inert = false, work = false, t }) {
   );
 }
 
-export function AppShell({ route, plan, session, mode, links = [], altoContraste, darkMode, vlibrasAtivo, toggleAltoContraste, toggleDarkMode, toggleVlibras, onLogout, children, loading = false }) {
+export function AppShell({ route, plan, session, mode, links = [], contextualNavigation, altoContraste, darkMode, vlibrasAtivo, toggleAltoContraste, toggleDarkMode, toggleVlibras, onLogout, children, loading = false }) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(() => window.matchMedia('(min-width: 992px)').matches);
   const [logoutState, setLogoutState] = useState('idle');
@@ -80,11 +81,24 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
   const menu = useRef(null);
   const previousRoute = useRef('');
   const returnMenuFocus = useRef(false);
+  const [treeOpen, setTreeOpen] = useState(() => contextualNavigation ? (() => { try { return localStorage.getItem('sumi.ui.plan-tree-open') !== 'false'; } catch { return true; } })() : false);
   const crumbs = mode === 'public' && !plan ? [] : breadcrumbsFor(route, plan);
   const work = mode === 'work';
   const mobileMenuOpen = work && menuOpen && !window.matchMedia('(min-width: 992px)').matches;
   const locationKey = isDashboardRoute(route) ? route.path : `${route.path}|${['item', 'action', 'stage', 'view', 'tab', 'objective'].map((key) => route.query.get(key)).join('|')}`;
   const closeMenu = () => { returnMenuFocus.current = true; setMenuOpen(false); };
+  const toggleMenu = () => setMenuOpen((current) => {
+    const next = !current;
+    if (next) setTreeOpen(false);
+    return next;
+  });
+  const handleTreeOpenChange = (next) => {
+    setTreeOpen(next);
+    if (next) setMenuOpen(false);
+  };
+  useEffect(() => {
+    if (menuOpen && treeOpen) setMenuOpen(false);
+  }, [menuOpen, treeOpen]);
   useEffect(() => {
     if (!mobileMenuOpen && returnMenuFocus.current) {
       returnMenuFocus.current = false;
@@ -146,17 +160,32 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
     try { await onLogout(); setLogoutState('idle'); } catch { setLogoutState('error'); }
   }
   return (
-    <div className={`template-base sumi-shell sumi-${mode} ${work && menuOpen ? 'menu-open' : ''}`}>
+    <div className={`template-base sumi-shell sumi-${mode} ${work && menuOpen ? 'menu-open' : ''} ${contextualNavigation && treeOpen ? 'context-tree-open' : ''}`}>
       <nav className="sumi-skiplinks" aria-label={t('shell.skip.ariaLabel')} inert={mobileMenuOpen}>
         <a href="#main-content" onClick={(event) => { event.preventDefault(); document.getElementById('main-content')?.focus(); }}>{t('shell.skip.content')}</a>
         <a href="#footer" onClick={(event) => { event.preventDefault(); const footer = document.getElementById('footer'); footer.tabIndex = -1; footer.focus(); }}>{t('shell.skip.footer')}</a>
       </nav>
       <OrgBar t={t} />
       <header className="br-header compact sumi-header" inert={mobileMenuOpen}>
+        {work && contextualNavigation && (
+        <Button
+        className="plan-tree-header-toggle"
+        variant="tertiary"
+        aria-label={treeOpen ? 'Recolher árvore de navegação' : 'Abrir árvore de navegação'}
+        aria-expanded={treeOpen}
+        aria-controls="plan-tree-navigation"
+        onClick={() => handleTreeOpenChange(!treeOpen)}
+        >
+        <span className="plan-tree-header-chevron" data-open={treeOpen} aria-hidden="true">
+          <Icon name="chevron" size={14} />
+        </span>
+        <span>Navegação</span>
+        </Button>
+        )}
         <div className="sumi-container">
           <div className="header-top">
             <div className="header-logo">
-              {work && <button ref={menuButton} className="br-button circle small" type="button" aria-label={menuOpen ? t('shell.menu.collapse') : t('shell.menu.expand')} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(!menuOpen)}><Icon name="menu" /></button>}
+              {work && <button ref={menuButton} className="br-button circle small" type="button" aria-label={menuOpen ? t('shell.menu.collapse') : t('shell.menu.expand')} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={toggleMenu}><Icon name="menu" /></button>}
               <Brand t={t} />
             </div>
             <div className="header-actions">
@@ -223,6 +252,7 @@ export function AppShell({ route, plan, session, mode, links = [], altoContraste
             </div>
           </aside>
         </>}
+        {work && contextualNavigation && <PlanTree {...contextualNavigation} open={treeOpen} onOpenChange={handleTreeOpenChange} />}
         <main id="main-content" tabIndex={-1} aria-busy={loading} inert={mobileMenuOpen}>
           <div className="sumi-content">
             {!!crumbs.length && (

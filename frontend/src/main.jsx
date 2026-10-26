@@ -279,7 +279,7 @@ function App({ auth }) {
   });
   const loading = needsWorkspace && auth.status !== 'error' && (auth.status === 'loading' || workspaceState.status === 'loading' || workspaceState.sessionKey !== sessionKey);
   return <AppShell route={route} plan={plan} session={session} mode={['/login', '/esqueci-senha', '/redefinir-senha'].includes(route.path) ? 'access' : session.authenticated ? 'work' : 'public'} links={links} contextualNavigation={planningContext?.axis ? { plan, context: planningContext } : undefined} altoContraste={altoContraste} darkMode={darkMode} vlibrasAtivo={vlibrasAtivo} toggleAltoContraste={toggleAltoContraste} toggleDarkMode={toggleDarkMode} toggleVlibras={toggleVlibras} onLogout={leaveSession} loading={loading}>
-      {saveError && <div role="alert" className="warning-strip">{saveError}</div>}
+      {saveError && <div role="alert" className="warning-strip"><span>{saveError}</span><button type="button" className="icon-button" aria-label="Dispensar aviso" onClick={() => setSaveError('')}><Icon name="close" size={14} /></button></div>}
         {route.path === '/login' ? <LoginPage authenticated={session.authenticated} returnTo={safeReturnPath(route.query.get('returnTo'))} onSuccess={async () => { await auth.reload(); navigate(safeReturnPath(route.query.get('returnTo'))); }} />
           : route.path === '/esqueci-senha' ? <ForgotPasswordPage />
           : route.path === '/redefinir-senha' ? <ResetPasswordPage token={route.query.get('token')} />
@@ -404,7 +404,7 @@ function ImportacaoPlanilha({ planId, onImport }) {
     <Button icon="download" onClick={baixarModeloPlanilha}>Baixar modelo</Button>
     <Button icon="upload" onClick={escolherArquivo} disabled={importando}>{importando ? 'Importando…' : 'Importar planilha'}</Button>
     <input ref={inputRef} type="file" accept=".xlsx" hidden onChange={arquivoSelecionado} aria-label="Selecionar planilha para importar" />
-    {erro && <p role="alert" className="form-error">{erro}</p>}
+    {erro && <p role="alert" className="form-error dismissible-message">{erro}<button type="button" className="icon-button" aria-label="Dispensar erro" onClick={() => setErro('')}><Icon name="close" size={14} /></button></p>}
     {!!avisos.length && <div role="status" className="import-avisos">
       <p><strong>Importação concluída com {avisos.length} aviso{avisos.length === 1 ? '' : 's'}:</strong></p>
       <ul>{avisos.map((aviso, index) => <li key={index}>{aviso}</li>)}</ul>
@@ -505,16 +505,22 @@ function PlanExplorer({ plan, actor, can, route, onModal, changeItem, onImportPl
 }
 
   function ItemHeader({ plan, item, actor, can, onModal, changeItem, hideDetails = false, scoped = false, children }) {
+  const [confirmingSubmit, setConfirmingSubmit] = useState(false);
   const axis = axisFor(plan, item);
   const objective = objectiveFor(plan, item);
   const resource = resourceFor(plan, item);
   const canSeeWorkflow = can(PERMISSIONS.SUBMIT_ITEM, resource) || can(PERMISSIONS.REVIEW_ITEM, resource) || can(PERMISSIONS.VIEW_HISTORY, resource);
   const presentExtra = (field, value) => field.type === 'date' ? formatDate(value) : field.type === 'number' ? formatNumber(value) : value;
   const extraFields = plan.template.fields.filter((field) => item.extras?.[field.id] !== '' && item.extras?.[field.id] != null);
-  const submit = () => changeItem(plan.id, item.id, (current) => ({ ...current, reviewStatus: 'submitted', reviewNote: '', history: [...current.history, historyEntry('Informações enviadas para validação.', actor)] }), 'Enviado para validação.');
+  const submit = () => { changeItem(plan.id, item.id, (current) => ({ ...current, reviewStatus: 'submitted', reviewNote: '', history: [...current.history, historyEntry('Informações enviadas para validação.', actor)] }), 'Enviado para validação.'); setConfirmingSubmit(false); };
   return <>{!hideDetails && <div className="item-heading" style={{ '--axis-color': axis?.color || '#2f78a5' }}><div className="section-heading"><div className="flex items-center gap-3"><span className="item-code">{plan.template.labels.item} {item.code}</span><Badge tone={statusTone(executionStatus(item))}>{executionStatus(item)}</Badge></div>{can(PERMISSIONS.EDIT_ITEM, resource) && <Button icon="edit" variant="tertiary" onClick={() => onModal({ type: 'item', item })}>Editar informações</Button>}</div>{!scoped && <h2>{item.title}</h2>}<p>{item.description}</p><div className="item-meta"><span><Icon name="layers" size={15} /><strong>{objective?.code} · {objective?.title}</strong></span><span><Icon name="user" size={15} /><strong>{item.owner}</strong></span>{item.partners && <span>Parceiros: {item.partners}</span>}</div>{extraFields.length > 0 && <div className="extra-values">{extraFields.map((field) => <span key={field.id}><b>{field.label}:</b> {presentExtra(field, item.extras[field.id])}</span>)}</div>}</div>}
-    {canSeeWorkflow && <div className={`workflow-banner ${item.reviewStatus}`}><div><span>Validação</span><strong>{reviewStatusLabel(item.reviewStatus)}</strong>{item.reviewNote && <p>{item.reviewNote}</p>}</div><div>{can(PERMISSIONS.SUBMIT_ITEM, resource) && ['draft', 'changes_requested'].includes(item.reviewStatus) && <Button variant="primary" onClick={submit}>Enviar para validação</Button>}{can(PERMISSIONS.REVIEW_ITEM, resource) && item.reviewStatus === 'submitted' && <><Button onClick={() => onModal({ type: 'review', item, decision: 'changes_requested' })}>Solicitar correção</Button><Button variant="primary" onClick={() => onModal({ type: 'review', item, decision: 'validated' })}>Validar</Button></>}</div></div>}
-    {item.linkedPlan && <a className="linked-plan" href={`#${planUrl(item.linkedPlan)}`}><Icon name="link" size={16} /><span>Relacionado ao Plano Diretor de Logística Sustentável</span><Icon name="arrow" size={14} /></a>}{children}</>;
+    {canSeeWorkflow && <div className={`workflow-banner ${item.reviewStatus}`}><div><span>Validação</span><strong>{reviewStatusLabel(item.reviewStatus)}</strong>{item.reviewNote && <p>{item.reviewNote}</p>}</div><div>{can(PERMISSIONS.SUBMIT_ITEM, resource) && ['draft', 'changes_requested'].includes(item.reviewStatus) && <Button variant="primary" onClick={() => setConfirmingSubmit(true)}>Enviar para validação</Button>}{can(PERMISSIONS.REVIEW_ITEM, resource) && item.reviewStatus === 'submitted' && <><Button onClick={() => onModal({ type: 'review', item, decision: 'changes_requested' })}>Solicitar correção</Button><Button variant="primary" onClick={() => onModal({ type: 'review', item, decision: 'validated' })}>Validar</Button></>}</div></div>}
+    {item.linkedPlan && <a className="linked-plan" href={`#${planUrl(item.linkedPlan)}`}><Icon name="link" size={16} /><span>Relacionado ao Plano Diretor de Logística Sustentável</span><Icon name="arrow" size={14} /></a>}{children}
+    {confirmingSubmit && <Modal title="Enviar para validação?" subtitle={item.title} onClose={() => setConfirmingSubmit(false)}>
+      <div className="form-body"><p>O item fica com a situação "Aguardando validação" e deixa de poder ser editado até ser validado ou ter correção solicitada.</p></div>
+      <div className="form-end"><Button onClick={() => setConfirmingSubmit(false)}>Cancelar</Button><Button variant="primary" onClick={submit}>Enviar para validação</Button></div>
+    </Modal>}
+  </>;
 }
 
 // Visão geral da iniciativa: primeiro o que está sendo feito (as ações), depois

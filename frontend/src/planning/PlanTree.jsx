@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Icon, Input } from '../ui.jsx';
 import { itemUrl, objectiveUrl } from './navigation.js';
 import { ordered } from './selectors.js';
@@ -20,6 +20,19 @@ function TreeNode({ label, code, title, href, active, expanded, onToggle, hasChi
 export function PlanTree({ plan, context, overlay = false, onClose }) {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState(() => new Set([context.objective?.id, context.item?.id].filter(Boolean)));
+  // A árvore não remonta ao navegar dentro do mesmo eixo (key={axis.id} no
+  // AppShell), então sem isto o Set de nós abertos ficava congelado no que
+  // era o caminho ativo só no primeiro carregamento — ao entrar numa ação
+  // mais funda a árvore parecia "voltar ao início" em vez de acompanhar.
+  // Só adiciona ao caminho atual; nunca recolhe o que a pessoa abriu à mão.
+  useEffect(() => {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (context.objective?.id) next.add(context.objective.id);
+      if (context.item?.id) next.add(context.item.id);
+      return next;
+    });
+  }, [context.objective?.id, context.item?.id]);
   const axis = context.axis;
   const labels = plan.template.labels;
   const query = search.trim().toLocaleLowerCase('pt-BR');

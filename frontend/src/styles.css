@@ -1009,6 +1009,8 @@ br-button.danger::part(button), html[data-theme="dark"] br-button.danger[emphasi
 .form-grid.code-title { grid-template-columns: 96px 1fr; }
 .form-end { display: flex; justify-content: flex-end; flex-wrap: wrap; align-items: center; gap: var(--spacing-scale-base); border-top: 1px solid var(--border); padding: var(--spacing-scale-2x) var(--spacing-scale-3x); background: var(--surface-soft); }
 .form-error { color: var(--danger); background: var(--warning-surface); padding: var(--spacing-scale-base) var(--spacing-scale-2x); font-size: var(--font-size-scale-base); margin: 0 var(--spacing-scale-3x) var(--spacing-scale-2x); border-radius: 4px; }
+.form-error.dismissible-message { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-scale-2x); white-space: normal; }
+.import-tools .form-error.dismissible-message { white-space: normal; }
 .risk-form-context { display: flex; flex-wrap: wrap; gap: var(--spacing-scale-base) var(--spacing-scale-2x); padding: var(--spacing-scale-base) var(--spacing-scale-2x); background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted); font-size: var(--font-size-scale-base); }
 .risk-form-context b { color: var(--primary-strong); }
 .risk-identification { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; padding: 0; overflow: hidden; background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: 6px; }

@@ -140,11 +140,11 @@ async function main() {
   await upsertUsuario(admin);
   console.log(`Usuário administrador pronto: ${admin.email}`);
 
-  const gestor = usuarioOpcional("GESTOR", false, "Gestor do Eixo (semente)");
+  const gestor = usuarioOpcional("GESTOR", false, "Responsável Técnico do Eixo (semente)");
   const gestorId = gestor ? await upsertUsuario(gestor) : null;
   if (gestor) console.log(`Usuário gestor pronto: ${gestor.email}`);
 
-  const responsavel = usuarioOpcional("RESPONSAVEL", false, "Responsável pelo Eixo (semente)");
+  const responsavel = usuarioOpcional("RESPONSAVEL", false, "Gestor do Eixo (semente)");
   const responsavelId = responsavel ? await upsertUsuario(responsavel) : null;
   if (responsavel) console.log(`Usuário responsável pronto: ${responsavel.email}`);
 

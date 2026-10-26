@@ -32,7 +32,7 @@ export const PERMISSOES = Object.freeze({
 export const TODAS_PERMISSOES_ADMIN = PERMISSION_CODES;
 
 /**
- * Concedidas por eixo a quem está em `managerIds` (Gestor do Eixo).
+ * Concedidas por eixo a quem está em `managerIds` (Responsável Técnico do Eixo).
  *
  * O Plano de Negócio limita o Gestor ao nível da etapa: cadastrar e alterar
  * etapas, informar resultados, justificar e anexar — e os riscos, que nascem
@@ -52,7 +52,7 @@ export const PERMISSOES_GESTOR_EIXO = Object.freeze([
   PERMISSOES.ATTACH_FILE,
 ]);
 
-/** Concedidas por eixo a quem está em `reviewerIds` (Responsável pelo Eixo). */
+/** Concedidas por eixo a quem está em `reviewerIds` (Gestor do Eixo). */
 export const PERMISSOES_RESPONSAVEL_EIXO = Object.freeze([
   PERMISSOES.VIEW_INTERNAL_PLAN,
   PERMISSOES.VIEW_RISK,

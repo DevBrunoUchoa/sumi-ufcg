@@ -72,7 +72,7 @@ describe("contrato da sessão de autorização", () => {
     const result = authenticatedSessionSchema.safeParse({
       authenticated: true,
       user,
-      roles: [{ code: "AXIS_CONTRIBUTOR", name: "Gestor do Eixo" }],
+      roles: [{ code: "AXIS_CONTRIBUTOR", name: "Responsável Técnico do Eixo" }],
       grants: [
         { permission: "plan.read_published", scope: { type: "global" } },
         {

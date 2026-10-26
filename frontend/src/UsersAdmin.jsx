@@ -14,13 +14,13 @@ const PAPEIS = [
   },
   {
     nome: 'Gestor do Eixo',
-    resumo: 'Atribuído por eixo, na Estrutura do plano. Atua até o nível da etapa.',
-    permissoes: ['Ver o plano internamente (inclusive rascunhos)', 'Cadastrar e atualizar etapas', 'Registrar resultados dos indicadores', 'Ver e gerenciar riscos', 'Ver e comentar no histórico', 'Enviar iniciativas para validação', 'Anexar documentos'],
+    resumo: 'Atribuído por eixo, na Estrutura do plano. Valida o que o Responsável Técnico envia.',
+    permissoes: ['Ver o plano internamente (inclusive rascunhos)', 'Ver riscos', 'Ver e comentar no histórico', 'Validar ou solicitar correção nas iniciativas enviadas', 'Anexar documentos'],
   },
   {
-    nome: 'Responsável pelo Eixo',
-    resumo: 'Atribuído por eixo, na Estrutura do plano. Valida o que o Gestor envia.',
-    permissoes: ['Ver o plano internamente (inclusive rascunhos)', 'Ver riscos', 'Ver e comentar no histórico', 'Validar ou solicitar correção nas iniciativas enviadas', 'Anexar documentos'],
+    nome: 'Responsável Técnico do Eixo',
+    resumo: 'Atribuído por eixo, na Estrutura do plano. Lança os dados até o nível da etapa.',
+    permissoes: ['Ver o plano internamente (inclusive rascunhos)', 'Cadastrar e atualizar etapas', 'Registrar resultados dos indicadores', 'Ver e gerenciar riscos', 'Ver e comentar no histórico', 'Enviar iniciativas para validação', 'Anexar documentos'],
   },
 ];
 

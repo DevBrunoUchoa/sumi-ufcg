@@ -12,7 +12,7 @@ const TREE_PREFERENCE_KEY = 'sumi.ui.plan-tree-open';
 const WIDE_TREE_QUERY = '(min-width: 1200px)';
 
 function readTreePreference() {
-  try { return localStorage.getItem(TREE_PREFERENCE_KEY) === 'true'; } catch { return false; }
+  try { return localStorage.getItem(TREE_PREFERENCE_KEY) !== 'false'; } catch { return true; }
 }
 
 function saveTreePreference(open) {

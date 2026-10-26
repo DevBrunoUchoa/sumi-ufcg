@@ -23,7 +23,7 @@ export const developmentSessions = Object.freeze({
   axis_contributor: {
     authenticated: true,
     user: { id: 'dev-contributor', name: 'Usuário do Eixo', email: 'gestor@sumi.local' },
-    roles: [{ code: 'AXIS_CONTRIBUTOR', name: 'Gestor do Eixo' }],
+    roles: [{ code: 'AXIS_CONTRIBUTOR', name: 'Responsável Técnico do Eixo' }],
     grants: [
       ...globalGrants(['plan.read_published', 'work_queue.read']),
       ...['plan.read_internal', 'stage.update', 'result.create', 'risk.read', 'risk.manage', 'history.read', 'history.comment', 'item.submit', 'item.attach'].map((permission) => ({ permission, scope: { type: 'axis', planId: 'pdi', axisId: 'pdi-axis-8' } })),
@@ -32,7 +32,7 @@ export const developmentSessions = Object.freeze({
   axis_reviewer: {
     authenticated: true,
     user: { id: 'dev-reviewer', name: 'Responsável do Eixo', email: 'responsavel@sumi.local' },
-    roles: [{ code: 'AXIS_REVIEWER', name: 'Responsável pelo Eixo' }],
+    roles: [{ code: 'AXIS_REVIEWER', name: 'Gestor do Eixo' }],
     grants: [
       ...globalGrants(['plan.read_published', 'review_queue.read']),
       ...['plan.read_internal', 'risk.read', 'history.read', 'history.comment', 'item.review', 'item.attach'].map((permission) => ({ permission, scope: { type: 'axis', planId: 'pdi', axisId: 'pdi-axis-8' } })),

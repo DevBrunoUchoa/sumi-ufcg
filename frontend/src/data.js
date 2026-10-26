@@ -55,7 +55,7 @@ const pdiItems = [
       action('capacitacao', '8.1.3.3', 'Capacitar Gestores e Lideranças da UFCG em Gestão de Riscos', [stage('publico', 'Definir o público e o conteúdo', 'not_started', '2026-10-20'), stage('realizar', 'Realizar a capacitação', 'not_started', '2026-12-05')]),
       action('politica', '8.1.3.4', 'Difundir o conhecimento sobre a Política de Gestão de Riscos', [stage('comunicacao', 'Preparar a comunicação para os setores', 'not_started', '2026-12-15')]),
     ],
-    history: history('Acompanhamento devolvido para complementação da etapa atrasada.', 'Responsável pelo Eixo'),
+    history: history('Acompanhamento devolvido para complementação da etapa atrasada.', 'Gestor do Eixo'),
     risks: [risk('risk-minuta', 'comissao', 'Elaborar a minuta da portaria', 'Atraso na consolidação da minuta de criação', 3, 3, 'SEPLAN')],
   },
   {
@@ -69,7 +69,7 @@ const pdiItems = [
       action('mapear', '8.1.9.1', 'Mapear os principais rankings universitários nacionais e internacionais', [stage('lista', 'Consolidar a lista de rankings', 'completed', '2026-08-30'), stage('criterios', 'Verificar os critérios de participação', 'in_progress', '2026-10-15')]),
       action('inscrever', '8.1.9.2', 'Fazer inscrições nos principais rankings universitários', [stage('dados', 'Reunir os dados institucionais', 'not_started', '2026-11-10'), stage('envio', 'Enviar as inscrições', 'not_started', '2026-12-10')]),
     ],
-    history: history('Resultado de 2026 registrado: 3 rankings.', 'Gestor do Eixo'), risks: [risk('risk-rankings', 'inscrever', 'Enviar as inscrições', 'Dados institucionais incompletos para a inscrição', 3, 3, 'SEPLAN')],
+    history: history('Resultado de 2026 registrado: 3 rankings.', 'Responsável Técnico do Eixo'), risks: [risk('risk-rankings', 'inscrever', 'Enviar as inscrições', 'Dados institucionais incompletos para a inscrição', 3, 3, 'SEPLAN')],
   },
   {
     id: 'sustentabilidade', code: '8.2.3', axisId: 'pdi-axis-8', objectiveId: 'pdi-objective-8-2',

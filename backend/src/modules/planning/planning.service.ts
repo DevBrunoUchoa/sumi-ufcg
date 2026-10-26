@@ -433,7 +433,7 @@ async function salvarPlano(sessao: SessaoUsuario, plano: Plan, noPorId: Map<stri
     // Criar/atualizar/remover objetivo normalmente exige plan.manage (tela de
     // Estrutura, administrativa) — mas quando todo objetivo tocado pertence a
     // um eixo onde a sessão já tem item.edit, basta essa permissão de eixo:
-    // é o caso da importação de planilha do Gestor do Eixo, que pode
+    // é o caso da importação de planilha do Responsável Técnico do Eixo, que pode
     // introduzir um objetivo ainda não cadastrado dentro do seu próprio eixo.
     const eixosEnvolvidos = new Set([
       ...objetivosAlterados.map((objective) => objective.axisId),
@@ -617,7 +617,7 @@ async function salvarItem(
 
   // Ações: criar/remover ação, ou editar os campos da própria ação, exige
   // action.manage (administrador). Etapas são mais permissivas — o Plano de
-  // Negócio dá ao Gestor do Eixo "cadastrar e alterar etapas": adicionar
+  // Negócio dá ao Responsável Técnico do Eixo "cadastrar e alterar etapas": adicionar
   // uma etapa nova a uma ação já existente, ou mudar status/justificativa/
   // parceiros de uma etapa existente, exige só stage.update. Remover etapa
   // ou mudar o título de uma etapa já existente continua exigindo

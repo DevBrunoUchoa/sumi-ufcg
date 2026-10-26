@@ -65,11 +65,11 @@ export function montarSessao(usuario: Usuario | null, eixos: EixoParaConcessoes[
   const comoResponsavel = eixos.filter((eixo) => idsDaLista(eixo.dados.reviewerIds).includes(usuario.id));
 
   if (comoGestor.length > 0) {
-    papeis.push({ code: "AXIS_CONTRIBUTOR", name: "Gestor do Eixo" });
+    papeis.push({ code: "AXIS_CONTRIBUTOR", name: "Responsável Técnico do Eixo" });
     concessoes.push({ permission: PERMISSOES.VIEW_WORK_QUEUE, scope: { type: "global" } });
   }
   if (comoResponsavel.length > 0) {
-    papeis.push({ code: "AXIS_REVIEWER", name: "Responsável pelo Eixo" });
+    papeis.push({ code: "AXIS_REVIEWER", name: "Gestor do Eixo" });
     concessoes.push({ permission: PERMISSOES.VIEW_REVIEW_QUEUE, scope: { type: "global" } });
   }
 

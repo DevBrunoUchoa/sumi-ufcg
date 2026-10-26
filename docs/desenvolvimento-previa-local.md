@@ -30,8 +30,8 @@ uma das contas fictícias abaixo; todas têm a senha `SumiLocal123!`.
 | Perfil | E-mail | Escopo |
 | --- | --- | --- |
 | Administrador Estratégico | admin@sumi.local | Administração dos planos e modelos |
-| Gestor do Eixo | gestor@sumi.local | Execução e resultados do eixo 8 do PDI |
-| Responsável pelo Eixo | responsavel@sumi.local | Validação do eixo 8 do PDI e eixos 1, 3 e 7 do PLS |
+| Responsável Técnico do Eixo | gestor@sumi.local | Execução e resultados do eixo 8 do PDI |
+| Gestor do Eixo | responsavel@sumi.local | Validação do eixo 8 do PDI e eixos 1, 3 e 7 do PLS |
 
 Essas contas vivem somente no middleware do Vite, sem backend ou usuários no
 banco. São desativadas em produção e com `VITE_DATA_SOURCE=http`. Login mantém

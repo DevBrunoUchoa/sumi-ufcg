@@ -20,11 +20,11 @@ O acesso administrativo ao Supabase permanece no servidor. A chave de serviço n
 
 ## Autenticação e sessão
 
-A sessão é um cookie httpOnly opaco (não JWT), validado a cada requisição contra a tabela `sessao`. Não existe papel global de "Gestor do Eixo" ou "Responsável pelo Eixo" no banco — essas concessões são derivadas da presença do usuário em `managerIds`/`reviewerIds` de cada eixo do plano. Ver `backend/src/modules/auth` e `docs/adr/0005-integracao-workspace-real.md`.
+A sessão é um cookie httpOnly opaco (não JWT), validado a cada requisição contra a tabela `sumi_sessao`. Não existe papel global de "Gestor do Eixo" ou "Responsável pelo Eixo" no banco — essas concessões são derivadas da presença do usuário em `managerIds`/`reviewerIds` de cada eixo do plano. Ver `backend/src/modules/auth` e `docs/adr/0005-integracao-workspace-real.md`.
 
 ## Workspace do frontend
 
-O frontend aprovado consome um único endpoint agregado (`GET/PUT /api/v1/planning/workspace`, módulo `backend/src/modules/planning`), que monta a árvore plano → eixo → objetivo → item a partir do motor genérico de `tipo_plano`/`no_plano` (módulo `planos`) somada a indicador, resultados, ações, etapas, riscos e histórico de cada item, guardados em tabelas próprias. A autorização de cada gravação é feita por item, comparando o estado antigo e o novo e exigindo a permissão correspondente à mudança (ver a ADR 0005 para os detalhes e as simplificações conhecidas).
+O frontend aprovado consome um único endpoint agregado (`GET/PUT /api/v1/planning/workspace`, módulo `backend/src/modules/planning`), que monta a árvore plano → eixo → objetivo → item a partir do motor genérico de `sumi_tipo_plano`/`sumi_no_plano` (módulo `planos`) somada a indicador, resultados, ações, etapas, riscos e histórico de cada item, guardados em tabelas próprias. A autorização de cada gravação é feita por item, comparando o estado antigo e o novo e exigindo a permissão correspondente à mudança (ver a ADR 0005 para os detalhes e as simplificações conhecidas).
 
 ## Build e implantação
 

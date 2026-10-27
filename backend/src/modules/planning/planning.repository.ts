@@ -29,7 +29,7 @@ export interface TipoPlanoRow {
 
 export const tipoPlanoRepo = {
   async listar(): Promise<TipoPlanoRow[]> {
-    const { data, error } = await supabase.from("tipo_plano").select("*").order("nome");
+    const { data, error } = await supabase.from("sumi_tipo_plano").select("*").order("nome");
     tratarErro(error, "Falha ao listar modelos");
     return data as TipoPlanoRow[];
   },
@@ -39,7 +39,7 @@ export const tipoPlanoRepo = {
     input: { rotulos: Record<string, string>; camposExtras: unknown[]; versao: number },
   ): Promise<void> {
     const { error } = await supabase
-      .from("tipo_plano")
+      .from("sumi_tipo_plano")
       .update({ rotulos: input.rotulos, campos_extras: input.camposExtras, versao: input.versao })
       .eq("id", id);
     tratarErro(error, "Falha ao atualizar modelo");
@@ -61,7 +61,7 @@ export interface NoPlanoRow {
 
 export const noPlanoRepo = {
   async buscarPorId(id: string): Promise<NoPlanoRow | null> {
-    const { data, error } = await supabase.from("no_plano").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("sumi_no_plano").select("*").eq("id", id).maybeSingle();
     tratarErro(error, "Falha ao buscar nó do plano");
     return data as NoPlanoRow | null;
   },
@@ -69,7 +69,7 @@ export const noPlanoRepo = {
   /** Todos os nós (raiz + eixos + objetivos + itens) de um tipo_plano — volume pequeno, uma consulta só. */
   async listarPorTipo(tipoPlanoId: string): Promise<NoPlanoRow[]> {
     const { data, error } = await supabase
-      .from("no_plano")
+      .from("sumi_no_plano")
       .select("*")
       .eq("tipo_plano_id", tipoPlanoId)
       .order("nivel")
@@ -79,7 +79,7 @@ export const noPlanoRepo = {
   },
 
   async listarTodos(): Promise<NoPlanoRow[]> {
-    const { data, error } = await supabase.from("no_plano").select("*").order("nivel").order("ordem");
+    const { data, error } = await supabase.from("sumi_no_plano").select("*").order("nivel").order("ordem");
     tratarErro(error, "Falha ao carregar planos");
     return data as NoPlanoRow[];
   },
@@ -88,7 +88,7 @@ export const noPlanoRepo = {
     linhas: { id: string; tipoPlanoId: string; noPaiId: string | null; nivel: number; ordem: number; dados: Record<string, unknown> }[],
   ): Promise<void> {
     if (!linhas.length) return;
-    const { error } = await supabase.from("no_plano").upsert(
+    const { error } = await supabase.from("sumi_no_plano").upsert(
       linhas.map((linha) => ({
         id: linha.id,
         tipo_plano_id: linha.tipoPlanoId,
@@ -104,13 +104,13 @@ export const noPlanoRepo = {
 
   async removerLote(ids: string[]): Promise<void> {
     if (!ids.length) return;
-    const { error } = await supabase.from("no_plano").delete().in("id", ids);
+    const { error } = await supabase.from("sumi_no_plano").delete().in("id", ids);
     tratarErro(error, "Falha ao remover nós do plano");
   },
 
   async criarRaiz(input: { id: string; tipoPlanoId: string; dados: Record<string, unknown> }): Promise<void> {
     const { error } = await supabase
-      .from("no_plano")
+      .from("sumi_no_plano")
       .insert({ id: input.id, tipo_plano_id: input.tipoPlanoId, no_pai_id: null, nivel: -1, ordem: 0, dados: input.dados });
     tratarErro(error, "Falha ao criar plano");
   },
@@ -120,36 +120,36 @@ export const noPlanoRepo = {
 
 export const indicadorRepo = {
   async listarTodos(): Promise<Record<string, unknown>[]> {
-    const { data, error } = await supabase.from("indicador").select("*");
+    const { data, error } = await supabase.from("sumi_indicador").select("*");
     tratarErro(error, "Falha ao carregar indicadores");
     return data as Record<string, unknown>[];
   },
   async upsertLote(linhas: Record<string, unknown>[]): Promise<void> {
     if (!linhas.length) return;
-    const { error } = await supabase.from("indicador").upsert(linhas, { onConflict: "no_plano_id" });
+    const { error } = await supabase.from("sumi_indicador").upsert(linhas, { onConflict: "no_plano_id" });
     tratarErro(error, "Falha ao gravar indicadores");
   },
   async removerPorItens(idsItem: string[]): Promise<void> {
     if (!idsItem.length) return;
-    const { error } = await supabase.from("indicador").delete().in("no_plano_id", idsItem);
+    const { error } = await supabase.from("sumi_indicador").delete().in("no_plano_id", idsItem);
     tratarErro(error, "Falha ao remover indicadores");
   },
 };
 
 export const resultadoRepo = {
   async listarTodos(): Promise<Record<string, unknown>[]> {
-    const { data, error } = await supabase.from("resultado").select("*").order("ano");
+    const { data, error } = await supabase.from("sumi_resultado").select("*").order("ano");
     tratarErro(error, "Falha ao carregar resultados");
     return data as Record<string, unknown>[];
   },
   async inserirLote(linhas: Record<string, unknown>[]): Promise<void> {
     if (!linhas.length) return;
-    const { error } = await supabase.from("resultado").insert(linhas);
+    const { error } = await supabase.from("sumi_resultado").insert(linhas);
     tratarErro(error, "Falha ao gravar resultados");
   },
   async removerPorItens(idsItem: string[]): Promise<void> {
     if (!idsItem.length) return;
-    const { error } = await supabase.from("resultado").delete().in("no_plano_id", idsItem);
+    const { error } = await supabase.from("sumi_resultado").delete().in("no_plano_id", idsItem);
     tratarErro(error, "Falha ao remover resultados");
   },
 };
@@ -158,31 +158,31 @@ export const resultadoRepo = {
 
 export const acaoRepo = {
   async listarTodos(): Promise<Record<string, unknown>[]> {
-    const { data, error } = await supabase.from("acao").select("*").order("ordem");
+    const { data, error } = await supabase.from("sumi_acao").select("*").order("ordem");
     tratarErro(error, "Falha ao carregar ações");
     return data as Record<string, unknown>[];
   },
   async inserirLote(linhas: Record<string, unknown>[]): Promise<void> {
     if (!linhas.length) return;
-    const { error } = await supabase.from("acao").insert(linhas);
+    const { error } = await supabase.from("sumi_acao").insert(linhas);
     tratarErro(error, "Falha ao gravar ações");
   },
   async removerPorItens(idsItem: string[]): Promise<void> {
     if (!idsItem.length) return;
-    const { error } = await supabase.from("acao").delete().in("no_plano_id", idsItem);
+    const { error } = await supabase.from("sumi_acao").delete().in("no_plano_id", idsItem);
     tratarErro(error, "Falha ao remover ações");
   },
 };
 
 export const etapaRepo = {
   async listarTodos(): Promise<Record<string, unknown>[]> {
-    const { data, error } = await supabase.from("etapa").select("*").order("ordem");
+    const { data, error } = await supabase.from("sumi_etapa").select("*").order("ordem");
     tratarErro(error, "Falha ao carregar etapas");
     return data as Record<string, unknown>[];
   },
   async inserirLote(linhas: Record<string, unknown>[]): Promise<void> {
     if (!linhas.length) return;
-    const { error } = await supabase.from("etapa").insert(linhas);
+    const { error } = await supabase.from("sumi_etapa").insert(linhas);
     tratarErro(error, "Falha ao gravar etapas");
   },
 };
@@ -191,18 +191,18 @@ export const etapaRepo = {
 
 export const riscoRepo = {
   async listarTodos(): Promise<Record<string, unknown>[]> {
-    const { data, error } = await supabase.from("risco").select("*");
+    const { data, error } = await supabase.from("sumi_risco").select("*");
     tratarErro(error, "Falha ao carregar riscos");
     return data as Record<string, unknown>[];
   },
   async inserirLote(linhas: Record<string, unknown>[]): Promise<void> {
     if (!linhas.length) return;
-    const { error } = await supabase.from("risco").insert(linhas);
+    const { error } = await supabase.from("sumi_risco").insert(linhas);
     tratarErro(error, "Falha ao gravar riscos");
   },
   async removerPorItens(idsItem: string[]): Promise<void> {
     if (!idsItem.length) return;
-    const { error } = await supabase.from("risco").delete().in("no_plano_id", idsItem);
+    const { error } = await supabase.from("sumi_risco").delete().in("no_plano_id", idsItem);
     tratarErro(error, "Falha ao remover riscos");
   },
 };
@@ -211,18 +211,18 @@ export const riscoRepo = {
 
 export const historicoRepo = {
   async listarTodos(): Promise<Record<string, unknown>[]> {
-    const { data, error } = await supabase.from("historico").select("*").order("em");
+    const { data, error } = await supabase.from("sumi_historico").select("*").order("em");
     tratarErro(error, "Falha ao carregar histórico");
     return data as Record<string, unknown>[];
   },
   async inserirLote(linhas: Record<string, unknown>[]): Promise<void> {
     if (!linhas.length) return;
-    const { error } = await supabase.from("historico").insert(linhas);
+    const { error } = await supabase.from("sumi_historico").insert(linhas);
     tratarErro(error, "Falha ao gravar histórico");
   },
   async removerPorItens(idsItem: string[]): Promise<void> {
     if (!idsItem.length) return;
-    const { error } = await supabase.from("historico").delete().in("no_plano_id", idsItem);
+    const { error } = await supabase.from("sumi_historico").delete().in("no_plano_id", idsItem);
     tratarErro(error, "Falha ao remover histórico");
   },
 };
@@ -244,12 +244,12 @@ export interface AnexoRow {
 
 export const anexoRepo = {
   async listarPorItem(noPlanoId: string): Promise<AnexoRow[]> {
-    const { data, error } = await supabase.from("anexo").select("*").eq("no_plano_id", noPlanoId).order("enviado_em");
+    const { data, error } = await supabase.from("sumi_anexo").select("*").eq("no_plano_id", noPlanoId).order("enviado_em");
     tratarErro(error, "Falha ao listar anexos");
     return data as AnexoRow[];
   },
   async buscarPorId(id: string): Promise<AnexoRow | null> {
-    const { data, error } = await supabase.from("anexo").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("sumi_anexo").select("*").eq("id", id).maybeSingle();
     tratarErro(error, "Falha ao buscar anexo");
     return data as AnexoRow | null;
   },
@@ -264,7 +264,7 @@ export const anexoRepo = {
     enviadoPor: string;
   }): Promise<AnexoRow> {
     const { data, error } = await supabase
-      .from("anexo")
+      .from("sumi_anexo")
       .insert({
         no_plano_id: input.noPlanoId,
         etapa_id: input.etapaId,
@@ -281,7 +281,7 @@ export const anexoRepo = {
     return data as AnexoRow;
   },
   async remover(id: string): Promise<void> {
-    const { error } = await supabase.from("anexo").delete().eq("id", id);
+    const { error } = await supabase.from("sumi_anexo").delete().eq("id", id);
     tratarErro(error, "Falha ao remover anexo");
   },
   // Reinsere anexos preservando id/metadados — usado para restaurar anexos de
@@ -289,7 +289,7 @@ export const anexoRepo = {
   // "on delete cascade" da FK já removeu o anexo antes do reinsert acontecer).
   async recriarLote(linhas: AnexoRow[]): Promise<void> {
     if (linhas.length === 0) return;
-    const { error } = await supabase.from("anexo").insert(
+    const { error } = await supabase.from("sumi_anexo").insert(
       linhas.map((linha) => ({
         id: linha.id,
         no_plano_id: linha.no_plano_id,
@@ -327,12 +327,12 @@ export interface EixoVersaoRow {
 
 export const eixoVersaoRepo = {
   async listarPorEixo(eixoId: string): Promise<EixoVersaoRow[]> {
-    const { data, error } = await supabase.from("eixo_versao").select("*").eq("eixo_id", eixoId).order("enviado_em", { ascending: false });
+    const { data, error } = await supabase.from("sumi_eixo_versao").select("*").eq("eixo_id", eixoId).order("enviado_em", { ascending: false });
     tratarErro(error, "Falha ao listar versões do eixo");
     return data as EixoVersaoRow[];
   },
   async buscarPorId(id: string): Promise<EixoVersaoRow | null> {
-    const { data, error } = await supabase.from("eixo_versao").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("sumi_eixo_versao").select("*").eq("id", id).maybeSingle();
     tratarErro(error, "Falha ao buscar versão do eixo");
     return data as EixoVersaoRow | null;
   },
@@ -350,7 +350,7 @@ export const eixoVersaoRepo = {
     enviadoPor: string;
   }): Promise<EixoVersaoRow> {
     const { data, error } = await supabase
-      .from("eixo_versao")
+      .from("sumi_eixo_versao")
       .insert({
         eixo_id: input.eixoId,
         periodo: input.periodo,

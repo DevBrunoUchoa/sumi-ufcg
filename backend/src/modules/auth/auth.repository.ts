@@ -35,7 +35,7 @@ function tratarErro(erro: { message: string; code?: string } | null, contexto: s
 export const usuarioRepository = {
   async buscarPorEmail(email: string): Promise<Usuario | null> {
     const { data, error } = await supabase
-      .from("usuario")
+      .from("sumi_usuario")
       .select("*")
       .eq("email", email.trim().toLowerCase())
       .maybeSingle();
@@ -44,13 +44,13 @@ export const usuarioRepository = {
   },
 
   async buscarPorId(id: string): Promise<Usuario | null> {
-    const { data, error } = await supabase.from("usuario").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("sumi_usuario").select("*").eq("id", id).maybeSingle();
     tratarErro(error, "Falha ao buscar usuário");
     return data ? paraUsuario(data as UsuarioRow) : null;
   },
 
   async listar(): Promise<Usuario[]> {
-    const { data, error } = await supabase.from("usuario").select("*").order("nome");
+    const { data, error } = await supabase.from("sumi_usuario").select("*").order("nome");
     tratarErro(error, "Falha ao listar usuários");
     return (data as UsuarioRow[]).map(paraUsuario);
   },
@@ -58,14 +58,14 @@ export const usuarioRepository = {
   /** Usado para notificações por e-mail (ex.: responsáveis de um eixo) — devolve só os usuários existentes dentre os ids. */
   async listarPorIds(ids: string[]): Promise<Usuario[]> {
     if (!ids.length) return [];
-    const { data, error } = await supabase.from("usuario").select("*").in("id", ids);
+    const { data, error } = await supabase.from("sumi_usuario").select("*").in("id", ids);
     tratarErro(error, "Falha ao buscar usuários");
     return (data as UsuarioRow[]).map(paraUsuario);
   },
 
   async criar(input: { nome: string; email: string; senhaHash: string; papelAdmin: boolean }): Promise<Usuario> {
     const { data, error } = await supabase
-      .from("usuario")
+      .from("sumi_usuario")
       .insert({ nome: input.nome, email: input.email.trim().toLowerCase(), senha_hash: input.senhaHash, papel_admin: input.papelAdmin })
       .select("*")
       .single();
@@ -78,13 +78,13 @@ export const usuarioRepository = {
     if (input.nome !== undefined) dados.nome = input.nome;
     if (input.papelAdmin !== undefined) dados.papel_admin = input.papelAdmin;
     if (input.senhaHash !== undefined) dados.senha_hash = input.senhaHash;
-    const { data, error } = await supabase.from("usuario").update(dados).eq("id", id).select("*").maybeSingle();
+    const { data, error } = await supabase.from("sumi_usuario").update(dados).eq("id", id).select("*").maybeSingle();
     tratarErro(error, "Falha ao atualizar usuário");
     return data ? paraUsuario(data as UsuarioRow) : null;
   },
 
   async remover(id: string): Promise<void> {
-    const { error } = await supabase.from("usuario").delete().eq("id", id);
+    const { error } = await supabase.from("sumi_usuario").delete().eq("id", id);
     tratarErro(error, "Falha ao remover usuário");
   },
 };
@@ -92,7 +92,7 @@ export const usuarioRepository = {
 export const sessaoRepository = {
   async criar(input: { usuarioId: string; expiraEm: Date }): Promise<string> {
     const { data, error } = await supabase
-      .from("sessao")
+      .from("sumi_sessao")
       .insert({ usuario_id: input.usuarioId, expira_em: input.expiraEm.toISOString() })
       .select("token")
       .single();
@@ -102,7 +102,7 @@ export const sessaoRepository = {
 
   async buscarUsuarioIdValido(token: string): Promise<string | null> {
     const { data, error } = await supabase
-      .from("sessao")
+      .from("sumi_sessao")
       .select("usuario_id, expira_em")
       .eq("token", token)
       .maybeSingle();
@@ -117,7 +117,7 @@ export const sessaoRepository = {
   },
 
   async remover(token: string): Promise<void> {
-    const { error } = await supabase.from("sessao").delete().eq("token", token);
+    const { error } = await supabase.from("sumi_sessao").delete().eq("token", token);
     tratarErro(error, "Falha ao encerrar sessão");
   },
 };
@@ -125,7 +125,7 @@ export const sessaoRepository = {
 export const redefinicaoSenhaRepository = {
   async criar(input: { usuarioId: string; expiraEm: Date }): Promise<string> {
     const { data, error } = await supabase
-      .from("redefinicao_senha")
+      .from("sumi_redefinicao_senha")
       .insert({ usuario_id: input.usuarioId, expira_em: input.expiraEm.toISOString() })
       .select("token")
       .single();
@@ -136,7 +136,7 @@ export const redefinicaoSenhaRepository = {
   /** null se o token não existe, já foi usado ou expirou. */
   async buscarValido(token: string): Promise<{ usuarioId: string } | null> {
     const { data, error } = await supabase
-      .from("redefinicao_senha")
+      .from("sumi_redefinicao_senha")
       .select("usuario_id, expira_em, usado_em")
       .eq("token", token)
       .maybeSingle();
@@ -148,7 +148,7 @@ export const redefinicaoSenhaRepository = {
   },
 
   async marcarUsado(token: string): Promise<void> {
-    const { error } = await supabase.from("redefinicao_senha").update({ usado_em: new Date().toISOString() }).eq("token", token);
+    const { error } = await supabase.from("sumi_redefinicao_senha").update({ usado_em: new Date().toISOString() }).eq("token", token);
     tratarErro(error, "Falha ao marcar token de redefinição de senha como usado");
   },
 };
@@ -156,7 +156,7 @@ export const redefinicaoSenhaRepository = {
 export const eixoRepository = {
   /** Todos os nós nivel=0 (eixos) de todos os planos — usado para calcular concessões por managerIds/reviewerIds. */
   async listarTodos(): Promise<EixoParaConcessoes[]> {
-    const { data, error } = await supabase.from("no_plano").select("id, no_pai_id, dados").eq("nivel", 0);
+    const { data, error } = await supabase.from("sumi_no_plano").select("id, no_pai_id, dados").eq("nivel", 0);
     tratarErro(error, "Falha ao carregar eixos");
     return (data as { id: string; no_pai_id: string | null; dados: Record<string, unknown> }[]).map((row) => ({
       id: row.id,

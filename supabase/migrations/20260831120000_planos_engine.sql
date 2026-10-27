@@ -1,15 +1,20 @@
--- Motor de planos: tipo_plano + nó_plano (árvore recursiva)
+-- Motor de planos: sumi_tipo_plano + sumi_no_plano (árvore recursiva)
 --
--- tipo_plano define, para um tipo de plano institucional (ex.: PDI 2026-2030),
+-- sumi_tipo_plano define, para um tipo de plano institucional (ex.: PDI 2026-2030),
 -- quantos níveis a árvore tem e quais campos cada nível aceita.
--- nó_plano é a árvore em si (lista de adjacência via no_pai_id): a raiz
+-- sumi_no_plano é a árvore em si (lista de adjacência via no_pai_id): a raiz
 -- (no_pai_id IS NULL) representa a instância do plano (ex.: "PDI UFCG
--- 2026-2030"); cada nível abaixo é definido por esquema_niveis do tipo_plano
+-- 2026-2030"); cada nível abaixo é definido por esquema_niveis do sumi_tipo_plano
 -- (ex.: Eixo -> Objetivo -> Iniciativa -> Ação Estratégica -> Etapa).
+--
+-- Todo objeto do SUMI no banco (tabelas, funções, índices, constraints,
+-- triggers) leva o prefixo sumi_: o Supabase da STI é compartilhado com
+-- outros sistemas. Bancos criados antes do prefixo são convertidos por
+-- 20261027120000_prefixo_sumi.sql.
 
 create extension if not exists pgcrypto;
 
-create table if not exists tipo_plano (
+create table if not exists sumi_tipo_plano (
   id uuid primary key default gen_random_uuid(),
   nome text not null,
   descricao text,
@@ -20,32 +25,32 @@ create table if not exists tipo_plano (
   ativo boolean not null default true,
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now(),
-  constraint tipo_plano_nome_unico unique (nome),
-  constraint tipo_plano_esquema_niveis_e_array check (jsonb_typeof(esquema_niveis) = 'array'),
-  constraint tipo_plano_esquema_campos_e_objeto check (jsonb_typeof(esquema_campos) = 'object')
+  constraint sumi_tipo_plano_nome_unico unique (nome),
+  constraint sumi_tipo_plano_esquema_niveis_e_array check (jsonb_typeof(esquema_niveis) = 'array'),
+  constraint sumi_tipo_plano_esquema_campos_e_objeto check (jsonb_typeof(esquema_campos) = 'object')
 );
 
-create table if not exists no_plano (
+create table if not exists sumi_no_plano (
   id uuid primary key default gen_random_uuid(),
-  tipo_plano_id uuid not null references tipo_plano (id) on delete restrict,
-  no_pai_id uuid references no_plano (id) on delete cascade,
-  -- Índice (0-based) em tipo_plano.esquema_niveis; raiz (no_pai_id null) = instância do plano, nivel = -1.
+  tipo_plano_id uuid not null references sumi_tipo_plano (id) on delete restrict,
+  no_pai_id uuid references sumi_no_plano (id) on delete cascade,
+  -- Índice (0-based) em sumi_tipo_plano.esquema_niveis; raiz (no_pai_id null) = instância do plano, nivel = -1.
   nivel integer not null,
   ordem integer not null default 0,
-  -- Valores dos campos definidos em tipo_plano.esquema_campos para este nível.
+  -- Valores dos campos definidos em sumi_tipo_plano.esquema_campos para este nível.
   dados jsonb not null default '{}'::jsonb,
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now(),
-  constraint no_plano_raiz_sem_pai check ((no_pai_id is null) = (nivel = -1)),
-  constraint no_plano_dados_e_objeto check (jsonb_typeof(dados) = 'object'),
-  constraint no_plano_nao_e_proprio_pai check (id is distinct from no_pai_id)
+  constraint sumi_no_plano_raiz_sem_pai check ((no_pai_id is null) = (nivel = -1)),
+  constraint sumi_no_plano_dados_e_objeto check (jsonb_typeof(dados) = 'object'),
+  constraint sumi_no_plano_nao_e_proprio_pai check (id is distinct from no_pai_id)
 );
 
-create index if not exists no_plano_pai_idx on no_plano (no_pai_id, ordem);
-create index if not exists no_plano_tipo_plano_idx on no_plano (tipo_plano_id);
+create index if not exists sumi_no_plano_pai_idx on sumi_no_plano (no_pai_id, ordem);
+create index if not exists sumi_no_plano_tipo_plano_idx on sumi_no_plano (tipo_plano_id);
 
 -- Mantém atualizado_em em dia em qualquer UPDATE.
-create or replace function set_atualizado_em()
+create or replace function sumi_set_atualizado_em()
 returns trigger
 language plpgsql
 as $$
@@ -55,21 +60,21 @@ begin
 end;
 $$;
 
-drop trigger if exists tipo_plano_set_atualizado_em on tipo_plano;
-create trigger tipo_plano_set_atualizado_em
-  before update on tipo_plano
-  for each row execute function set_atualizado_em();
+drop trigger if exists sumi_tipo_plano_set_atualizado_em on sumi_tipo_plano;
+create trigger sumi_tipo_plano_set_atualizado_em
+  before update on sumi_tipo_plano
+  for each row execute function sumi_set_atualizado_em();
 
-drop trigger if exists no_plano_set_atualizado_em on no_plano;
-create trigger no_plano_set_atualizado_em
-  before update on no_plano
-  for each row execute function set_atualizado_em();
+drop trigger if exists sumi_no_plano_set_atualizado_em on sumi_no_plano;
+create trigger sumi_no_plano_set_atualizado_em
+  before update on sumi_no_plano
+  for each row execute function sumi_set_atualizado_em();
 
 -- Retorna toda a subárvore (incluindo a própria raiz) a partir de um nó,
 -- ordenada por profundidade e por 'ordem' entre irmãos. supabase-js não
 -- expressa CTEs recursivas, então essa consulta é exposta como RPC
--- (supabase.rpc('arvore_no_plano', { raiz_id })).
-create or replace function arvore_no_plano(raiz_id uuid)
+-- (supabase.rpc('sumi_arvore_no_plano', { raiz_id })).
+create or replace function sumi_arvore_no_plano(raiz_id uuid)
 returns table (
   id uuid,
   tipo_plano_id uuid,
@@ -86,13 +91,13 @@ stable
 as $$
   with recursive subarvore as (
     select np.*, 0 as profundidade
-    from no_plano np
+    from sumi_no_plano np
     where np.id = raiz_id
 
     union all
 
     select np.*, s.profundidade + 1
-    from no_plano np
+    from sumi_no_plano np
     join subarvore s on np.no_pai_id = s.id
   )
   select id, tipo_plano_id, no_pai_id, nivel, ordem, dados, profundidade, criado_em, atualizado_em
@@ -100,5 +105,5 @@ as $$
   order by profundidade, ordem;
 $$;
 
-comment on table tipo_plano is 'Define os níveis e o esquema de campos de um tipo de plano institucional (ex.: PDI).';
-comment on table no_plano is 'Árvore recursiva de um plano concreto (lista de adjacência via no_pai_id).';
+comment on table sumi_tipo_plano is 'Define os níveis e o esquema de campos de um tipo de plano institucional (ex.: PDI).';
+comment on table sumi_no_plano is 'Árvore recursiva de um plano concreto (lista de adjacência via no_pai_id).';

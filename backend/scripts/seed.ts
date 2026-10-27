@@ -36,7 +36,7 @@ function usuarioOpcional(prefixo: string, papelAdmin: boolean, nomePadrao: strin
 
 async function upsertUsuario(usuario: UsuarioSeed): Promise<string> {
   const { data: existente, error: erroBusca } = await supabase
-    .from("usuario")
+    .from("sumi_usuario")
     .select("id")
     .eq("email", usuario.email.trim().toLowerCase())
     .maybeSingle();
@@ -44,7 +44,7 @@ async function upsertUsuario(usuario: UsuarioSeed): Promise<string> {
   if (existente) return (existente as { id: string }).id;
 
   const { data, error } = await supabase
-    .from("usuario")
+    .from("sumi_usuario")
     .insert({
       nome: usuario.nome,
       email: usuario.email.trim().toLowerCase(),
@@ -67,12 +67,12 @@ async function upsertTipoPlano(input: {
 }): Promise<string> {
   // Idempotente por `tipo` (PDI/PLS), não por id: o script gera um id novo a
   // cada chamada, então checar por id nunca encontraria nada já existente.
-  const { data: existente, error: erroBusca } = await supabase.from("tipo_plano").select("id").eq("tipo", input.tipo).maybeSingle();
+  const { data: existente, error: erroBusca } = await supabase.from("sumi_tipo_plano").select("id").eq("tipo", input.tipo).maybeSingle();
   if (erroBusca) throw erroBusca;
   if (existente) return (existente as { id: string }).id;
 
   const { data, error } = await supabase
-    .from("tipo_plano")
+    .from("sumi_tipo_plano")
     .insert({
       id: randomUUID(),
       nome: input.nome,
@@ -110,7 +110,7 @@ async function upsertNoPlano(input: {
   dados: Record<string, unknown>;
   chaveNatural: "shortName" | "code";
 }): Promise<string> {
-  let query = supabase.from("no_plano").select("id, dados").eq("tipo_plano_id", input.tipoPlanoId).eq("nivel", input.nivel);
+  let query = supabase.from("sumi_no_plano").select("id, dados").eq("tipo_plano_id", input.tipoPlanoId).eq("nivel", input.nivel);
   query = input.noPaiId === null ? query.is("no_pai_id", null) : query.eq("no_pai_id", input.noPaiId);
   const { data: candidatos, error: erroBusca } = await query;
   if (erroBusca) throw erroBusca;
@@ -118,13 +118,13 @@ async function upsertNoPlano(input: {
     (row) => row.dados[input.chaveNatural] === input.dados[input.chaveNatural],
   );
   if (existente) {
-    const { error: erroUpdate } = await supabase.from("no_plano").update({ dados: input.dados, ordem: input.ordem }).eq("id", existente.id);
+    const { error: erroUpdate } = await supabase.from("sumi_no_plano").update({ dados: input.dados, ordem: input.ordem }).eq("id", existente.id);
     if (erroUpdate) throw erroUpdate;
     return existente.id;
   }
 
   const { data, error } = await supabase
-    .from("no_plano")
+    .from("sumi_no_plano")
     .insert({ id: randomUUID(), tipo_plano_id: input.tipoPlanoId, no_pai_id: input.noPaiId, nivel: input.nivel, ordem: input.ordem, dados: input.dados })
     .select("id")
     .single();

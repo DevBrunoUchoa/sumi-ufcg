@@ -70,7 +70,7 @@ interface DadosEixo8 {
 }
 
 async function buscarNoPorCodigo(noPaiId: string, nivel: number, codigo: string): Promise<string | null> {
-  const { data, error } = await supabase.from("no_plano").select("id, dados").eq("no_pai_id", noPaiId).eq("nivel", nivel);
+  const { data, error } = await supabase.from("sumi_no_plano").select("id, dados").eq("no_pai_id", noPaiId).eq("nivel", nivel);
   if (error) throw error;
   const encontrado = (data as { id: string; dados: Record<string, unknown> }[]).find((row) => row.dados.code === codigo);
   return encontrado?.id ?? null;
@@ -86,13 +86,13 @@ async function upsertNoPorCodigo(input: {
 }): Promise<string> {
   const existenteId = await buscarNoPorCodigo(input.noPaiId, input.nivel, input.codigo);
   if (existenteId) {
-    const { error } = await supabase.from("no_plano").update({ dados: input.dados, ordem: input.ordem }).eq("id", existenteId);
+    const { error } = await supabase.from("sumi_no_plano").update({ dados: input.dados, ordem: input.ordem }).eq("id", existenteId);
     if (error) throw error;
     return existenteId;
   }
   const id = randomUUID();
   const { error } = await supabase
-    .from("no_plano")
+    .from("sumi_no_plano")
     .insert({ id, tipo_plano_id: input.tipoPlanoId, no_pai_id: input.noPaiId, nivel: input.nivel, ordem: input.ordem, dados: input.dados });
   if (error) throw error;
   return id;
@@ -103,12 +103,12 @@ async function main() {
   const caminho = path.resolve(__dirname, "data/eixo8-monitoramento-pdi.json");
   const dados: DadosEixo8 = JSON.parse(readFileSync(caminho, "utf-8"));
 
-  const { data: tipoPdi, error: erroTipo } = await supabase.from("tipo_plano").select("id").eq("tipo", "PDI").maybeSingle();
+  const { data: tipoPdi, error: erroTipo } = await supabase.from("sumi_tipo_plano").select("id").eq("tipo", "PDI").maybeSingle();
   if (erroTipo) throw erroTipo;
   if (!tipoPdi) throw new Error('Tipo de plano "PDI" não encontrado — rode `pnpm --filter backend seed` primeiro.');
   const tipoPlanoId = (tipoPdi as { id: string }).id;
 
-  const { data: raizPdi, error: erroRaiz } = await supabase.from("no_plano").select("id").eq("tipo_plano_id", tipoPlanoId).eq("nivel", -1).limit(1).maybeSingle();
+  const { data: raizPdi, error: erroRaiz } = await supabase.from("sumi_no_plano").select("id").eq("tipo_plano_id", tipoPlanoId).eq("nivel", -1).limit(1).maybeSingle();
   if (erroRaiz) throw erroRaiz;
   if (!raizPdi) throw new Error("Plano PDI (nó raiz) não encontrado — rode `pnpm --filter backend seed` primeiro.");
   const planoId = (raizPdi as { id: string }).id;

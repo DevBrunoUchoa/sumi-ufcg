@@ -5,7 +5,7 @@ import { pode } from "../auth/auth.can.js";
 import type { SessaoUsuario } from "../auth/auth.types.js";
 import { anexoRepo, noPlanoRepo, type AnexoRow } from "./planning.repository.js";
 
-export const BUCKET_ANEXOS = "anexos";
+export const BUCKET_ANEXOS = "sumi-anexos";
 export const TIPOS_MIME_PERMITIDOS = [
   "image/png",
   "image/jpeg",

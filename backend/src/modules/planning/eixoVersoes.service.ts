@@ -6,7 +6,7 @@ import type { SessaoUsuario } from "../auth/auth.types.js";
 import { eixoVersaoRepo, noPlanoRepo, type EixoVersaoRow } from "./planning.repository.js";
 import type { Plan } from "./planning.types.js";
 
-export const BUCKET_EIXO_VERSOES = "eixo-versoes";
+export const BUCKET_EIXO_VERSOES = "sumi-eixo-versoes";
 export const TAMANHO_MAXIMO_BYTES = 15 * 1024 * 1024;
 
 export interface EixoVersao {

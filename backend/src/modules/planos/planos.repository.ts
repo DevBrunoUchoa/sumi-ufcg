@@ -2,8 +2,8 @@ import { supabase } from "../../lib/supabase.js";
 import { HttpError } from "../../lib/http-error.js";
 import type { EsquemaCampos, NivelDef, NoPlano, NoPlanoArvore, TipoPlano } from "./planos.types.js";
 
-const TABELA_TIPO_PLANO = "tipo_plano";
-const TABELA_NO_PLANO = "no_plano";
+const TABELA_TIPO_PLANO = "sumi_tipo_plano";
+const TABELA_NO_PLANO = "sumi_no_plano";
 
 interface TipoPlanoRow {
   id: string;
@@ -189,9 +189,9 @@ export const noPlanoRepository = {
     tratarErro(error, "Falha ao remover nó do plano");
   },
 
-  /** Subárvore completa (incluindo a raiz) via RPC `arvore_no_plano` (ver supabase/migrations). */
+  /** Subárvore completa (incluindo a raiz) via RPC `sumi_arvore_no_plano` (ver supabase/migrations). */
   async arvore(raizId: string): Promise<NoPlanoArvore[]> {
-    const { data, error } = await supabase.rpc("arvore_no_plano", { raiz_id: raizId });
+    const { data, error } = await supabase.rpc("sumi_arvore_no_plano", { raiz_id: raizId });
     tratarErro(error, "Falha ao carregar árvore do plano");
     return (data as NoPlanoArvoreRow[]).map((row) => ({ ...paraNoPlano(row), profundidade: row.profundidade }));
   },

@@ -31,20 +31,20 @@ sessão 200/401, regra de decisão) é o mesmo.
 A PR #6 deliberadamente não implementou nada além do contrato (schemas e
 documentação, rota não registrada em `app.ts`) — aqui o módulo está
 implementado de ponta a ponta: login/logout reais, sessão persistida
-(tabela `sessao`), senha com hash, e `sessionMiddleware` aplicado a toda
+(tabela `sumi_sessao`), senha com hash, e `sessionMiddleware` aplicado a toda
 requisição.
 
 ## Modelo
 
-Só existe um papel global no banco (`usuario.papel_admin`, "Administrador
+Só existe um papel global no banco (`sumi_usuario.papel_admin`, "Administrador
 Estratégico"). Gestor do Eixo e Responsável pelo Eixo **não são papéis
-próprios** — são derivados da presença do `usuario.id` em
-`no_plano.dados.managerIds`/`reviewerIds` de cada eixo. Ver a ADR para a
+próprios** — são derivados da presença do `sumi_usuario.id` em
+`sumi_no_plano.dados.managerIds`/`reviewerIds` de cada eixo. Ver a ADR para a
 composição exata de concessões por perfil.
 
 ## Sessão
 
-Cookie httpOnly opaco (`sumi_session`), token em `sessao.token`, sem JWT.
+Cookie httpOnly opaco (`sumi_session`), token em `sumi_sessao.token`, sem JWT.
 Senha com `scrypt` (`node:crypto`), sem dependência externa. `GET /session`
 responde `401` com `{"error":{"code":"UNAUTHENTICATED","message":"..."}}`
 quando não há sessão válida (o frontend trata `401` como consulta pública

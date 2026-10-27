@@ -1,4 +1,4 @@
-alter table risco
+alter table sumi_risco
   add column if not exists eixo text not null default '',
   add column if not exists objetivo text not null default '',
   add column if not exists ref_iniciativa text not null default '',
@@ -18,4 +18,4 @@ alter table risco
   add column if not exists acoes_corretivas text not null default '',
   add column if not exists licoes_aprendidas text not null default '';
 
-create index if not exists risco_id_risco_idx on risco (id_risco);
+create index if not exists sumi_risco_id_risco_idx on sumi_risco (id_risco);

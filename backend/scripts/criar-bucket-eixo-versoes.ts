@@ -1,15 +1,15 @@
 /**
- * Cria o bucket de storage "eixo-versoes" no Supabase (idempotente — não
+ * Cria o bucket de storage "sumi-eixo-versoes" no Supabase (idempotente — não
  * falha se já existir). Guarda os arquivos originais de cada importação de
  * planilha retida como versão do eixo (ver planning/eixoVersoes.service.ts).
  * Privado: arquivos são servidos pelo backend via signed URL de curta
- * duração, mesma visibilidade (plan.read_internal) do bucket "anexos".
+ * duração, mesma visibilidade (plan.read_internal) do bucket "sumi-anexos".
  *
  * Uso: pnpm --filter backend criar-bucket-eixo-versoes
  */
 import { supabase } from "../src/lib/supabase.js";
 
-const BUCKET = "eixo-versoes";
+const BUCKET = "sumi-eixo-versoes";
 const LIMITE_TAMANHO_BYTES = 15 * 1024 * 1024; // 15MB
 const TIPOS_PERMITIDOS = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

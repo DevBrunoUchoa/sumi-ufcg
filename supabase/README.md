@@ -12,7 +12,16 @@ migrations/
   20261013120000_eixo_versao.sql               # sumi_eixo_versao (versões das importações)
   20261013130000_redefinicao_senha.sql         # sumi_redefinicao_senha
   20261027120000_prefixo_sumi.sql              # converte bancos antigos para o prefixo sumi_
+  20261028120000_rls_sumi.sql                  # RLS sem policies: a API pública não acessa nada
 ```
+
+## RLS
+
+Só o backend acessa o banco, sempre com a service role key, que ignora RLS;
+o frontend nunca fala com o Supabase. Por isso as tabelas têm RLS ligada e
+**nenhuma policy**: `anon` e `authenticated` não leem nem gravam nada, e o
+backend funciona normalmente. Num Supabase compartilhado isso é o que impede
+quem tem a anon key de outro sistema de ler `sumi_usuario` ou `sumi_sessao`.
 
 ## Prefixo `sumi_`
 
@@ -25,9 +34,9 @@ sistemas.
 
 ## Banco novo
 
-Rode todos os arquivos em ordem (a última migration não faz nada num banco
-novo). Pelo SQL Editor do painel do Supabase, colando um arquivo por vez, ou
-via `psql` com a connection string do projeto (Settings → Database):
+Rode todos os arquivos em ordem (a de prefixo não faz nada num banco novo).
+Pelo SQL Editor do painel do Supabase, colando um arquivo por vez, ou via
+`psql` com a connection string do projeto (Settings → Database):
 
 ```bash
 for f in supabase/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"; done
@@ -40,13 +49,23 @@ ver `backend/scripts/seed.ts`):
 ```bash
 pnpm --filter backend criar-bucket
 pnpm --filter backend criar-bucket-eixo-versoes
-pnpm --filter backend seed
+SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=... pnpm --filter backend seed
+```
+
+Em produção, os mesmos comandos rodam dentro do container, que já tem o
+pnpm e os scripts:
+
+```bash
+docker compose exec app pnpm --filter backend criar-bucket
+docker compose exec app pnpm --filter backend criar-bucket-eixo-versoes
+docker compose exec -e SEED_ADMIN_EMAIL=... -e SEED_ADMIN_PASSWORD=... app pnpm --filter backend seed
 ```
 
 ## Banco criado antes do prefixo
 
-Rode **só** `20261027120000_prefixo_sumi.sql`: ela renomeia tabelas,
-constraints, índices, triggers e funções sem perder dados. Os buckets novos
+Rode `20261027120000_prefixo_sumi.sql` e as que vêm depois dela (não as
+anteriores): ela renomeia tabelas, constraints, índices, triggers e funções
+sem perder dados. Os buckets novos
 precisam ser criados com os comandos acima; os arquivos que já estavam nos
 buckets antigos (`anexos`, `eixo-versoes`) não são movidos.
 

@@ -25,8 +25,16 @@ FROM node:24-alpine AS runtime
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
+# pnpm e os scripts do backend vão na imagem final para rodar seed e
+# criação de buckets no próprio container (ver supabase/README.md). Como o
+# container roda com o sistema de arquivos somente leitura, o pnpm não
+# confere dependências nem procura atualização antes de rodar.
+ENV pnpm_config_verify_deps_before_run=false
+ENV pnpm_config_update_notifier=false
 
 WORKDIR /app
+
+RUN npm install --global pnpm@11.19.0 && npm cache clean --force
 
 COPY --from=build --chown=node:node /app/package.json ./package.json
 COPY --from=build --chown=node:node /app/pnpm-lock.yaml ./pnpm-lock.yaml
@@ -38,6 +46,9 @@ COPY --from=build --chown=node:node /app/frontend/node_modules ./frontend/node_m
 COPY --from=build --chown=node:node /app/backend/node_modules ./backend/node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/backend/dist ./backend/dist
+COPY --from=build --chown=node:node /app/backend/tsconfig.json ./backend/tsconfig.json
+COPY --from=build --chown=node:node /app/backend/src ./backend/src
+COPY --from=build --chown=node:node /app/backend/scripts ./backend/scripts
 
 USER node
 

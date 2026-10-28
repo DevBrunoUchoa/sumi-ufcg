@@ -1,4 +1,5 @@
 import { gerarHashSenha, verificarSenha } from "../../lib/password.js";
+import { cpfValido, normalizarCpf } from "../../lib/cpf.js";
 import { HttpError } from "../../lib/http-error.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../config/env.js";
@@ -7,6 +8,7 @@ import { authenticatedSessionSchema, type PermissionCode } from "./auth.contract
 import { PERMISSOES_CONCEDIVEIS_POR_EIXO, PERMISSOES, PERMISSOES_GESTOR_EIXO, PERMISSOES_RESPONSAVEL_EIXO, TODAS_PERMISSOES_ADMIN } from "./auth.permissions.js";
 import { eixoRepository, redefinicaoSenhaRepository, sessaoRepository, usuarioRepository } from "./auth.repository.js";
 import type { Concessao, EixoParaConcessoes, Papel, SessaoUsuario, Usuario } from "./auth.types.js";
+import type { IdentidadeGovbr } from "./govbr.js";
 
 export const DURACAO_SESSAO_MS = 12 * 60 * 60 * 1000; // 12h
 export const DURACAO_REDEFINICAO_SENHA_MS = 60 * 60 * 1000; // 1h
@@ -104,17 +106,42 @@ export function montarSessao(usuario: Usuario | null, eixos: EixoParaConcessoes[
   };
 }
 
+async function criarSessao(usuario: Usuario): Promise<{ sessao: SessaoUsuario; token: string }> {
+  const token = await sessaoRepository.criar({ usuarioId: usuario.id, expiraEm: new Date(Date.now() + DURACAO_SESSAO_MS) });
+  const eixos = await eixoRepository.listarTodos();
+  const sessao = montarSessao(usuario, eixos);
+  authenticatedSessionSchema.parse(sessao);
+  return { sessao, token };
+}
+
 export const authService = {
   async autenticar(email: string, senha: string): Promise<{ sessao: SessaoUsuario; token: string }> {
     const usuario = await usuarioRepository.buscarPorEmail(email);
     if (!usuario || !verificarSenha(senha, usuario.senhaHash)) {
       throw new HttpError(401, "Credenciais inválidas");
     }
-    const token = await sessaoRepository.criar({ usuarioId: usuario.id, expiraEm: new Date(Date.now() + DURACAO_SESSAO_MS) });
-    const eixos = await eixoRepository.listarTodos();
-    const sessao = montarSessao(usuario, eixos);
-    authenticatedSessionSchema.parse(sessao);
-    return { sessao, token };
+    return criarSessao(usuario);
+  },
+
+  /**
+   * Liga a identidade GOV.BR a um usuário do SUMI: primeiro pelo CPF
+   * cadastrado; sem CPF, pelo e-mail verificado no GOV.BR — e aí grava o CPF,
+   * para os próximos logins. Quem não tem conta no SUMI (ou cujo e-mail já
+   * está ligado a outro CPF) não entra: contas e permissões vêm do admin.
+   */
+  async autenticarGovbr(identidade: IdentidadeGovbr): Promise<{ sessao: SessaoUsuario; token: string }> {
+    const cpf = normalizarCpf(identidade.cpf);
+    if (!cpfValido(cpf)) throw new HttpError(400, "CPF inválido na resposta do GOV.BR");
+    let usuario = await usuarioRepository.buscarPorCpf(cpf);
+    if (!usuario && identidade.emailVerificado && identidade.email) {
+      const porEmail = await usuarioRepository.buscarPorEmail(identidade.email);
+      if (porEmail && !porEmail.cpf) {
+        usuario = await usuarioRepository.atualizar(porEmail.id, { cpf });
+        logger.info({ usuarioId: porEmail.id }, "Conta ligada ao GOV.BR pelo e-mail no primeiro acesso");
+      }
+    }
+    if (!usuario) throw new HttpError(403, "Conta GOV.BR sem usuário no SUMI");
+    return criarSessao(usuario);
   },
 
   async encerrar(token: string | null): Promise<void> {

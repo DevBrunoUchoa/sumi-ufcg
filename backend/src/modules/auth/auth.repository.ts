@@ -8,6 +8,7 @@ interface UsuarioRow {
   email: string;
   senha_hash: string;
   papel_admin: boolean;
+  cpf: string | null;
   criado_em: string;
   atualizado_em: string;
 }
@@ -19,6 +20,7 @@ function paraUsuario(row: UsuarioRow): Usuario {
     email: row.email,
     senhaHash: row.senha_hash,
     papelAdmin: row.papel_admin,
+    cpf: row.cpf ?? null,
     criadoEm: row.criado_em,
     atualizadoEm: row.atualizado_em,
   };
@@ -43,6 +45,12 @@ export const usuarioRepository = {
     return data ? paraUsuario(data as UsuarioRow) : null;
   },
 
+  async buscarPorCpf(cpf: string): Promise<Usuario | null> {
+    const { data, error } = await supabase.from("sumi_usuario").select("*").eq("cpf", cpf).maybeSingle();
+    tratarErro(error, "Falha ao buscar usuário");
+    return data ? paraUsuario(data as UsuarioRow) : null;
+  },
+
   async buscarPorId(id: string): Promise<Usuario | null> {
     const { data, error } = await supabase.from("sumi_usuario").select("*").eq("id", id).maybeSingle();
     tratarErro(error, "Falha ao buscar usuário");
@@ -63,21 +71,24 @@ export const usuarioRepository = {
     return (data as UsuarioRow[]).map(paraUsuario);
   },
 
-  async criar(input: { nome: string; email: string; senhaHash: string; papelAdmin: boolean }): Promise<Usuario> {
+  async criar(input: { nome: string; email: string; senhaHash: string; papelAdmin: boolean; cpf?: string | null }): Promise<Usuario> {
     const { data, error } = await supabase
       .from("sumi_usuario")
-      .insert({ nome: input.nome, email: input.email.trim().toLowerCase(), senha_hash: input.senhaHash, papel_admin: input.papelAdmin })
+      // cpf só entra quando informado: assim criar usuário continua funcionando
+      // num banco que ainda não rodou a migration do CPF.
+      .insert({ nome: input.nome, email: input.email.trim().toLowerCase(), senha_hash: input.senhaHash, papel_admin: input.papelAdmin, ...(input.cpf ? { cpf: input.cpf } : {}) })
       .select("*")
       .single();
     tratarErro(error, "Falha ao criar usuário");
     return paraUsuario(data as UsuarioRow);
   },
 
-  async atualizar(id: string, input: { nome?: string; papelAdmin?: boolean; senhaHash?: string }): Promise<Usuario | null> {
+  async atualizar(id: string, input: { nome?: string; papelAdmin?: boolean; senhaHash?: string; cpf?: string | null }): Promise<Usuario | null> {
     const dados: Record<string, unknown> = {};
     if (input.nome !== undefined) dados.nome = input.nome;
     if (input.papelAdmin !== undefined) dados.papel_admin = input.papelAdmin;
     if (input.senhaHash !== undefined) dados.senha_hash = input.senhaHash;
+    if (input.cpf !== undefined) dados.cpf = input.cpf;
     const { data, error } = await supabase.from("sumi_usuario").update(dados).eq("id", id).select("*").maybeSingle();
     tratarErro(error, "Falha ao atualizar usuário");
     return data ? paraUsuario(data as UsuarioRow) : null;

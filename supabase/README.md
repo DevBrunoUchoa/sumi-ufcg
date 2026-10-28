@@ -14,6 +14,7 @@ migrations/
   20261027120000_prefixo_sumi.sql              # converte bancos antigos para o prefixo sumi_
   20261028120000_rls_sumi.sql                  # RLS sem policies: a API pública não acessa nada
   20261028130000_storage_sumi.sql              # buckets sumi- fechados para anon e authenticated
+  20261028140000_cpf_usuario.sql               # CPF do usuário, para o login com GOV.BR
 ```
 
 ## RLS

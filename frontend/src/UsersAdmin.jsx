@@ -24,6 +24,17 @@ const PAPEIS = [
   },
 ];
 
+// O CPF liga a conta ao login com gov.br (o GOV.BR identifica a pessoa por
+// ele). O backend valida de novo; aqui é só para avisar antes de enviar.
+const soDigitos = (valor) => String(valor || '').replace(/\D/g, '');
+const formatarCpf = (cpf) => (cpf ? cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : '');
+function cpfValido(valor) {
+  const cpf = soDigitos(valor);
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digito = (base) => ((([...base].reduce((total, d, i) => total + Number(d) * (base.length + 1 - i), 0) * 10) % 11) % 10);
+  return digito(cpf.slice(0, 9)) === Number(cpf[9]) && digito(cpf.slice(0, 10)) === Number(cpf[10]);
+}
+
 function PapeisReferencia() {
   return <section className="section-heading pdi-section-heading" aria-labelledby="papeis-title" style={{ display: 'block', marginTop: 'var(--spacing-scale-5x)' }}>
     <div><h2 id="papeis-title">Papéis e permissões</h2><p className="hint">O que cada papel pode fazer no SUMI. Gestor e Responsável são atribuídos por eixo, na Estrutura de cada plano — aqui é só referência.</p></div>
@@ -60,8 +71,12 @@ export function UsersAdmin({ currentUserId }) {
     event.preventDefault();
     setError('');
     const values = Object.fromEntries(new FormData(event.currentTarget));
+    if (values.cpf && !cpfValido(values.cpf)) {
+      setError('CPF inválido. Confira os dígitos.');
+      return;
+    }
     try {
-      await criarUsuario({ nome: values.nome.trim(), email: values.email.trim(), senha: values.senha, papelAdmin: values.papelAdmin === 'on' });
+      await criarUsuario({ nome: values.nome.trim(), email: values.email.trim(), senha: values.senha, papelAdmin: values.papelAdmin === 'on', cpf: soDigitos(values.cpf) || undefined });
       setCreating(false);
       reload();
     } catch (err) {
@@ -73,9 +88,15 @@ export function UsersAdmin({ currentUserId }) {
     event.preventDefault();
     setError('');
     const values = Object.fromEntries(new FormData(event.currentTarget));
+    if (values.cpf && !cpfValido(values.cpf)) {
+      setError('CPF inválido. Confira os dígitos.');
+      return;
+    }
     setBusyId(usuario.id);
     try {
       const dados = { nome: values.nome.trim(), papelAdmin: values.papelAdmin === 'on' };
+      // Só manda o CPF quando ele mudou; em branco desliga a conta do gov.br.
+      if (soDigitos(values.cpf) !== (usuario.cpf || '')) dados.cpf = soDigitos(values.cpf) || null;
       if (values.senha) dados.senha = values.senha;
       await atualizarUsuario(usuario.id, dados);
       setEditingId(null);
@@ -115,6 +136,7 @@ export function UsersAdmin({ currentUserId }) {
         <Field label="Nome"><Input name="nome" required maxLength={120} autoFocus /></Field>
         <Field label="E-mail"><Input name="email" type="email" required maxLength={180} /></Field>
         <Field label="Senha provisória"><Input name="senha" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" /></Field>
+        <Field label="CPF (opcional)" help="Permite entrar com o gov.br."><Input name="cpf" maxLength={14} placeholder="000.000.000-00" /></Field>
       </div>
       <label className="checkbox-field"><input name="papelAdmin" type="checkbox" /> Administrador Estratégico (acesso total)</label>
       <div className="form-end"><Button onClick={() => { setCreating(false); setError(''); }}>Cancelar</Button><Button type="submit" variant="primary">Criar usuário</Button></div>
@@ -123,14 +145,15 @@ export function UsersAdmin({ currentUserId }) {
       : state.status === 'error' ? <Empty title="Não foi possível carregar os usuários" action={<Button onClick={reload}>Tentar novamente</Button>} />
       : !state.usuarios.length ? <Empty title="Nenhum usuário cadastrado" />
       : <div className="table-scroll"><table className="annual-table">
-          <thead><tr><th scope="col">Nome</th><th scope="col">E-mail</th><th scope="col">Papel</th><th scope="col" aria-label="Ações" /></tr></thead>
-          <tbody>{state.usuarios.map((usuario) => editingId === usuario.id ? <tr key={usuario.id}><td colSpan={4}>
+          <thead><tr><th scope="col">Nome</th><th scope="col">E-mail</th><th scope="col">Papel</th><th scope="col">gov.br</th><th scope="col" aria-label="Ações" /></tr></thead>
+          <tbody>{state.usuarios.map((usuario) => editingId === usuario.id ? <tr key={usuario.id}><td colSpan={5}>
             <form className="user-edit-form" onSubmit={(event) => handleUpdate(event, usuario)}>
               <div className="form-grid three">
                 {/* eslint-disable-next-line jsx-a11y/no-autofocus -- formulário revelado pelo clique em "Editar" */}
                 <Field label="Nome"><Input name="nome" required maxLength={120} defaultValue={usuario.nome} autoFocus /></Field>
                 <Field label="E-mail"><Input value={usuario.email} disabled /></Field>
                 <Field label="Nova senha (opcional)" help="Deixe em branco para manter a atual."><Input name="senha" type="password" minLength={8} /></Field>
+                <Field label="CPF" help="Liga a conta ao gov.br. Em branco, desliga."><Input name="cpf" maxLength={14} placeholder="000.000.000-00" defaultValue={formatarCpf(usuario.cpf)} /></Field>
               </div>
               <label className="checkbox-field"><input name="papelAdmin" type="checkbox" defaultChecked={usuario.papelAdmin} /> Administrador Estratégico (acesso total)</label>
               <div className="form-end"><Button onClick={() => { setEditingId(null); setError(''); }}>Cancelar</Button><Button type="submit" variant="primary" disabled={busyId === usuario.id}>Salvar</Button></div>
@@ -139,6 +162,7 @@ export function UsersAdmin({ currentUserId }) {
             <td>{usuario.nome}</td>
             <td>{usuario.email}</td>
             <td><Badge tone={usuario.papelAdmin ? 'blue' : 'neutral'}>{usuario.papelAdmin ? 'Administrador' : 'Padrão'}</Badge></td>
+            <td className="nowrap">{usuario.cpf ? <Badge tone="green">Vinculado</Badge> : <Badge>Não vinculado</Badge>}</td>
             <td className="table-row-actions">
               <button type="button" className="icon-button" aria-label={`Editar ${usuario.nome}`} onClick={() => setEditingId(usuario.id)}><Icon name="edit" size={15} /></button>
               {usuario.id !== currentUserId && <button type="button" className="icon-button" aria-label={`Remover ${usuario.nome}`} disabled={busyId === usuario.id} onClick={() => handleRemove(usuario)}><Icon name="close" size={15} /></button>}

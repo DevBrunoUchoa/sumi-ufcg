@@ -1,21 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Field, Icon } from '../ui.jsx';
 import { useTranslation } from '../i18n/context.jsx';
 
 const env = import.meta.env || {};
 const API_BASE_URL = (env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-// The server must implement the OIDC authorization/callback flow before enabling it.
-const GOVBR_ENABLED = env.VITE_GOVBR_LOGIN_ENABLED === 'true';
 
-// Uses the existing SUMI credentials until an identity provider is integrated.
-// A GOV.BR sign-in must target the backend authorization route, not collect its password.
-export function LoginPage({ onSuccess, authenticated = false, returnTo = '/inicio' }) {
+// Códigos que o callback do GOV.BR devolve em ?govbr= (backend/src/modules/auth/govbr.routes.ts).
+const GOVBR_ERRORS = {
+  'nao-vinculado': 'login.govbrErrorNotLinked',
+  cancelado: 'login.govbrErrorCancelled',
+  falha: 'login.govbrErrorFailed',
+};
+
+// The GOV.BR button only targets the backend authorization route; the SUMI never
+// collects the GOV.BR password. It shows up only when the server has the provider
+// credentials, so the same build works with or without them.
+export function LoginPage({ onSuccess, authenticated = false, returnTo = '/inicio', govbrError = null }) {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [govbrEnabled, setGovbrEnabled] = useState(false);
+  const govbrMessage = GOVBR_ERRORS[govbrError] ? t(GOVBR_ERRORS[govbrError]) : '';
+
+  useEffect(() => {
+    if (authenticated) return undefined;
+    let active = true;
+    fetch(`${API_BASE_URL}/api/v1/auth/govbr`, { credentials: 'include', cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => { if (active) setGovbrEnabled(body?.enabled === true); })
+      .catch(() => { /* Sem resposta: segue só com e-mail e senha. */ });
+    return () => { active = false; };
+  }, [authenticated]);
 
   async function submit(event) {
     event.preventDefault();
@@ -46,8 +64,12 @@ export function LoginPage({ onSuccess, authenticated = false, returnTo = '/inici
       {authenticated ? <section className="br-card login-form"><div className="form-body"><h1>{t('login.sessionActiveTitle')}</h1><p>{t('login.sessionActiveText')}</p><a className="br-button primary" href={`#${returnTo}`}>{t('login.continue')} <Icon name="arrow" size={16} /></a></div></section> :
       <form className="login-form" onSubmit={submit}>
         <div className="form-body">
-          {GOVBR_ENABLED && <a className="br-sign-in primary block" href={`${API_BASE_URL}/api/v1/auth/govbr/authorize?${new URLSearchParams({ returnTo })}`}><Icon name="user" size={16} />{t('login.govbrSignIn')} <strong>GOV.BR</strong></a>}
           <h1>{t('login.title')}</h1>
+          {govbrMessage && <p role="alert" className="form-error login-govbr-error">{govbrMessage}</p>}
+          {govbrEnabled && <>
+            <a className="br-sign-in primary block login-govbr" href={`${API_BASE_URL}/api/v1/auth/govbr/authorize?${new URLSearchParams({ returnTo })}`}>{t('login.govbrSignIn')}&nbsp;<img src="/images/govbr-negative.png" alt="gov.br" /></a>
+            <p className="login-divider">{t('login.orEmail')}</p>
+          </>}
           <p>{t('login.lead')}</p>
           <Field label={t('login.emailLabel')}>
             <input type="email" name="email" required autoComplete="username" autoCapitalize="none" spellCheck={false} disabled={loading} value={email} onChange={(event) => setEmail(event.target.value)} />

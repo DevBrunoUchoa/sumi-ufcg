@@ -644,6 +644,7 @@ br-select::part(option):hover {
 .annual-table th, .annual-table td { padding: var(--spacing-scale-2x); border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
 .annual-table thead th { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-medium); color: var(--text-muted); border-bottom-color: var(--border-strong); background: var(--surface-soft); }
 .annual-table tbody th { font-weight: var(--font-weight-medium); }
+.annual-table td.nowrap { white-space: nowrap; }
 .annual-table .current-year { background: var(--surface-raised); }
 .annual-table .badge { white-space: normal; padding: 0; background: transparent; }
 .period-button { padding: var(--spacing-scale-base); margin-left: calc(var(--spacing-scale-base) * -1); color: var(--text-subtle); font-size: var(--font-size-scale-base); border-radius: 3px; text-align: left; }

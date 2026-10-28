@@ -30,6 +30,11 @@ function semSenha(usuario: Usuario) {
   return resto;
 }
 
+async function garantirCpfLivre(cpf: string, usuarioId?: string): Promise<void> {
+  const dono = await usuarioRepository.buscarPorCpf(cpf);
+  if (dono && dono.id !== usuarioId) throw new HttpError(409, "Já existe um usuário com este CPF");
+}
+
 usuariosAdminRouter.get("/api/v1/admin/usuarios", async (req, res, next) => {
   try {
     exigirAdmin(req);
@@ -46,11 +51,13 @@ usuariosAdminRouter.post("/api/v1/admin/usuarios", async (req, res, next) => {
     const input = parseOrLancar(criarUsuarioSchema, req.body);
     const existente = await usuarioRepository.buscarPorEmail(input.email);
     if (existente) throw new HttpError(409, "Já existe um usuário com este e-mail");
+    if (input.cpf) await garantirCpfLivre(input.cpf);
     const usuario = await usuarioRepository.criar({
       nome: input.nome,
       email: input.email,
       senhaHash: gerarHashSenha(input.senha),
       papelAdmin: input.papelAdmin,
+      cpf: input.cpf ?? null,
     });
     res.status(201).json(semSenha(usuario));
   } catch (err) {
@@ -62,10 +69,12 @@ usuariosAdminRouter.patch("/api/v1/admin/usuarios/:id", async (req, res, next) =
   try {
     exigirAdmin(req);
     const input = parseOrLancar(atualizarUsuarioSchema, req.body);
+    if (input.cpf) await garantirCpfLivre(input.cpf, req.params.id);
     const usuario = await usuarioRepository.atualizar(req.params.id, {
       nome: input.nome,
       papelAdmin: input.papelAdmin,
       senhaHash: input.senha ? gerarHashSenha(input.senha) : undefined,
+      cpf: input.cpf,
     });
     if (!usuario) throw new HttpError(404, "Usuário não encontrado");
     res.json(semSenha(usuario));

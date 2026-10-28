@@ -13,6 +13,7 @@ migrations/
   20261013130000_redefinicao_senha.sql         # sumi_redefinicao_senha
   20261027120000_prefixo_sumi.sql              # converte bancos antigos para o prefixo sumi_
   20261028120000_rls_sumi.sql                  # RLS sem policies: a API pública não acessa nada
+  20261028130000_storage_sumi.sql              # buckets sumi- fechados para anon e authenticated
 ```
 
 ## RLS
@@ -22,6 +23,12 @@ o frontend nunca fala com o Supabase. Por isso as tabelas têm RLS ligada e
 **nenhuma policy**: `anon` e `authenticated` não leem nem gravam nada, e o
 backend funciona normalmente. Num Supabase compartilhado isso é o que impede
 quem tem a anon key de outro sistema de ler `sumi_usuario` ou `sumi_sessao`.
+
+Os arquivos seguem a mesma regra. Como todos os buckets ficam na mesma
+tabela (`storage.objects`), uma policy de outro sistema sem filtro de
+`bucket_id` valeria também para os buckets `sumi-`. A policy restritiva
+`sumi_buckets_so_backend` impede isso: `anon` e `authenticated` não leem nem
+gravam nos buckets do SUMI, seja qual for a policy dos outros sistemas.
 
 ## Prefixo `sumi_`
 

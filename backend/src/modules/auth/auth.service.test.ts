@@ -10,7 +10,6 @@ function usuario(overrides: Partial<Usuario> = {}): Usuario {
     email: "teste@ufcg.edu.br",
     senhaHash: "irrelevante",
     papelAdmin: false,
-    cpf: null,
     criadoEm: new Date().toISOString(),
     atualizadoEm: new Date().toISOString(),
     ...overrides,

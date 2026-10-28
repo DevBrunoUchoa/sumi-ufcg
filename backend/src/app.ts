@@ -10,7 +10,6 @@ import { errorHandler, notFoundHandler } from "./middlewares/error-handler.js";
 import { healthRouter } from "./routes/health.route.js";
 import { planosRouter } from "./modules/planos/planos.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
-import { govbrRouter } from "./modules/auth/govbr.routes.js";
 import { sessionMiddleware } from "./modules/auth/auth.middleware.js";
 import { planningRouter } from "./modules/planning/planning.routes.js";
 import { anexosRouter } from "./modules/planning/anexos.routes.js";
@@ -68,7 +67,6 @@ export function createApp() {
 
   // Rotas de domínio entram aqui conforme forem implementadas em src/modules/*.
   app.use(authRouter);
-  app.use(govbrRouter);
   app.use(usuariosAdminRouter);
   app.use(planningRouter);
   app.use(anexosRouter);

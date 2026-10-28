@@ -168,11 +168,6 @@
 .login-form .form-end br-button { display: block; width: 100%; }
 .login-form .form-end br-button::part(button) { width: 100%; }
 .login-form .field { position: relative; }
-.login-govbr { display: flex; justify-content: center; align-items: center; width: 100%; text-decoration: none; }
-.login-govbr img { height: 20px; width: auto; }
-.login-form .form-body > .login-govbr-error { margin: 0 0 var(--spacing-scale-2x); color: var(--danger); }
-.login-form .form-body > .login-divider { display: flex; align-items: center; gap: var(--spacing-scale-2x); margin: var(--spacing-scale-3x) 0 var(--spacing-scale-2x); font-size: var(--font-size-scale-down-01); }
-.login-divider::before, .login-divider::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
 .login-password { position: relative; }
 .login-password input { padding-right: 48px; }
 .login-password button { position: absolute; top: 0; right: 0; }

@@ -17,8 +17,6 @@ export interface Usuario {
   email: string;
   senhaHash: string;
   papelAdmin: boolean;
-  /** Só dígitos; liga a conta ao login com GOV.BR (ver authService.autenticarGovbr). */
-  cpf: string | null;
   criadoEm: string;
   atualizadoEm: string;
 }

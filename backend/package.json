@@ -16,8 +16,7 @@
     "previa-local": "tsx scripts/preparar-previa-local.ts",
     "importar-eixo8": "tsx scripts/importar-eixo8.ts",
     "criar-bucket": "tsx scripts/criar-bucket-anexos.ts",
-    "criar-bucket-eixo-versoes": "tsx scripts/criar-bucket-eixo-versoes.ts",
-    "govbr-simulado": "tsx scripts/govbr-simulado.ts"
+    "criar-bucket-eixo-versoes": "tsx scripts/criar-bucket-eixo-versoes.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.58.0",
@@ -28,7 +27,6 @@
     "helmet": "8.1.0",
     "multer": "2.0.1",
     "nodemailer": "10.1.0",
-    "openid-client": "6.8.8",
     "pino": "9.13.1",
     "pino-http": "10.5.0",
     "zod": "4.1.12"

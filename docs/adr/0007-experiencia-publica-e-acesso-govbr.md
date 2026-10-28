@@ -45,18 +45,12 @@ sessão; o workspace interno é removido e a consulta pública é recarregada.
 Destinos de retorno são restritos às rotas locais conhecidas. Falhas da API
 preservam cabeçalho/rodapé, navegação ao acesso e opção de tentar novamente.
 
-O login com GOV.BR (Login Único, OpenID Connect com code + PKCE) é feito pelo
-backend: `/api/v1/auth/govbr/authorize` leva ao GOV.BR e
-`/api/v1/auth/govbr/callback` troca o código pelo ID token e cria a mesma sessão
-por cookie do login por e-mail. O botão "Entrar com gov.br" só aparece quando
-`GET /api/v1/auth/govbr` informa que o servidor tem as credenciais (`GOVBR_*`),
-então a mesma imagem serve com ou sem elas. A conta é ligada pelo CPF (`sub`)
-cadastrado pelo administrador; sem CPF, o primeiro acesso liga pelo e-mail
-verificado no GOV.BR e grava o CPF. Quem não tem usuário no SUMI não entra.
+`VITE_GOVBR_LOGIN_ENABLED` é falso por padrão. Só pode ser ativado depois de
+implementar e configurar a autorização/callback OIDC no servidor e concluir a
+integração necessária com o provedor GOV.BR. A rota prevista é
+`/api/v1/auth/govbr/authorize`; ela ainda não é implementada pelo backend atual.
 Nenhuma credencial do provedor pertence ao frontend. O SUMI não coleta senha
-GOV.BR, não simula sua página de autenticação e não oferece um botão inoperante;
-o GOV.BR simulado (`pnpm --filter backend govbr-simulado`) existe só para
-desenvolvimento e testes.
+GOV.BR, não simula sua página de autenticação e não oferece um botão inoperante.
 
 ## Preferência de aparência
 

@@ -17,8 +17,6 @@ auth.service.ts        # login, logout, montarSessao (valida contra authenticate
 auth.can.ts             # pode(sessao, permissao, recurso) — espelha src/auth/permissions.js do frontend
 auth.middleware.ts      # resolve req.sumiSession a partir do cookie em toda requisição
 auth.routes.ts           # POST /login, POST /logout, GET /session
-govbr.ts                 # cliente OIDC do GOV.BR (openid-client): discovery, PKCE, ID token
-govbr.routes.ts          # GET /govbr (habilitado?), /govbr/authorize, /govbr/callback
 ```
 
 ## Diferenças em relação à PR #6
@@ -58,8 +56,5 @@ e não lê esse corpo — ele existe para consumidores que precisem dele).
   gestores/responsáveis por eixo — hoje isso é feito via
   `backend/scripts/seed.ts` ou escrita direta no banco, porque o
   protótipo aprovado não tem tela para isso (ver ADR 0005).
-- O login com GOV.BR só fica ativo com `GOVBR_ISSUER`, `GOVBR_CLIENT_ID` e
-  `GOVBR_CLIENT_SECRET` no servidor. Ele não cria contas: liga a pessoa pelo
-  CPF cadastrado em `sumi_usuario.cpf` ou, no primeiro acesso, pelo e-mail
-  verificado no GOV.BR (gravando o CPF). Sair do SUMI não encerra a sessão no
-  GOV.BR.
+- Login é e-mail/senha, não GOV.BR — fora do escopo desta integração
+  (ver "Fora do contrato v1" na PR #6).

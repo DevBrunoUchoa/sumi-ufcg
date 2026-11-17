@@ -35,6 +35,7 @@ describe("montarSessao", () => {
     const eixos: EixoParaConcessoes[] = [{ id: "eixo-1", noPaiId: "plano-1", dados: { managerIds: ["user-1"], reviewerIds: [] } }];
     const sessao = montarSessao(usuario(), eixos);
     expect(sessao.roles.map((r) => r.code)).toContain("AXIS_CONTRIBUTOR");
+    expect(sessao.roles.map((r) => r.name)).toContain("Gestor do Eixo");
     expect(pode(sessao, "stage.update", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "result.create", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "item.submit", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
@@ -54,6 +55,7 @@ describe("montarSessao", () => {
     const eixos: EixoParaConcessoes[] = [{ id: "eixo-1", noPaiId: "plano-1", dados: { managerIds: [], reviewerIds: ["user-1"] } }];
     const sessao = montarSessao(usuario(), eixos);
     expect(sessao.roles.map((r) => r.code)).toContain("AXIS_REVIEWER");
+    expect(sessao.roles.map((r) => r.name)).toContain("Responsável Técnico do Eixo");
     expect(pode(sessao, "item.review", { planId: "plano-1", axisId: "eixo-1" })).toBe(true);
     expect(pode(sessao, "stage.update", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);
     expect(pode(sessao, "item.submit", { planId: "plano-1", axisId: "eixo-1" })).toBe(false);

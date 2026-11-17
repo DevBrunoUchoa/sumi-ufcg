@@ -232,12 +232,24 @@ export function DatePicker({ value = '', onChange, name, ...props }) {
 }
 
 export function Badge({ children, tone = 'neutral' }) { return <span className={`badge ${tone}`}>{children}</span>; }
-export function Field({ label, help, children, className = '' }) {
+export function Field({ label, help, tooltip, children, className = '' }) {
   const id = useId();
   // Componentes do DS já renderizam o próprio label; só os demais usam o <label> do Field.
   const isGov = [Input, Textarea, Select].includes(children.type);
   const extra = { id, 'data-initial-focus': children.props['data-initial-focus'] ?? (children.props.autoFocus ? 'true' : undefined), 'aria-describedby': help ? `${id}-help` : undefined };
-  return <div className={`field ${className}`}>{!isGov && <label htmlFor={id}>{label}</label>}{React.cloneElement(children, isGov ? { ...extra, label } : extra)}{help && <small id={`${id}-help`}>{help}</small>}</div>;
+  // O label dos componentes do DS fica dentro do próprio componente (às vezes
+  // em shadow DOM), então o "i" não entra junto com o texto do label — fica
+  // sobreposto no canto superior direito do campo, onde visualmente cai na
+  // mesma linha do label, sem precisar mexer no componente do DS.
+  return <div className={`field ${className} ${tooltip ? 'has-tooltip' : ''}`}>
+    {!isGov && <label htmlFor={id}>{label}</label>}
+    {tooltip && <span className="field-tooltip">
+      <button type="button" className="field-tooltip-trigger" aria-describedby={`${id}-tooltip`} aria-label={`Ajuda sobre o campo ${label}`}><Icon name="info" size={12} /></button>
+      <span role="tooltip" id={`${id}-tooltip`} className="field-tooltip-text">{tooltip}</span>
+    </span>}
+    {React.cloneElement(children, isGov ? { ...extra, label } : extra)}
+    {help && <small id={`${id}-help`}>{help}</small>}
+  </div>;
 }
 export function Empty({ title, children, action }) {
   return <div className="empty"><span className="empty-icon"><Icon name="layers" size={25} /></span><h3>{title}</h3>{children && <p>{children}</p>}{action}</div>;

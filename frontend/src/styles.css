@@ -1004,6 +1004,17 @@ br-button.danger::part(button), html[data-theme="dark"] br-button.danger[emphasi
 .field { display: flex; flex-direction: column; gap: var(--spacing-scale-base); min-width: 0; }
 .field > label { font-size: var(--font-size-scale-base); font-weight: var(--font-weight-semi-bold); line-height: var(--font-line-height-medium); color: var(--gray-80); }
 .field > small { font-size: var(--font-size-scale-base); color: var(--text-muted); font-weight: var(--font-weight-regular); }
+
+/* O label dos componentes do DS (br-input/br-select/br-textarea) fica dentro
+   do próprio componente, então o "i" não pode entrar junto com o texto do
+   label como um <label> comum faria — fica posicionado absoluto no canto
+   superior direito do campo, caindo na mesma linha visual do label. */
+.field.has-tooltip { position: relative; }
+.field-tooltip { position: absolute; top: 0; right: 0; z-index: 1; }
+.field-tooltip-trigger { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%; background: var(--surface-soft); color: var(--text-muted); cursor: help; }
+.field-tooltip-trigger:hover, .field-tooltip-trigger:focus-visible { background: var(--primary-soft); color: var(--interactive-default); }
+.field-tooltip-text { position: absolute; top: 24px; right: 0; width: max-content; max-width: 260px; padding: var(--spacing-scale-base) var(--spacing-scale-2x); border-radius: 4px; background: var(--gray-90); color: var(--pure-0); font-size: var(--font-size-scale-down-01); font-weight: var(--font-weight-regular); line-height: var(--font-line-height-medium); opacity: 0; pointer-events: none; transition: opacity 0.1s ease; }
+.field-tooltip-trigger:hover + .field-tooltip-text, .field-tooltip-trigger:focus-visible + .field-tooltip-text { opacity: 1; pointer-events: auto; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-scale-2x); }
 .form-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .form-grid.code-title { grid-template-columns: 96px 1fr; }

@@ -22,18 +22,18 @@ export function createApp() {
 
   app.disable("x-powered-by");
   app.use(
-    helmet({
-      // CSP padrão do helmet só libera 'self' em script/connect/img/media —
-      // o widget do VLibras (tradutor de Libras, vlibras.gov.br) carrega um
-      // script externo e baixa os assets do avatar (Unity/WebGL) desse
-      // mesmo domínio, então precisa de uma exceção explícita.
+  helmet({
+      // O widget do VLibras (vlibras.gov.br) redireciona e carrega o plugin
+      // e os assets do avatar (Unity/WebGL) via CDN jsDelivr, além de criar
+      // Web Workers via blob:.
       contentSecurityPolicy: {
         directives: {
           ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          "script-src": ["'self'", "https://vlibras.gov.br"],
-          "connect-src": ["'self'", "https://vlibras.gov.br"],
-          "img-src": ["'self'", "data:", "https://vlibras.gov.br"],
-          "media-src": ["'self'", "https://vlibras.gov.br"],
+          "script-src": ["'self'", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
+          "connect-src": ["'self'", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
+          "img-src": ["'self'", "data:", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
+          "media-src": ["'self'", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
+          "worker-src": ["'self'", "blob:"],
         },
       },
     }),

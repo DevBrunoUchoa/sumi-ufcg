@@ -164,4 +164,23 @@ export const eixoRepository = {
       dados: row.dados,
     }));
   },
+
+  /** Remove referências a um usuário excluído dos arrays de atribuição dos eixos. */
+  async removerReferenciasDoUsuario(usuarioId: string): Promise<void> {
+    const { data, error } = await supabase.from("sumi_no_plano").select("id, dados").eq("nivel", 0);
+    tratarErro(error, "Falha ao localizar referências do usuário nos eixos");
+
+    const eixos = (data as { id: string; dados: Record<string, unknown> }[]).filter((row) =>
+      ["managerIds", "reviewerIds"].some((campo) => Array.isArray(row.dados[campo]) && (row.dados[campo] as unknown[]).includes(usuarioId)),
+    );
+
+    for (const eixo of eixos) {
+      const dados = { ...eixo.dados };
+      for (const campo of ["managerIds", "reviewerIds"]) {
+        if (Array.isArray(dados[campo])) dados[campo] = (dados[campo] as unknown[]).filter((id) => id !== usuarioId);
+      }
+      const { error: erroAtualizacao } = await supabase.from("sumi_no_plano").update({ dados }).eq("id", eixo.id);
+      tratarErro(erroAtualizacao, "Falha ao remover referência do usuário no eixo");
+    }
+  },
 };

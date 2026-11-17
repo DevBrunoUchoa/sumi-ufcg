@@ -151,8 +151,17 @@ export function StructureForm({ plan, onClose, onSave }) {
   const [objectives, setObjectives] = useState(structuredClone(plan.objectives));
   const [error, setError] = useState('');
   const [usuarios, setUsuarios] = useState([]);
+  const [usuariosCarregados, setUsuariosCarregados] = useState(false);
   const [editingAxes, setEditingAxes] = useState(() => new Set());
-  useEffect(() => { listarUsuarios().then(setUsuarios).catch(() => setUsuarios([])); }, []);
+  useEffect(() => {
+    listarUsuarios().then((users) => {
+      setUsuarios(users);
+      setUsuariosCarregados(true);
+    }).catch(() => {
+      setUsuarios([]);
+      setUsuariosCarregados(false);
+    });
+  }, []);
   const updateAxis = (id, field, value) => setAxes((current) => current.map((axis) => {
     if (axis.id !== id) return axis;
     const color = field === 'code' ? axisColorFor(plan.type, value) : null;
@@ -186,7 +195,18 @@ export function StructureForm({ plan, onClose, onSave }) {
     if (repeatedObjectives.length) return reject('Os códigos dos objetivos não podem se repetir no mesmo eixo.', repeatedObjectives.map((objective) => objective.axisId));
     // Permissões avulsas por usuário não são mais concedidas pela tela: salvar
     // a estrutura limpa as que ainda existirem, para não sobrar acesso invisível.
-    onSave({ axes: axes.map((axis) => ({ ...axis, customGrants: [] })), objectives });
+    const idsValidos = new Set(usuarios.map((usuario) => usuario.id));
+    onSave({
+      axes: axes.map((axis) => ({
+        ...axis,
+        ...(usuariosCarregados ? {
+          managerIds: (axis.managerIds || []).filter((id) => idsValidos.has(id)),
+          reviewerIds: (axis.reviewerIds || []).filter((id) => idsValidos.has(id)),
+        } : {}),
+        customGrants: [],
+      })),
+      objectives,
+    });
   }
   const removeAxis = (id) => {
     if (plan.items.some((item) => item.axisId === id)) return setError('Não é possível remover um eixo que possui itens cadastrados.');
@@ -209,6 +229,8 @@ export function StructureForm({ plan, onClose, onSave }) {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+  const idsDeUsuariosVisiveis = new Set(usuarios.map((usuario) => usuario.id));
+  const idsSelecionados = (ids) => usuariosCarregados ? ids.filter((id) => idsDeUsuariosVisiveis.has(id)) : ids;
   return <Modal title="Estrutura do planejamento" subtitle={plan.name} onClose={onClose} wide><form onSubmit={submit}><div className="form-body">
     <div className="section-heading"><div><h3>Eixos</h3><p className="hint">Organize os objetivos dentro de cada eixo para facilitar o acompanhamento.</p></div><Button icon="plus" onClick={addAxis}>Adicionar eixo</Button></div>
     {!axes.length && <p className="hint">Nenhum eixo cadastrado. Adicione o primeiro eixo para começar.</p>}
@@ -243,7 +265,7 @@ export function StructureForm({ plan, onClose, onSave }) {
         </div>
         {editing && <div className="axis-editor">
           <div className="form-grid axis-fields"><Field label="Código do eixo"><Input aria-label="Código do eixo" value={axis.code} onChange={(event) => updateAxis(axis.id, 'code', event.target.value)} placeholder="1" /></Field><Field label="Nome do eixo"><Input aria-label="Nome do eixo" value={axis.name} onChange={(event) => updateAxis(axis.id, 'name', event.target.value)} placeholder="Nome do eixo" /></Field><Field label="Unidade responsável"><Input aria-label="Unidade responsável pelo eixo" value={axis.ownerUnit} onChange={(event) => updateAxis(axis.id, 'ownerUnit', event.target.value)} placeholder="Unidade responsável" /></Field><Field label="Cor"><Input aria-label={`Cor do eixo ${axis.code || 'novo'}`} type="color" value={axis.color} onChange={(event) => updateAxis(axis.id, 'color', event.target.value)} /></Field></div>
-          <div className="axis-user-pickers"><AxisUserPicker label="Gestor do eixo" permissions={PERMISSOES_DO_PERFIL.gestor} usuarios={usuarios} selectedIds={axis.managerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} /><AxisUserPicker label="Responsável pelo eixo" permissions={PERMISSOES_DO_PERFIL.responsavel} usuarios={usuarios} selectedIds={axis.reviewerIds || []} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} /></div>
+          <div className="axis-user-pickers"><AxisUserPicker label="Gestor do eixo" permissions={PERMISSOES_DO_PERFIL.gestor} usuarios={usuarios} selectedIds={idsSelecionados(axis.managerIds || [])} onToggle={(userId) => toggleAxisUser(axis.id, 'managerIds', userId)} /><AxisUserPicker label="Responsável pelo eixo" permissions={PERMISSOES_DO_PERFIL.responsavel} usuarios={usuarios} selectedIds={idsSelecionados(axis.reviewerIds || [])} onToggle={(userId) => toggleAxisUser(axis.id, 'reviewerIds', userId)} /></div>
           <div className="axis-objectives-heading"><div><h5>Objetivos do eixo</h5></div><Button icon="plus" aria-label={`Adicionar objetivo ao eixo ${axis.code || 'novo'}`} onClick={() => addObjective(axis.id)}>Adicionar objetivo</Button></div>
           {!axisObjectives.length && <p className="hint">Nenhum objetivo cadastrado neste eixo.</p>}
           <div className="structure-list objective-list">{axisObjectives.map((objective) => <div className="objective-structure" key={objective.id}><div className="form-grid code-title"><Field label="Código"><Input aria-label="Código do objetivo" value={objective.code} onChange={(event) => updateObjective(objective.id, 'code', event.target.value)} placeholder={`${axis.code || '1'}.1`} /></Field><Field label="Objetivo"><Input aria-label="Nome do objetivo" value={objective.title} onChange={(event) => updateObjective(objective.id, 'title', event.target.value)} placeholder="Descrição do objetivo" /></Field></div><button type="button" className="text-button danger" onClick={() => removeObjective(objective.id)}>Remover objetivo</button><OdsPicker objective={objective} selected={odsForObjective({ ...plan, axes }, objective).map((icon) => icon.id)} documented={documentedOdsForObjective({ ...plan, axes }, objective)} onToggle={(number) => toggleObjectiveOds(objective.id, number)} onApplyDocumented={() => updateObjective(objective.id, 'ods', documentedOdsForObjective({ ...plan, axes }, objective).map((icon) => icon.id))} /></div>)}</div>

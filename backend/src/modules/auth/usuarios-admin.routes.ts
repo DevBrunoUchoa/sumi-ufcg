@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 import { HttpError } from "../../lib/http-error.js";
 import { gerarHashSenha } from "../../lib/password.js";
 import { pode } from "./auth.can.js";
-import { usuarioRepository } from "./auth.repository.js";
+import { eixoRepository, usuarioRepository } from "./auth.repository.js";
 import type { Usuario } from "./auth.types.js";
 import { atualizarUsuarioSchema, criarUsuarioSchema, parseOrLancar } from "./usuarios-admin.schema.js";
 
@@ -80,6 +80,7 @@ usuariosAdminRouter.delete("/api/v1/admin/usuarios/:id", async (req, res, next) 
     if (req.sumiSession.user?.id === req.params.id) {
       throw new HttpError(409, "Você não pode remover a própria conta");
     }
+    await eixoRepository.removerReferenciasDoUsuario(req.params.id);
     await usuarioRepository.remover(req.params.id);
     res.status(204).send();
   } catch (err) {

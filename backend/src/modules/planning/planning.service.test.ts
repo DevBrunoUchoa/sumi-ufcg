@@ -18,7 +18,7 @@ const authMocks = vi.hoisted(() => ({ listarPorIds: vi.fn().mockResolvedValue([]
 vi.mock("../auth/auth.repository.js", () => ({ usuarioRepository: { listarPorIds: authMocks.listarPorIds } }));
 const mailerMocks = vi.hoisted(() => ({ enviar: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("../../lib/mailer.js", () => ({ mailer: { enviar: mailerMocks.enviar } }));
-import { removerPlano, salvarWorkspace } from "./planning.service.js";
+import { montarWorkspace, removerPlano, salvarWorkspace } from "./planning.service.js";
 import { noPlanoRepo } from "./planning.repository.js";
 
 const session: SessaoUsuario = {
@@ -31,6 +31,45 @@ const workspace = (): Workspace => ({ version: 2, plans: [], templates: [{
   labels: { axis: "Eixo", objective: "Objetivo", item: "Iniciativa" },
   defaultPeriodicity: "annual", fields: [],
 }] });
+
+describe("montarWorkspace — visibilidade por escopo de eixo", () => {
+  const planoId = "p1";
+  const axisId = "a1";
+  const now = new Date().toISOString();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.listar.mockResolvedValue([{ id: "pdi", tipo: "PDI", nome: "PDI", versao: 1, descricao: null, rotulos: {}, periodicidade_padrao: "annual", campos_extras: [] }]);
+    (noPlanoRepo.listarTodos as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: planoId, tipo_plano_id: "pdi", no_pai_id: null, nivel: -1, ordem: 0, dados: { shortName: "PDI", name: "PDI", start: 2026, end: 2030, status: "draft" }, criado_em: now, atualizado_em: now },
+      { id: axisId, tipo_plano_id: "pdi", no_pai_id: planoId, nivel: 0, ordem: 0, dados: { code: "1", name: "Eixo", managerIds: [], reviewerIds: [], customGrants: [] }, criado_em: now, atualizado_em: now },
+    ]);
+  });
+
+  it("inclui rascunho quando o acesso interno está concedido no eixo", async () => {
+    const gestor: SessaoUsuario = {
+      authenticated: true,
+      user: { id: "gestor", name: "Gestor", email: null },
+      roles: [],
+      grants: [{ permission: "plan.read_internal", scope: { type: "axis", planId: planoId, axisId } }],
+    };
+
+    const result = await montarWorkspace(gestor);
+
+    expect(result.plans.map((plan) => plan.id)).toEqual([planoId]);
+  });
+
+  it("continua ocultando rascunho sem acesso ao plano ou a seus eixos", async () => {
+    const result = await montarWorkspace({
+      authenticated: true,
+      user: { id: "outro", name: "Outro", email: null },
+      roles: [],
+      grants: [],
+    });
+
+    expect(result.plans).toHaveLength(0);
+  });
+});
 
 describe("salvarWorkspace com metadados JSONB", () => {
   beforeEach(() => {

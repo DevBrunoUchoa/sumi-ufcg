@@ -96,11 +96,13 @@ export async function montarWorkspace(sessao: SessaoUsuario): Promise<Workspace>
 
     const dados = raiz.dados as { shortName?: string; name?: string; start?: number; end?: number; status?: "draft" | "published" };
     const planId = raiz.id;
-    const visivelInternamente = pode(sessao, "plan.read_internal", { planId });
+    const eixosRows = nosPorPai.get(raiz.id) ?? [];
+    const visivelInternamente =
+      pode(sessao, "plan.read_internal", { planId }) ||
+      eixosRows.some((eixo) => pode(sessao, "plan.read_internal", { planId, axisId: eixo.id }));
     const publicado = dados.status === "published";
     if (!publicado && !visivelInternamente) continue; // rascunho e sem acesso interno: plano inteiro fora da resposta.
 
-    const eixosRows = nosPorPai.get(raiz.id) ?? [];
     const axes: Axis[] = eixosRows.map((row) => {
       const d = row.dados as Partial<Axis>;
       return {

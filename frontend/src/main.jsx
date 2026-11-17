@@ -31,7 +31,7 @@ import './layout/theme.css';
 
 const KNOWN_TOP_LEVEL_PATHS = ['/inicio', '/planejamentos', '/pendencias', '/validacoes', '/modelos', '/usuarios', '/login', '/sobre', '/ajuda', '/privacidade', '/legislacao', '/resolucoes'];
 const EMPTY_WORKSPACE = { version: 2, templates: [], plans: [] };
-const PUBLIC_SESSION = { authenticated: false, user: null, roles: [], grants: [] };
+const PUBLIC_SESSION = { authenticated: false, user: null, roles: [], grants: [{ permission: PERMISSIONS.VIEW_PUBLISHED_PLAN, scope: { type: 'global' } }] };
 const isOfflineError = (error) => error instanceof TypeError || error?.name === 'AbortError';
 
 const PAGE_DESCRIPTIONS = {

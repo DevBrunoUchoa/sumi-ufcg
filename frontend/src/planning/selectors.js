@@ -1,4 +1,4 @@
-import { executionProgress, executionStatus, metricResult, normalize } from '../domain.js';
+import { executionProgress, executionStatus, metricReachedEarly, metricResult, normalize } from '../domain.js';
 
 export const ordered = (entries) => [...entries].sort((a, b) => a.code.localeCompare(b.code, 'pt-BR', { numeric: true }));
 
@@ -23,7 +23,9 @@ export function targetState(item, period, plan, now = new Date()) {
   const target = item.metric.targets[period];
   if (target == null || String(target).trim() === '' || (item.metric.valueType !== 'status' && numericValue(target) === null)) return 'no_target';
   const result = metricResult(item, period, now);
-  if (result == null || String(result).trim() === '' || (item.metric.valueType !== 'status' && numericValue(result) === null)) return 'no_result';
+  if (result == null || String(result).trim() === '' || (item.metric.valueType !== 'status' && numericValue(result) === null)) {
+    return metricReachedEarly(item, period) ? 'reached_early' : 'no_result';
+  }
   const reached = item.metric.valueType === 'status' ? normalize(target) === normalize(result)
     : item.metric.direction === 'down' ? Number(result) <= Number(target) : Number(result) >= Number(target);
   return reached ? 'reached' : 'below';
@@ -31,6 +33,7 @@ export function targetState(item, period, plan, now = new Date()) {
 
 export const targetStates = [
   { key: 'reached', label: 'Meta atingida', tone: 'done' },
+  { key: 'reached_early', label: 'Meta atingida antecipadamente', tone: 'early' },
   { key: 'below', label: 'Meta não atingida', tone: 'active' },
   { key: 'no_result', label: 'Sem resultado', tone: 'pending' },
   { key: 'no_target', label: 'Sem meta comparável', tone: 'empty' },

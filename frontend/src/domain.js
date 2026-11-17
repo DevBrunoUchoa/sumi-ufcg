@@ -57,11 +57,33 @@ export function formatMetricValue(item, value) {
   return formatNumber(value);
 }
 
+// Um resultado muito acima da meta num ano cedo (ex.: 1000% em vez de 20%)
+// já cobre as metas dos anos seguintes mesmo sem ninguém ter registrado
+// resultado neles ainda — sem isso, esses anos ficavam "Sem resultado" até
+// alguém lançar de novo o mesmo valor, ano a ano, pra um indicador que já
+// foi cumprido. Só compara contra resultados de fato registrados em anos
+// anteriores, nunca inventa um valor pro próprio ano.
+export function metricReachedEarly(item, period) {
+  if (item.metric.valueType === 'status' || item.metric.measurementMode === 'stages') return false;
+  const target = item.metric.targets[period];
+  const numericTarget = Number(target);
+  if (target == null || target === '' || !Number.isFinite(numericTarget)) return false;
+  return Object.keys(item.metric.targets)
+    .map(Number)
+    .filter((candidate) => Number.isFinite(candidate) && candidate < Number(period))
+    .some((earlierPeriod) => {
+      const result = metricResult(item, earlierPeriod);
+      const numericResult = Number(result);
+      if (result == null || result === '' || !Number.isFinite(numericResult)) return false;
+      return item.metric.direction === 'down' ? numericResult <= numericTarget : numericResult >= numericTarget;
+    });
+}
+
 export function metricStatus(item, period) {
   const target = item.metric.targets[period];
   if (target == null || target === '') return 'Sem meta definida';
   const result = metricResult(item, period);
-  if (result == null || result === '') return 'Sem resultado';
+  if (result == null || result === '') return metricReachedEarly(item, period) ? 'Meta atingida antecipadamente' : 'Sem resultado';
   if (item.metric.valueType === 'status') return normalize(result) === normalize(target) ? 'Meta atingida' : 'Em acompanhamento';
   const reached = item.metric.direction === 'down' ? Number(result) <= Number(target) : Number(result) >= Number(target);
   return reached ? 'Meta atingida' : 'Meta não atingida';
@@ -86,7 +108,7 @@ export function metricAchievement(item, period) {
 
 export const metricTone = (item, period) => {
   const achievement = metricAchievement(item, period);
-  if (achievement == null) return 'neutral';
+  if (achievement == null) return metricReachedEarly(item, period) ? 'blue' : 'neutral';
   if (item.metric.valueType === 'status') return achievement === 100 ? 'green' : 'blue';
   return achievement >= 100 ? 'green' : achievement > 25 ? 'attention' : 'critical';
 };

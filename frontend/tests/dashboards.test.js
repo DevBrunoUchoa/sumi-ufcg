@@ -38,6 +38,21 @@ test('metas distinguem ausência, zero, redução, texto e ciclo sem fazer médi
   assert.equal(distribution.reduce((sum, value) => sum + value.value, 0), plan.items.length + 1);
 });
 
+test('resultado muito acima da meta cobre anos seguintes sem resultado como antecipados', () => {
+  const item = structuredClone(plan.items[1]);
+  item.metric.measurementMode = 'manual'; item.metric.valueType = 'number'; item.metric.direction = 'up';
+  item.metric.targets = { 2026: 20, 2027: 40, 2028: 60 };
+  item.measurements = [{ year: 2026, value: 1000 }];
+  assert.equal(targetState(item, 2026, plan), 'reached');
+  assert.equal(targetState(item, 2027, plan), 'reached_early');
+  assert.equal(targetState(item, 2028, plan), 'reached_early');
+  // resultado real registrado num ano sempre prevalece sobre a antecipação
+  item.measurements.push({ year: 2027, value: 10 });
+  assert.equal(targetState(item, 2027, plan), 'below');
+  const distribution = targetDistribution([item], 2028, plan);
+  assert.equal(distribution.find((entry) => entry.key === 'reached_early').value, 1);
+});
+
 test('distribuição de etapas inclui canceladas sem alterar o denominador da execução', () => {
   const item = structuredClone(plan.items[0]);
   item.actions[0].tasks[0].status = 'cancelled';

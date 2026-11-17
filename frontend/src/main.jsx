@@ -125,6 +125,21 @@ function LoadingState() {
   </div>;
 }
 
+// Reescrever uma meta futura sem registrar o valor anterior em algum lugar
+// apaga a informação de que ela já foi uma e virou outra — e esse é
+// exatamente o tipo de coisa que auditoria/trilha de decisão precisa saber
+// depois (ex.: meta de 2027 era 40%, foi revisada pra 1000% só porque 2026
+// estourou a meta). O histórico do item já existe pra esse tipo de registro;
+// só precisa detalhar valor antigo → novo em vez de um aviso genérico.
+function describeTargetChanges(plan, item, nextTargets) {
+  const periodsChanged = Object.keys(nextTargets).filter((period) => String(item.metric.targets[period] ?? '') !== String(nextTargets[period] ?? ''));
+  if (!periodsChanged.length) return 'Metas revisadas sem alteração de valores.';
+  const unit = item.metric.unit ? ` ${item.metric.unit}` : '';
+  const describe = (value) => value == null || value === '' ? 'sem meta definida' : `${formatMetricValue(item, value)}${unit}`;
+  const changes = periodsChanged.map((period) => `${periodLabel(plan, item, period)}: ${describe(item.metric.targets[period])} → ${describe(nextTargets[period])}`);
+  return `Metas revisadas — ${changes.join('; ')}.`;
+}
+
 function AppGate() {
   const auth = useSession();
   return <App auth={auth} />;
@@ -310,7 +325,7 @@ function App({ auth }) {
     {modal?.type === 'stage' && plan && <StageForm plan={plan} onClose={close} onSave={(stage) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, actions: item.actions.map((action) => action.id === modal.action.id ? { ...action, tasks: [...action.tasks, { id: uid(), ...stage, status: 'not_started', justification: '' }] } : action), history: [...item.history, historyEntry(`Etapa adicionada: ${stage.title}.`, actor)] }), 'Etapa adicionada.'); close(); }} />}
     {modal?.type === 'risk' && plan && <RiskForm plan={plan} item={modal.item} action={modal.action} stage={modal.stage} risk={modal.risk} onClose={close} onSave={(nextRisk) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: ['submitted', 'validated'].includes(item.reviewStatus) ? 'draft' : item.reviewStatus, risks: modal.risk ? item.risks.map((current) => current.id === nextRisk.id ? nextRisk : current) : [...(item.risks || []), nextRisk], history: [...item.history, historyEntry(`${modal.risk ? 'Risco atualizado' : 'Risco adicionado'}: ${nextRisk.title}.`, actor)] }), modal.risk ? 'Risco atualizado.' : 'Risco adicionado.'); close(); }} />}
     {modal?.type === 'measurement' && plan && <MeasurementForm plan={plan} item={modal.item} year={modal.period} onClose={close} onSave={(entry) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', measurements: [...item.measurements, entry], history: [...item.history, historyEntry(`Resultado registrado para ${periodLabel(plan, item, entry.year)}: ${formatMetricValue(item, entry.value)}${item.metric.unit ? ` ${item.metric.unit}` : ''}. ${entry.note}`, actor)] }), 'Resultado registrado.'); close(); navigate(itemUrl(plan, modal.item.id, 'indicadores', entry.year)); }} />}
-    {modal?.type === 'targets' && plan && <TargetsForm plan={plan} item={modal.item} onClose={close} onSave={(targets) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', metric: { ...item.metric, targets }, history: [...item.history, historyEntry('Metas atualizadas.', actor)] }), 'Metas salvas.'); close(); }} />}
+    {modal?.type === 'targets' && plan && <TargetsForm plan={plan} item={modal.item} onClose={close} onSave={(targets) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: 'draft', metric: { ...item.metric, targets }, history: [...item.history, historyEntry(describeTargetChanges(plan, item, targets), actor)] }), 'Metas salvas.'); close(); }} />}
     {modal?.type === 'review' && plan && <ReviewForm item={modal.item} decision={modal.decision} onClose={close} onSave={({ status, note }) => { changeItem(plan.id, modal.item.id, (item) => ({ ...item, reviewStatus: status, reviewNote: note, history: [...item.history, historyEntry(status === 'validated' ? 'Informações validadas.' : `Correção solicitada: ${note}`, actor)] }), status === 'validated' ? 'Informações validadas.' : 'Correção solicitada.'); close(); }} />}
   </AppShell>;
 }

@@ -102,6 +102,22 @@ test('metas numéricas respeitam ausência, zero e sentido de melhoria', () => {
   assert.equal(metricAchievement(paper, 2026), 100);
 });
 
+test('resultado bem acima da meta cobre os anos seguintes como antecipados, sem inventar resultado', () => {
+  const paper = initialState().plans[1].items[0]; // consumo de papel A4, direction 'down', metas de 900 resmas/ano
+  paper.measurements.push({ year: 2026, value: 0 });
+  assert.equal(metricStatus(paper, 2026), 'Meta atingida');
+  assert.equal(metricStatus(paper, 2027), 'Meta atingida antecipadamente');
+  assert.equal(metricTone(paper, 2027), 'blue');
+  assert.equal(metricStatus(paper, 2030), 'Meta atingida antecipadamente');
+  assert.equal(metricResult(paper, 2027), undefined); // nunca inventa um resultado pro ano em si
+});
+
+test('indicador calculado por etapas nunca mostra antecipação de meta', () => {
+  const pdi = initialState().plans[0].items[0];
+  assert.equal(pdi.metric.measurementMode, 'stages');
+  assert.equal(metricStatus(pdi, 2027), 'Sem resultado');
+});
+
 test('entrega descritiva só atinge a meta ao chegar à situação esperada', () => {
   const item = initialState().plans[1].items.find((candidate) => candidate.id === 'guia-compras');
   assert.equal(metricStatus(item, 2030), 'Em acompanhamento');

@@ -36,6 +36,7 @@
 .chart-tone-pending { background: var(--chart-gray); }
 .chart-tone-empty { background: var(--chart-light); }
 .chart-tone-cycle { background: var(--chart-violet); }
+.chart-tone-early { background: var(--chart-amber); }
 .chart-legend { display: grid; gap: var(--spacing-scale-baseh); margin: 0; }
 .chart-legend > div { display: flex; gap: var(--spacing-scale-base); justify-content: space-between; align-items: baseline; }
 .chart-legend dt { display: flex; align-items: center; gap: var(--spacing-scale-baseh); font-size: var(--font-size-scale-base); }
@@ -72,13 +73,14 @@
 .trend-legend > span { display: flex; align-items: center; gap: var(--spacing-scale-baseh); }
 .trend-legend i { width: 26px; border-top: 3px solid var(--chart-blue); }
 .trend-legend .trend-target-key { border-top: 2px dashed var(--chart-gray); }
-:root { --chart-blue: var(--blue-warm-vivid-70); --chart-green: var(--green-vivid-50); --chart-gray: var(--gray-60); --chart-light: var(--gray-20); --chart-violet: var(--violet-warm-50); }
-html[data-theme="dark"] { --chart-blue: var(--blue-warm-30); --chart-green: var(--green-30); --chart-gray: var(--gray-40); --chart-light: var(--gray-70); --chart-violet: var(--violet-warm-30); }
-html[data-alto-contraste="true"] { --chart-blue: #000; --chart-green: #000; --chart-gray: #000; --chart-light: #fff; --chart-violet: #000; }
+:root { --chart-blue: var(--blue-warm-vivid-70); --chart-green: var(--green-vivid-50); --chart-gray: var(--gray-60); --chart-light: var(--gray-20); --chart-violet: var(--violet-warm-50); --chart-amber: var(--orange-vivid-60); }
+html[data-theme="dark"] { --chart-blue: var(--blue-warm-30); --chart-green: var(--green-30); --chart-gray: var(--gray-40); --chart-light: var(--gray-70); --chart-violet: var(--violet-warm-30); --chart-amber: var(--orange-vivid-30); }
+html[data-alto-contraste="true"] { --chart-blue: #000; --chart-green: #000; --chart-gray: #000; --chart-light: #fff; --chart-violet: #000; --chart-amber: #000; }
 html[data-alto-contraste="true"] .chart-stacked span { outline: 1px solid #000; outline-offset: -1px; }
 html[data-alto-contraste="true"] .chart-tone-active { background: repeating-linear-gradient(45deg, #000 0 3px, #fff 3px 6px); }
 html[data-alto-contraste="true"] .chart-tone-pending { background: repeating-linear-gradient(0deg, #000 0 2px, #fff 2px 4px); }
 html[data-alto-contraste="true"] .chart-tone-cycle { background: repeating-linear-gradient(90deg, #000 0 2px, #fff 2px 4px); }
+html[data-alto-contraste="true"] .chart-tone-early { background: repeating-linear-gradient(135deg, #000 0 3px, #fff 3px 6px); }
 @media (max-width: 1000px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
   .planning-chart .card-content { padding: var(--spacing-scale-2x); }

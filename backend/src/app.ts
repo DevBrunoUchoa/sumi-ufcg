@@ -23,17 +23,47 @@ export function createApp() {
   app.disable("x-powered-by");
   app.use(
   helmet({
-      // O widget do VLibras (vlibras.gov.br) redireciona e carrega o plugin
-      // e os assets do avatar (Unity/WebGL) via CDN jsDelivr, além de criar
-      // Web Workers via blob:.
+      crossOriginResourcePolicy: { policy: "cross-origin" },
       contentSecurityPolicy: {
         directives: {
           ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          "script-src": ["'self'", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
-          "connect-src": ["'self'", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
-          "img-src": ["'self'", "data:", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
-          "media-src": ["'self'", "https://vlibras.gov.br", "https://cdn.jsdelivr.net"],
+          "script-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "'wasm-unsafe-eval'",
+            "blob:",
+            "https://vlibras.gov.br",
+            "https://*.vlibras.gov.br",
+            "https://cdn.jsdelivr.net",
+          ],
+          "script-src-attr": ["'unsafe-inline'"],
+          "connect-src": [
+            "'self'",
+            "blob:",
+            "data:",
+            "https://vlibras.gov.br",
+            "https://*.vlibras.gov.br",
+            "https://cdn.jsdelivr.net",
+          ],
+          "img-src": [
+            "'self'",
+            "data:",
+            "blob:",
+            "https://vlibras.gov.br",
+            "https://*.vlibras.gov.br",
+            "https://cdn.jsdelivr.net",
+          ],
+          "media-src": [
+            "'self'",
+            "blob:",
+            "https://vlibras.gov.br",
+            "https://*.vlibras.gov.br",
+            "https://cdn.jsdelivr.net",
+          ],
           "worker-src": ["'self'", "blob:"],
+          "child-src": ["'self'", "blob:", "https://vlibras.gov.br", "https://*.vlibras.gov.br"],
+          "frame-src": ["'self'", "blob:", "https://vlibras.gov.br", "https://*.vlibras.gov.br"],
         },
       },
     }),

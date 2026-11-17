@@ -5,7 +5,7 @@ import { Badge, Button, Empty, Field, Icon, Input, Modal, Select } from './ui.js
 import { ActionForm, ItemForm, MeasurementForm, PlanForm, ReviewForm, RiskForm, StageForm, StructureForm, TargetsForm, TemplateForm } from './forms.jsx';
 import { SessionProvider, useSession } from './auth/context.jsx';
 import { LanguageProvider } from './i18n/context.jsx';
-import { PERMISSIONS, resourceFor } from './auth/permissions.js';
+import { canViewPlan, PERMISSIONS, resourceFor } from './auth/permissions.js';
 import { LoginPage } from './auth/Login.jsx';
 import { ForgotPasswordPage, ResetPasswordPage } from './auth/PasswordReset.jsx';
 import { ForbiddenPage, NotFoundPage, OfflinePage, ServerErrorPage, UnauthorizedPage } from './error-pages.jsx';
@@ -248,7 +248,7 @@ function App({ auth }) {
   const encodedPlanId = route.path.startsWith('/plano/') ? route.path.split('/')[2] : null;
   let planId;
   try { planId = encodedPlanId ? decodeURIComponent(encodedPlanId) : null; } catch { planId = null; }
-  const visiblePlans = data.plans.filter((plan) => can(PERMISSIONS.VIEW_INTERNAL_PLAN, resourceFor(plan)) || (plan.status === 'published' && can(PERMISSIONS.VIEW_PUBLISHED_PLAN, resourceFor(plan))));
+  const visiblePlans = data.plans.filter((plan) => canViewPlan(session, plan));
   const plan = visiblePlans.find((candidate) => candidate.id === planId);
   const planningContext = plan?.type === 'PDI' ? resolvePlanRoute(plan, route) : null;
   const actor = session.user?.name || session.user?.email || 'Usuário do sistema';

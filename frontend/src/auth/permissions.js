@@ -42,3 +42,15 @@ export function resourceFor(plan, item) {
     itemId: item?.id,
   };
 }
+
+export function canViewPlan(session, plan) {
+  const planResource = { planId: plan?.id };
+  const hasInternalAccess = can(session, PERMISSIONS.VIEW_INTERNAL_PLAN, planResource)
+    || (plan?.axes || []).some((axis) => can(session, PERMISSIONS.VIEW_INTERNAL_PLAN, {
+      planId: plan?.id,
+      axisId: axis.id,
+    }));
+
+  return hasInternalAccess
+    || (plan?.status === 'published' && can(session, PERMISSIONS.VIEW_PUBLISHED_PLAN, planResource));
+}

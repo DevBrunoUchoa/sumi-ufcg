@@ -21,7 +21,7 @@ import {
   validateWorkspace,
   years,
 } from '../src/domain.js';
-import { can, PERMISSIONS } from '../src/auth/permissions.js';
+import { can, canViewPlan, PERMISSIONS } from '../src/auth/permissions.js';
 import { normalizeSession } from '../src/auth/session-client.js';
 
 test('fixtures representam as hierarquias próprias do PDI e do PLS', () => {
@@ -166,6 +166,15 @@ test('concessões de plano, eixo e item não escapam do recurso', () => {
   const itemSession = { grants: [{ permission: PERMISSIONS.REVIEW_ITEM, scope: { type: 'item', planId: 'pdi', itemId: 'riscos' } }] };
   assert.equal(can(itemSession, PERMISSIONS.REVIEW_ITEM, { planId: 'pdi', itemId: 'riscos' }), true);
   assert.equal(can(itemSession, PERMISSIONS.REVIEW_ITEM, { planId: 'pdi', itemId: 'rankings' }), false);
+});
+
+test('gestor vê rascunho quando possui acesso interno em um eixo do plano', () => {
+  const plan = { id: 'pdi', status: 'draft', axes: [{ id: 'eixo-8' }] };
+  const gestor = { grants: [{ permission: PERMISSIONS.VIEW_INTERNAL_PLAN, scope: { type: 'axis', planId: 'pdi', axisId: 'eixo-8' } }] };
+  const outroPlano = { id: 'pls', status: 'draft', axes: [{ id: 'eixo-1' }] };
+
+  assert.equal(canViewPlan(gestor, plan), true);
+  assert.equal(canViewPlan(gestor, outroPlano), false);
 });
 
 test('sessão segue o contrato e mantém consulta pública no 401', () => {
